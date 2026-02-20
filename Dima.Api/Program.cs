@@ -1,11 +1,16 @@
+using Dima.Api.Data;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 // 1) Registrando os servicos antes do Build()
-// testando o Git com o branch dev
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<Handler>();
 
 var app = builder.Build();
+var cnnStr = builder.Configuration.GetConnectionString("DefaultConnection")??string.Empty;
+
+builder.Services.AddDbContext<AppDbContext>(x => { x.UseSqlServer(cnnStr); });
 
 // 2) Configurando middleware antes do Run()
 app.UseSwagger();
@@ -20,6 +25,7 @@ app.MapPost("/v1/transaction", (Request request, Handler handler) => handler.Han
 app.Run();
 
 //Request
+
 public class Request
 {
     public string Title { get; set; } = string.Empty;
