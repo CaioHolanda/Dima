@@ -1,5 +1,6 @@
 var builder = WebApplication.CreateBuilder(args);
 // 1) Registrando os servicos antes do Build()
+// testando o Git com o branch dev
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<Handler>();
