@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Dima.Api/Dima.Api.csproj" />
+  <Project Path="Dima.Core/Dima.Core.csproj" />
+</Solution>
