@@ -2,15 +2,15 @@ using Dima.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var cnnStr = builder.Configuration.GetConnectionString("DefaultConnection")??string.Empty;
 // 1) Registrando os servicos antes do Build()
+builder.Services.AddDbContext<AppDbContext>(x => { x.UseSqlServer(cnnStr); });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<Handler>();
 
 var app = builder.Build();
-var cnnStr = builder.Configuration.GetConnectionString("DefaultConnection")??string.Empty;
 
-builder.Services.AddDbContext<AppDbContext>(x => { x.UseSqlServer(cnnStr); });
 
 // 2) Configurando middleware antes do Run()
 app.UseSwagger();

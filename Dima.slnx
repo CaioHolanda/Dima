@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="stringConnection.txt" />
+  </Folder>
   <Project Path="Dima.Api/Dima.Api.csproj" />
   <Project Path="Dima.Core/Dima.Core.csproj" />
 </Solution>
