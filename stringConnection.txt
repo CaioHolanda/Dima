@@ -1,0 +1,1 @@
+"Server=localhost,1433;Database=dima-dev;User ID=sa;Password=1q2w3e4r@#$;Encrypt=True;TrustServerCertificate=True;"
