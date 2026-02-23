@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
+// testando um commit a partir do escritorio
 
 namespace Dima.Core.Responses
 {
