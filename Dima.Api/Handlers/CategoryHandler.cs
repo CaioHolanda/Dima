@@ -53,14 +53,49 @@ namespace Dima.Api.Handlers
 
         }
 
-        public Task<PagedResponse<List<Category>>> GetAllAsync(GetAllCategoriesRequest request)
+        public async Task<PagedResponse<List<Category>>> GetAllAsync(GetAllCategoriesRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var query = context
+                    .Categories
+                    .AsNoTracking()
+                    .Where(x => x.UserId == request.UserId)
+                    .OrderBy(x => x.Title);
+                var categories = await query
+                    .Skip((request.PageNumber - 1)*request.PageSize)
+                    .Take(request.PageSize)
+                    .ToListAsync();
+                var count = await query.CountAsync();
+                return new PagedResponse<List<Category>>(
+                    categories,
+                    count,
+                    request.PageNumber,
+                    request.PageSize);
+            }
+            catch
+            {
+                return new PagedResponse<List<Category>>(null, 500, "[E007] Consult not possible");
+            }
         }
 
-        public Task<Response<Category?>> GetByIdAsync(GetCategoryByIdRequest request)
+        public async Task<Response<Category?>> GetByIdAsync(GetCategoryByIdRequest request)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var category = await context
+                    .Categories
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync( x => x.Id == request.Id
+                                      &&  x.UserId==request.UserId);
+                return category is null
+                    ? new Response<Category?>(null, 404, "Category not found")
+                    : new Response<Category?>(category);
+            }
+            catch
+            {
+                return new Response<Category?>(null,500,"[E006] Load not possible");
+            }
         }
 
         public async Task<Response<Category?>> UpdateAsync(UpdateCategoryRequest request)

@@ -1,9 +1,11 @@
 using Dima.Api.Data;
 using Dima.Api.Handlers;
+using Dima.Api.Migrations;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Categories;
 using Dima.Core.Responses;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,10 +25,47 @@ app.UseSwaggerUI();
 
 // 3) Mapeando os endpoints (antes do Run())
 app.MapPost("/v1/categories", 
-    (CreateCategoryRequest request, ICategoryHandler handler) => handler.CreateAsync(request))
+    ([FromBody]     CreateCategoryRequest request, 
+     [FromServices] ICategoryHandler handler) => 
+    handler.CreateAsync(request))
     .WithName("Categories: Create")
     .WithSummary("Create a new Category")
     .Produces<Response<Category>>();
+
+app.MapPut("/v1/categories/{id}",
+    async([FromRoute]       long id,
+          [FromBody]        UpdateCategoryRequest request,
+          [FromServices]    ICategoryHandler handler) =>
+    {
+        request.Id=id;
+        return await handler.UpdateAsync(request);
+    })
+    .WithName("Categories: Update")
+    .WithSummary("Update a Category")
+    .Produces<Response<Category?>>();
+
+app.MapDelete("/v1/categories/{id}",
+    async([FromRoute]       long id,
+          [FromServices]    ICategoryHandler handler) =>
+    {
+        var request=new DeleteCategoryRequest {Id=id};
+        // para teste
+        request.UserId = "test1@mail.com";
+        return await handler.DeleteAsync(request);
+    })
+    .WithName("Categories: Delete")
+    .WithSummary("Remove a Category")
+    .Produces<Response<Category?>>();
+
+app.MapGet("/v1/categories/",
+    async([FromServices]    ICategoryHandler handler) =>
+    {
+        var request=new GetAllCategoriesRequest {UserId="test2@mail.com"};
+        return await handler.GetAllAsync(request);
+    })
+    .WithName("Categories: GetAll")
+    .WithSummary("Return all Categories")
+    .Produces<PagedResponse<List<Category>?>>();
 
 app.Run();
 
