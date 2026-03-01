@@ -30,7 +30,7 @@ app.MapPost("/v1/categories",
     handler.CreateAsync(request))
     .WithName("Categories: Create")
     .WithSummary("Create a new Category")
-    .Produces<Response<Category>>();
+    .Produces<Response<Category?>>();
 
 app.MapPut("/v1/categories/{id}",
     async([FromRoute]       long id,
