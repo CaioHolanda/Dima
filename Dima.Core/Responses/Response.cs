@@ -7,6 +7,8 @@ namespace Dima.Core.Responses
 {
     public class Response<TData>
     {
+        public TData? Data { get; set; }
+        public string? Message { get; set; } = string.Empty;
         private readonly int _code;
         [JsonConstructor]
         public Response(
@@ -18,8 +20,6 @@ namespace Dima.Core.Responses
             Message = message;
             _code = code;
         }
-        public TData? Data { get; set; }
-        public string? Message { get; set; } = string.Empty;
         public Response()
             =>_code=Configuration.DefaultStatusCode;
         [JsonIgnore]
