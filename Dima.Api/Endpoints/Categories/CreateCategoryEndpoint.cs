@@ -19,6 +19,7 @@ namespace Dima.Api.Endpoints.Categories
             ICategoryHandler handler,
             CreateCategoryRequest request)
         {
+            request.UserId = "test@gmail.com";
             var result = await handler.CreateAsync(request);
             return result.IsSuccess
                 ? TypedResults.Created($"/{result.Data?.Id}",result)

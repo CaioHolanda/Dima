@@ -20,7 +20,7 @@ public class DeleteCategoryEndpoint : IEndpoint
     {
         var request = new DeleteCategoryRequest
         {
-            UserId = "test2@gmail.com", // user test temporary
+            UserId = "test@gmail.com", // user test temporary
             Id = id
         };
         var result = await handler.DeleteAsync(request);

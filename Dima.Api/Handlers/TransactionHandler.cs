@@ -92,7 +92,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
                 .Where(x =>
                         x.PaidOrReceivedAt >= request.StartDate &&
                         x.PaidOrReceivedAt <= request.EndDate &&
-                        x.UserId != request.UserId)
+                        x.UserId == request.UserId)
                 .OrderBy(x => x.PaidOrReceivedAt);
             var transactions=await query
                 .Skip((request.PageNumber-1)*request.PageSize)
@@ -124,7 +124,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             transaction.Type=request.Type;
             transaction.PaidOrReceivedAt= request.PaidOrReceivedAt;
 
-            context.Transactions.Add(transaction);
+            context.Transactions.Update(transaction);
             await context.SaveChangesAsync();
 
             return new Response<Transaction?>(transaction);
@@ -132,7 +132,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
         }
         catch
         {
-            return new Response<Transaction?>(null, 500, "[E010] Transaction not found.");
+            return new Response<Transaction?>(null, 500, "[E010] Transaction update not possible. {ex.Message}");
         }
     }
 }

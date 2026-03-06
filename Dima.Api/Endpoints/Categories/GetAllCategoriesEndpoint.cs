@@ -25,13 +25,13 @@ namespace Dima.Api.Endpoints.Categories
         {
             var request = new GetAllCategoriesRequest
             {
-                //UserId = "test2@gmai.com",
+                UserId = "test@gmail.com",
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
             var result = await handler.GetAllAsync(request);
             return result.IsSuccess
-                ? TypedResults.Ok(request)
+                ? TypedResults.Ok(result)
                 : TypedResults.BadRequest(result);
         }
 

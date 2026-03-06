@@ -2,24 +2,26 @@
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Categories;
+using Dima.Core.Requests.Transactions;
 using Dima.Core.Responses;
 
-namespace Dima.Api.Endpoints.Categories;
-public class GetCategoryByIdEndpoint : IEndpoint
+namespace Dima.Api.Endpoints.Transactions;
+
+public class GetTransactionByIdEndpoint:IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app)
     => app.MapGet("/{id}", HandleAsync)
-        .WithName("Categories: By Id")
-        .WithSummary("Read one category")
-        .WithDescription("Read one category")
+        .WithName("Transactions: By Id")
+        .WithSummary("Read one transaction")
+        .WithDescription("Read one transaction")
         .WithOrder(4)
-        .Produces<Response<Category?>>();
+        .Produces<Response<Transaction?>>();
 
     private static async Task<IResult> HandleAsync(
-        ICategoryHandler handler,
+        ITransactionHandler handler,
         long id)
     {
-        var request = new GetCategoryByIdRequest
+        var request = new GetTransactionByIdRequest
         {
             UserId = "test@gmail.com",
             Id = id
