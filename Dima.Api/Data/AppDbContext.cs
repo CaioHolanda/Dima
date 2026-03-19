@@ -10,7 +10,7 @@ namespace Dima.Api.Data
 {
     public class AppDbContext(DbContextOptions<AppDbContext> options):IdentityDbContext
         <
-        User,
+        Dima.Api.Models.User,
         IdentityRole<long>,
         long,
         IdentityUserClaim<long>,
