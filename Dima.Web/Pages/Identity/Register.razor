@@ -11,27 +11,40 @@
                      alt="Dima-Controle Financeiro"
                      width="200" />
             </div>
-            <MudForm @ref="_mudForm">
-                <MudTextField T="string"
-                              Label="E-mail"
-                              InputType="InputType.Email"
-                              Required="true"
-                              RequiredError="Informe o email"
-                              Validation=@(new EmailAddressAttribute{ErrorMessage="Email invalido"}) />
-                <MudTextField T="string"
-                              Label="Senha"
-                              InputType="InputType.Password"
-                              Required="true"
-                              RequiredError="Senha Invalida" />
-            </MudForm>
-            <div class="d-flex mt-8">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary">Comecar</MudButton>
-                <MudSpacer />
-                <MudButton Variant="Variant.Outlined" Href="/login">Ja tenho uma conta</MudButton>
-            </div>
+            <EditForm Model="@InputModel" OnValidSubmit="OnValidSubmitAsync">
+                <DataAnnotationsValidator/>
+                <MudTextField
+                    T="string"
+                    Label="E-mail"
+                    HelperText="Email required"
+                    InputType="InputType.Email"
+                    For="@(()=>InputModel.Email)"
+                    @bind-Value="InputModel.Email"
+                />
+                <MudTextField 
+                    T="string"
+                    Label="Password"
+                    HelperText="Password required"
+                    InputType="InputType.Password"
+                    For="@(()=>InputModel.Password)"
+                    @bind-Value="InputModel.Password"
+                />
+                <div class="d-flex mt-8">
+                    @if (IsBusy)
+                    {
+                        <MudProgressCircular Color="Color.Info" Indeterminate="true"/>
+                    }
+                    else
+                    {
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary">START</MudButton>
+                        <MudSpacer/>
+                        <MudButton Href="/login">I have an account</MudButton>
+                    }
+                </div>
+            </EditForm>
         </MudPaper>
     </MudItem>
 </MudGrid>
-@code {
-    MudForm? _mudForm;
-}
+

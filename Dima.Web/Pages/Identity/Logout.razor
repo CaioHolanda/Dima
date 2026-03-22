@@ -1,0 +1,18 @@
+﻿@page "/sair"
+@inherits LogoutPage
+@layout HeadlessLayout
+
+<PageTitle>Dima-Sair</PageTitle>
+
+<MudText Typo="Typo.h3">Finalizando a sessao...</MudText>
+<MudPaper Class="pa-8 mt-4">
+    <div class="d-flex justify-content-center pb-8 pt-8">
+        <img src="imgs/dima.png" alt="Dima-Seu Controle Financeiro" width="200"
+    </div>
+    <MudAlert Severity="Severity.Info">
+        <div>
+            Sessao finalizada...
+            <MudButton Variant="Variant.Text" Href="/"> IR PARA A TELA DE LOGIN</MudButton>
+        </div>
+    </MudAlert>
+</MudPaper>
