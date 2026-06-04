@@ -16,13 +16,13 @@
                 <DataAnnotationsValidator />
                 <MudTextField T="string"
                               Label="E-mail"
-                              HelperText="Email required"
+                              HelperText="Email Obrigatorio"
                               InputType="InputType.Email"
                               For="@(()=>InputModel.Email)"
                               @bind-Value="InputModel.Email" />
                 <MudTextField T="string"
                               Label="Password"
-                              HelperText="Password required"
+                              HelperText="Senha Obrigatoria"
                               InputType="InputType.Password"
                               For="@(()=>InputModel.Password)"
                               @bind-Value="InputModel.Password" />
@@ -35,9 +35,9 @@
                     {
                         <MudButton ButtonType="ButtonType.Submit"
                                    Variant="Variant.Filled"
-                                   Color="Color.Primary">ENTER</MudButton>
+                                   Color="Color.Primary">ENTRAR</MudButton>
                         <MudSpacer />
-                        <MudButton Href="/login">I want to register</MudButton>
+                        <MudButton Href="/login">Quero me registrar.</MudButton>
                     }
                 </div>
             </EditForm>

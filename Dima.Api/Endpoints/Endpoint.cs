@@ -45,7 +45,7 @@ public static class Endpoint
             .MapEndpoint<GetRolesEndpoint>();
 
     }
-    private static IEndpointRouteBuilder MapEndpoint<TEndpoint> (this IEndpointRouteBuilder app)
+    private static IEndpointRouteBuilder MapEndpoint<TEndpoint>(this IEndpointRouteBuilder app)
         where TEndpoint:IEndpoint
     {
         TEndpoint.Map(app);

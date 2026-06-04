@@ -19,14 +19,13 @@ namespace Dima.Api.Data
         IdentityRoleClaim<long>,
         IdentityUserToken<long>
         >(options)
-    {
-
-        public DbSet<Category> Categories { get; set; } = null!;
-        public DbSet<Transaction> Transactions { get; set; } = null!;
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
-            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            public DbSet<Category> Categories { get; set; } = null!;
+            public DbSet<Transaction> Transactions { get; set; } = null!;
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                base.OnModelCreating(modelBuilder);
+                modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            }
         }
-    }
 }
