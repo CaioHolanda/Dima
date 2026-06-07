@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Api.Models;
 using Dima.Core.Models;
+using Dima.Core.Models.Account;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 

@@ -7,9 +7,11 @@ namespace Dima.Core.Requests.Account
     public class LoginRequest : Request
     {
         [Required(ErrorMessage = "Email")]
-        [EmailAddress(ErrorMessage = "Invalid Email")]
+        [EmailAddress(ErrorMessage = "Email Invalido")]
         public string Email { get; set; } = string.Empty;
-        [Required(ErrorMessage = "Invalid Password")]
+
+
+        [Required(ErrorMessage = "Senha Invalida")]
         public string Password { get; set; } = string.Empty;
     }
 }

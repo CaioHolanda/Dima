@@ -10,6 +10,8 @@ namespace Dima.Core.Requests.Account
         [Required(ErrorMessage = "Email")]
         [EmailAddress(ErrorMessage = "Invalid Email")]
         public string Email { get; set; } = string.Empty;
+
+
         [Required(ErrorMessage = "Invalid Password")]
         public string Password { get; set; } = string.Empty;
     }

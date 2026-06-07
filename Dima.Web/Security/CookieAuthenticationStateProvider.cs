@@ -1,4 +1,4 @@
-﻿using Dima.Core.Models;
+﻿using Dima.Core.Models.Account;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Net.Http.Json;
 using System.Security.Claims;
@@ -9,12 +9,12 @@ namespace Dima.Web.Security
     {
         private bool _isAuthenticated = false;
         private readonly HttpClient _client = clientFactory.CreateClient(Configuration.HttpClientName);
+
         public async Task<bool> CheckAuthenticatedAsync()
         {
             await GetAuthenticationStateAsync();
             return _isAuthenticated;
         }
-
 
         public void NotifyAuthenticationStateChanged()
         => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
@@ -65,9 +65,14 @@ namespace Dima.Web.Security
             foreach (var role in roles ?? [])
                 if (!string.IsNullOrEmpty(role.Type) &&
                     !string.IsNullOrEmpty(role.Value))
-                    claims.Add(new Claim(role.Type, role.Value, role.ValueType, role.Issuer, role.OriginalIssuer));
+                    claims.Add(new Claim(role.Type, 
+                                         role.Value, 
+                                         role.ValueType, 
+                                         role.Issuer, 
+                                         role.OriginalIssuer));
             return claims;
         }
+
         private async Task<User?> GetUser()
         {
             try

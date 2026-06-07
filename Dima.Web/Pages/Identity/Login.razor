@@ -1,6 +1,8 @@
 ﻿@page "/login"
 @layout HeadlessLayout
-@inherits LoginPage
+
+@* Insere a classe com o codigo C# relacionado *@
+@inherits LoginPage 
 
 <PageTitle>Dima-Entrar</PageTitle>
 
@@ -37,7 +39,7 @@
                                    Variant="Variant.Filled"
                                    Color="Color.Primary">ENTRAR</MudButton>
                         <MudSpacer />
-                        <MudButton Href="/login">Quero me registrar.</MudButton>
+                        <MudButton Href="/comecar">Quero me registrar.</MudButton>
                     }
                 </div>
             </EditForm>

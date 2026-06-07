@@ -16,6 +16,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped<CookieHandler>();
 
 builder.Services.AddMudServices();
+
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>
     {

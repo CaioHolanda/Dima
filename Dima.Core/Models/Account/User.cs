@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Dima.Core.Models
+namespace Dima.Core.Models.Account
 {
     public class User
     {
