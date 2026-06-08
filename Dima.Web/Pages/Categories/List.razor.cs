@@ -18,8 +18,13 @@ namespace Dima.Web.Pages.Categories
         #region Services
         [Inject]
         public ISnackbar Snackbar { get; set; } = null!;
+
         [Inject]
-        public ICategoryHandler Handler { get; set; } = null;
+        public ICategoryHandler Handler { get; set; } = null!;
+
+        [Inject]
+        public IDialogService DialogService { get; set; } = null!;
+
         #endregion
 
         #region Methods
@@ -35,12 +40,33 @@ namespace Dima.Web.Pages.Categories
             if (category.Description is not null && category.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
                 return true;
             return false;
-
         };
 
+        public async void OnDeleteButtonClickedAsync(long id, string title)
+        {
+            var result = await DialogService.ShowMessageBoxAsync(
+                "ATENCAO",
+                $"Ao prosseguir a categoria {title} sera excluida. Acao irreverssivel, continua?",
+                yesText: "EXCLUIR",
+                cancelText: "Cancelar");
+            if (result is true)
+                await OnDeleteAsync(id,title);
+            StateHasChanged();
+        }
+        public async Task OnDeleteAsync(long id,string title)
+        {
+            try
+            {
+                await Handler.DeleteAsync(new DeleteCategoryRequest { Id= id });
+                Categories.RemoveAll(c => c.Id == id);
+                Snackbar.Add($"Categoria {title} excluida com sucesso",Severity.Success);
+            }
+            catch(Exception ex)
+            {
+                Snackbar.Add(ex.Message ,Severity.Error);
+            }
+        }
         #endregion
-
-
 
         #region Overrides
         protected override async Task OnInitializedAsync()
