@@ -11,10 +11,10 @@ namespace Dima.Core.Responses
 
         public string? Message { get; set; } = string.Empty;
 
-        private readonly int _code;
+        public int Code { get; set; }
 
         [JsonIgnore]
-        public bool IsSuccess => _code is >= 200 and <= 299;
+        public bool IsSuccess => Code is >= 200 and <= 299;
 
         [JsonConstructor]
         public Response(
@@ -24,11 +24,11 @@ namespace Dima.Core.Responses
         {
             Data = data;
             Message = message;
-            _code = code;
+            Code = code;
         }
 
         public Response()
-            =>_code=Configuration.DefaultStatusCode;
+            => Code = Configuration.DefaultStatusCode;
 
 
     }

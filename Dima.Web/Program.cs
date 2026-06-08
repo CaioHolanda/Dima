@@ -24,7 +24,11 @@ builder.Services
         new Uri(Configuration.BackendUrl);
     })
     .AddHttpMessageHandler<CookieHandler>();
-builder.Services.AddTransient<IAccountHandler, AccountHandler>();
+
+builder.Services.AddTransient<IAccountHandler,      AccountHandler>();
+builder.Services.AddTransient<ITransactionHandler,  TransactionHandler>();
+builder.Services.AddTransient<ICategoryHandler,     CategoryHandler>();
+
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CookieAuthenticationStateProvider>();
 builder.Services.AddScoped(

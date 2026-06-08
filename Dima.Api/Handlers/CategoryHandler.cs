@@ -22,7 +22,7 @@ namespace Dima.Api.Handlers
                 await context.Categories.AddAsync(category);
                 await context.SaveChangesAsync();
 
-                return new Response<Category?>(category,201,"Category sucessufully created");
+                return new Response<Category?>(category,201,"Categoria criada com sucesso!");
             }
             catch
             {

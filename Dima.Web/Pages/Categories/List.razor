@@ -1,9 +1,40 @@
 ﻿@page "/categorias"
 @inherits ListCategoriesPage
+
 <MudText Typo="Typo.h3">Categorias</MudText>
-<ul>
-    @foreach(var cat in Categories)
-    {
-        <li>@cat.Title</li>
-    }
-</ul>
+<MudStack Row="true" Justify="Justify.FlexEnd">
+    <MudButton 
+        Variant="Variant.Filled" 
+        Color="Color.Primary"
+        StartIcon="@Icons.Material.TwoTone.Add"
+        Href="/categorias/adicionar">
+        NOVA CATEGORIA
+    </MudButton>
+</MudStack>
+
+<MudDataGrid 
+    Class="pt-4" 
+    Items="@Categories"
+@*     Filterable="true" *@
+    QuickFilter="Filter"
+    Hideable="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6"></MudText>
+         <MudTextField
+            @bind-Value="SearchTerm"
+            Placeholder="Filtrar..."
+            Adornment="Adornment.Start"
+            AdornmentIcon="@Icons.Material.Filled.Search"
+            Immediate="true"
+            IconSize="Size.Medium"
+            Class="mt-0"
+            >
+
+        </MudTextField>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x=>x.Id" Title="#"></PropertyColumn>
+        <PropertyColumn Property="x=>x.Title" Title="Categoria"></PropertyColumn>
+    </Columns>
+
+</MudDataGrid>

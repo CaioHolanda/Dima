@@ -12,6 +12,7 @@ namespace Dima.Web.Pages.Categories
         #region Properties
         public bool IsBusy { get; set; } = false;
         public List<Category> Categories { get; set; } = [];
+        public string SearchTerm { get; set; } = string.Empty;
         #endregion
 
         #region Services
@@ -20,6 +21,26 @@ namespace Dima.Web.Pages.Categories
         [Inject]
         public ICategoryHandler Handler { get; set; } = null;
         #endregion
+
+        #region Methods
+
+        public Func<Category, bool> Filter => category =>
+        {
+            if (string.IsNullOrEmpty(SearchTerm))
+                return true;
+            if (category.Id.ToString().Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (category.Title.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (category.Description is not null && category.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
+                return true;
+            return false;
+
+        };
+
+        #endregion
+
+
 
         #region Overrides
         protected override async Task OnInitializedAsync()
