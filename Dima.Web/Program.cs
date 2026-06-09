@@ -35,4 +35,9 @@ builder.Services.AddScoped(
     x => (ICookieAuthenticationStateProvider)x
          .GetRequiredService<AuthenticationStateProvider>());
 
+builder.Services.AddLocalization();
+System.Globalization.CultureInfo.DefaultThreadCurrentCulture = new System.Globalization.CultureInfo("pt-BR");
+System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = new System.Globalization.CultureInfo("pt-BR");
+
+
 await builder.Build().RunAsync();
