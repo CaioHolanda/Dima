@@ -12,6 +12,10 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
 {
     public async Task<Response<Transaction?>> CreateAsync(CreateTransactionRequest request)
     {
+        if(request is { Type:Core.Enums.ETransactionType.Withdraw,Amount: >= 0})
+        {
+            request.Amount *= -1;
+        }
         try
         {
             var transaction = new Transaction
@@ -109,6 +113,10 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
 
     public async Task<Response<Transaction?>> UpdateAsync(UpdateTransactionRequest request)
     {
+        if (request is { Type: Core.Enums.ETransactionType.Withdraw, Amount: >= 0 })
+        {
+            request.Amount *= -1;
+        }
         try
         {
             var transaction=await context
