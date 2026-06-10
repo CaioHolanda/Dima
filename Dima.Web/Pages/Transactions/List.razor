@@ -3,6 +3,34 @@
 
 <MudText Typo="Typo.h3">Lancamentos</MudText>
 
+<div class="d-flex justify-end mt-4 mb-4">
+    <MudSelect T="int" Label="Mes" @bind-Value="@CurrentMonth" AnchorOrigin="Origin.BottomCenter" Class="mr-4">
+        @for(var month =1;month <= 12; month++)
+        {
+            var date = new DateTime(DateTime.Now.Year, month, 1);
+            <MudSelectItem T="int" Value="@month">
+                @(date.ToString("MMMM"))
+            </MudSelectItem>
+        }
+    </MudSelect>
+    <MudSelect T="int" Label="Ano" @bind-Value="@CurrentYear" AnchorOrigin="Origin.BottomCenter">
+        @foreach(var year in Years)
+        {
+            <MudSelectItem T="int" Value="@year">
+                @year
+            </MudSelectItem>
+        }
+    </MudSelect>
+    <MudSpacer/>
+    <MudButton  Size="Size.Small"
+                Variant="Variant.Filled" 
+                Color="Color.Primary" 
+                StartIcon="@Icons.Material.TwoTone.Search"
+                OnClick="() =>{}">
+                PESQUISAR
+    </MudButton>
+
+</div>
 
 <MudDataGrid Class="mt-4"
              Items="@Transactions"
@@ -11,8 +39,7 @@
              Hideable="true"
              ColumnResizeMode="ResizeMode.Column">
     <ToolBarContent>
-        <MudText Typo="Typo.h6">Lancamentos</MudText>
-        <MudSpacer/>
+        <MudText Typo="Typo.h6"></MudText>
         <MudTextField @bind-Value="SearchTerm"
                       Placeholder="Filtrar..."
                       Adornment="Adornment.Start"
@@ -49,9 +76,9 @@
                 @context.Items.Sum(x=>x.Amount).ToString("C")
             </FooterTemplate>
         </PropertyColumn>
-        <TemplateColumn Class="d-flex justify-end">
+        <TemplateColumn Title="" Sortable="false" Filterable="false">
             <CellTemplate>
-                <MudStack Row>
+                <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
                     <MudIconButton 
                         Icon="@Icons.Material.Filled.Edit" 
                         Color="Color.Primary"
