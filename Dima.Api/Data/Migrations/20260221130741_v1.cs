@@ -33,7 +33,7 @@ namespace Dima.Api.Migrations
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Title = table.Column<string>(type: "NVARCHAR(80)", maxLength: 80, nullable: false),
-                    CreateAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     PaidOrReceivedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Type = table.Column<short>(type: "SMALLINT", nullable: false),
                     Amount = table.Column<decimal>(type: "MONEY", maxLength: 255, nullable: false),

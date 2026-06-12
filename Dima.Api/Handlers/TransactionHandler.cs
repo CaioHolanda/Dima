@@ -22,7 +22,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             {
                 UserId = request.UserId,
                 CategoryId = request.CategoryId,
-                CreateAt = DateTime.Now,
+                CreatedAt = DateTime.Now,
                 Amount = request.Amount,
                 PaidOrReceivedAt = request.PaidOrReceivedAt,
                 Title = request.Title,
@@ -138,9 +138,9 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             return new Response<Transaction?>(transaction);
 
         }
-        catch
+        catch (Exception ex)
         {
-            return new Response<Transaction?>(null, 500, "[E010] Transaction update not possible. {ex.Message}");
+            return new Response<Transaction?>(null, 500, ex.Message);
         }
     }
 }

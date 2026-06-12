@@ -8,10 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="Data\Views\vwGetIncomesByCategory.sql" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" /> <!--Pacote para documentacao-->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.3">
