@@ -18,9 +18,15 @@
                 Edge="Edge.Start"
                 OnClick="ToggleDrawer"/>
                 Dima
-                
+                <MudButton  Href="/lancamentos/novo" 
+                            Variant="Variant.Text"
+                            StartIcon="@Icons.Material.TwoTone.Add"
+                           Color="Color.Inherit"
+                           Class="ml-16">
+                                Novo Lancamento
+                </MudButton>
                 <MudSpacer/>
-                <MudText Typo="Typo.caption">
+                <MudText Typo="Typo.caption" Class="ml-4">
                     @context.User.Identity?.Name
                 </MudText>
                 <MudSwitch 

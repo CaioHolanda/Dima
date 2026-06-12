@@ -39,7 +39,13 @@ namespace Dima.Web.Pages.Transactions
 
         #region Private_Methods
 
-        private async Task GetTransaction()
+        public async Task OnSearchAsync()
+        {
+            await GetTransactionsAsync();
+            StateHasChanged();
+        }
+
+        private async Task GetTransactionsAsync()
         {
             IsBusy = true;
             try
@@ -96,7 +102,7 @@ namespace Dima.Web.Pages.Transactions
         #region Overrides
 
         protected override async Task OnInitializedAsync()
-        => await GetTransaction();
+        => await GetTransactionsAsync();
 
         #endregion
 

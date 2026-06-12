@@ -26,12 +26,10 @@
                 Variant="Variant.Filled" 
                 Color="Color.Primary" 
                 StartIcon="@Icons.Material.TwoTone.Search"
-                OnClick="() =>{}">
+                OnClick="OnSearchAsync">
                 PESQUISAR
     </MudButton>
-
 </div>
-
 <MudDataGrid Class="mt-4"
              Items="@Transactions"
              Filterable="true"
