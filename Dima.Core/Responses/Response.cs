@@ -27,7 +27,7 @@ namespace Dima.Core.Responses
             Code = code;
         }
 
-        public Response()
+        public Response(Task<Models.Product?> product)
             => Code = Configuration.DefaultStatusCode;
 
 
