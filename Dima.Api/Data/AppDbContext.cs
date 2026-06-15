@@ -18,31 +18,34 @@ namespace Dima.Api.Data
                 IdentityUserLogin<long>,
                 IdentityRoleClaim<long>,
                 IdentityUserToken<long>
-        >(options)
+    >(options)
+    {
+        public DbSet<Category> Categories { get; set; } = null!;
+        public DbSet<Transaction> Transactions { get; set; } = null!;
+        public DbSet<IncomesAndExpenses> IncomesAndExpenses { get; set; } = null!;
+        public DbSet<IncomesByCategory> IncomesByCategory { get; set; } = null!;
+        public DbSet<ExpensesByCategory> ExpensesByCategory { get; set; } = null!;
+        public DbSet<Product> Products { get; set; } = null!;
+        public DbSet<Voucher> Vouchers { get; set; } = null!;
+        public DbSet<Order> Orders { get; set; } = null!;
+
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            public DbSet<Category> Categories { get; set; } = null!;
-            public DbSet<Transaction> Transactions { get; set; } = null!;
-            public DbSet<IncomesAndExpenses> IncomesAndExpenses { get; set; } = null!;
-            public DbSet<IncomesByCategory> IncomesByCategory { get; set; } = null!;
-            public DbSet<ExpensesByCategory> ExpensesByCategory { get; set; } = null!;
-            protected override void OnModelCreating(ModelBuilder modelBuilder)
-                {
-                    base.OnModelCreating(modelBuilder);
-                    modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
-                    modelBuilder.Entity<IncomesAndExpenses>()
-                        .HasNoKey()
-                        .ToView("vwGetIncomesAndExpenses");
+            modelBuilder.Entity<IncomesAndExpenses>()
+                .HasNoKey()
+                .ToView("vwGetIncomesAndExpenses");
 
-                    modelBuilder.Entity<IncomesByCategory>()
-                        .HasNoKey()
-                        .ToView("vwGetIncomesByCategory");
+            modelBuilder.Entity<IncomesByCategory>()
+                .HasNoKey()
+                .ToView("vwGetIncomesByCategory");
 
-                    modelBuilder.Entity<ExpensesByCategory>()
-                        .HasNoKey()
-                        .ToView("vwGetExpensesByCategory");
-                }
+            modelBuilder.Entity<ExpensesByCategory>()
+                .HasNoKey()
+                .ToView("vwGetExpensesByCategory");
         }
-
-
+    }
 }
