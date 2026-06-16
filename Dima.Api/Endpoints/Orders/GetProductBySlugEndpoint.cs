@@ -19,7 +19,7 @@ namespace Dima.Api.Endpoints.Orders
             .Produces<Response<Product?>>();
 
         private static async Task<IResult> HandleAsync(
-            IProductHanlder handler,
+            IProductHandler handler,
             string slug)
         {
             var request = new GetProductBySlugRequest

@@ -1,31 +1,27 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
-using Dima.Core.Requests.Categories;
 using Dima.Core.Requests.Order;
 using Dima.Core.Responses;
-using System.Security.Claims;
 
 namespace Dima.Api.Endpoints.Orders
 {
-    public class GetOrderByNumberEndpoint : IEndpoint
+    public class GetVoucherByNumberEndpoint : IEndpoint
     {
         public static void Map(IEndpointRouteBuilder app)
         => app.MapGet("/{number}", HandleAsync)
-            .WithName("Order: By number")
-            .WithSummary("Read one order")
-            .WithDescription("Read one order")
-            .WithOrder(4)
-            .Produces<Response<Order?>>();
+            .WithName("Voucher: By Number")
+            .WithSummary("Read one Voucher")
+            .WithDescription("Read one Voucher")
+            .WithOrder(1)
+            .Produces<Response<Voucher?>>();
 
         private static async Task<IResult> HandleAsync(
-            ClaimsPrincipal user,
-            IOrderHandler handler,
+            IVoucherHandler handler,
             string number)
         {
-            var request = new GetOrderByNumberRequest
+            var request = new GetVoucherByNumberRequest
             {
-                UserId = user.Identity!.Name ?? string.Empty,
                 Number = number
             };
             var result = await handler.GetByNumberAsync(request);

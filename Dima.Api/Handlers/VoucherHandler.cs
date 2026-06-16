@@ -16,7 +16,7 @@ namespace Dima.Api.Handlers
                 var voucher = await context.Vouchers
                                         .AsNoTracking()
                                         .FirstOrDefaultAsync(x => x.Number == request.Number && x.IsActive == true);
-                return (voucher is null)
+                return voucher is null
                     ? new Response<Voucher?>(null, 404, "Voucher nao encontrado.")
                     : new Response<Voucher?>(voucher);
             }

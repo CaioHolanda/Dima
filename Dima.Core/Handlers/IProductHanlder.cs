@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Dima.Core.Handlers
 {
-    public interface IProductHanlder
+    public interface IProductHandler
     {
         Task<PagedResponse<List<Product>?>> GetAllAsync(GetAllProductsRequest request);
         Task<Response<Product?>> GetBySlugAsync(GetProductBySlugRequest request);

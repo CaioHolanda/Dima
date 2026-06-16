@@ -19,7 +19,7 @@ namespace Dima.Api.Endpoints.Orders
                     .WithOrder(1)
                     .Produces<PagedResponse<List<Product>?>>();
         private static async Task<IResult> HandleAsync(
-            IProductHanlder handler,
+            IProductHandler handler,
             [FromQuery] int pageSize = Configuration.DefaultPageSize,
             [FromQuery] int pageNumber = Configuration.DefaultPageNumber)
         {

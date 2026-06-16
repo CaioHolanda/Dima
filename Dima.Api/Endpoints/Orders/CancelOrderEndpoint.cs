@@ -14,7 +14,7 @@ namespace Dima.Api.Endpoints.Orders
                     .WithName("Orders: Cancel Order")
                     .WithSummary("Cancela um pedido")
                     .WithDescription("Cancela um pedido")
-                    .WithOrder(2)
+                    .WithOrder(1)
                     .Produces<Response<Order?>>();
         private static async Task<IResult> HandleAsync(
             IOrderHandler handler,

@@ -14,7 +14,7 @@ namespace Dima.Api.Endpoints.Orders
                     .WithName("Orders: Create Order")
                     .WithSummary("Cria um pedido")
                     .WithDescription("Cria um pedido")
-                    .WithOrder(1)
+                    .WithOrder(2)
                     .Produces<Response<Order?>>();
         private static async Task<IResult> HandleAsync(
             IOrderHandler handler,

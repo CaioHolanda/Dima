@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers
 {
-    public class ProductHandler(AppDbContext context) : IProductHanlder
+    public class ProductHandler(AppDbContext context) : IProductHandler
     {
         public async Task<PagedResponse<List<Product>?>> GetAllAsync(GetAllProductsRequest request)
         {
@@ -34,9 +34,9 @@ namespace Dima.Api.Handlers
         {
             try
             {
-                var product = context.Products  .AsNoTracking()
+                var product = await context.Products  .AsNoTracking()
                                                 .FirstOrDefaultAsync
-                                                (x => x.Slug == request.Slug&& x.IsActive==true);
+                                                (x => x.Slug == request.Slug && x.IsActive == true);
 
                 return product is null 
                         ? new Response<Product?>(null, 404, "Produto nao encontrado")

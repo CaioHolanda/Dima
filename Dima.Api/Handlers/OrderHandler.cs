@@ -82,21 +82,26 @@ namespace Dima.Api.Handlers
             }
 
             // Ha Voucher?
-            Voucher? voucher = null;
+            Voucher? voucher=null;
             try
             {
-                if(request.VoucherId is not null)
+                if (request.VoucherId is not null)
                 {
-                    voucher = await context
-                        .Vouchers
+                    var voucherId = request.VoucherId.Value;
+
+                    // 1. Existe algum voucher com este ID?
+                    voucher = await context.Vouchers
                         .AsNoTracking()
-                        .FirstOrDefaultAsync(x =>
-                            x.Id == request.VoucherId &&
-                            x.IsActive == true);
+                        .FirstOrDefaultAsync(x => x.Id == voucherId);
+
                     if (voucher is null)
-                        return new Response<Order?>(null, 400, "[E043] Voucher invalido ou nao encontrado");
-                    if (voucher.IsActive == false)
-                        return new Response<Order?>(null, 400, "[E044] Este voucher ja foi utilizado");
+                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} nao encontrado");
+
+                    // 2. O voucher está ativo?
+                    if (!voucher.IsActive)
+                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} existe, mas esta inativo");
+
+                    // 3. Agora sim, atualiza
                     voucher.IsActive = false;
                     context.Vouchers.Update(voucher);
                 }
@@ -125,7 +130,7 @@ namespace Dima.Api.Handlers
                 return new Response<Order?>(null, 500, "[E046] Nao foi possivel realizar seu pedido");
             }
 
-            return new Response<Order?>(null, 201, $"Pedido {order.Number} cadastrado com sucesso");
+            return new Response<Order?>(order, 201, $"Pedido {order.Number} cadastrado com sucesso");
         }
 
         public async Task<PagedResponse<List<Order>?>> GetAllAsync(GetAllOrdersRequest request)
@@ -187,6 +192,8 @@ namespace Dima.Api.Handlers
             {
                 order = await context
                     .Orders
+                    .Include(x => x.Product)
+                    .Include(x => x.Voucher)
                     .FirstOrDefaultAsync(x=>x.Id == request.Id && x.UserId==request.UserId);
                 if (order is null)
                     return new Response<Order?>(null, 404, "[E047] Pedido nao encontrado");
@@ -236,6 +243,8 @@ namespace Dima.Api.Handlers
             {
                 order = await context
                     .Orders
+                    .Include(x => x.Product)
+                    .Include(x => x.Voucher)
                     .FirstOrDefaultAsync(x => x.Id == request.Id && x.UserId == request.UserId);
                 if (order is null)
                     return new Response<Order?>(null, 404, "[E060] Pedido nao encontrado");
