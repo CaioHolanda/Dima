@@ -15,7 +15,7 @@ namespace Dima.Api.Handlers
             {
                 var query = context.Products.AsNoTracking()
                                             .Where(x => x.IsActive == true)
-                                            .OrderBy(x => x.Title);
+                                            .OrderByDescending(x => x.Price);
 
                 var products = await query.Skip((request.PageNumber - 1) * request.PageSize)
                                             .Take(request.PageSize)
