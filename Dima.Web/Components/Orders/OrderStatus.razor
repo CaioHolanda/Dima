@@ -1,0 +1,25 @@
+﻿@inherits OrderStatusComponent
+@switch (Status)
+{
+    case EOrderStatus.Canceled:
+    <MudChip T="string" Color="Color.Error">CANCELADO</MudChip>
+        break;
+
+    case EOrderStatus.Paid:
+    <MudChip T="string" Color="Color.Success">PAGO</MudChip>
+        break;
+
+    case EOrderStatus.Refunded:
+        <MudChip T="string" Color="Color.Info">ESTORNADO</MudChip>
+        break;
+
+    case EOrderStatus.WaintingPayment:
+    <MudChip T="string" Color="Color.Warning">AGUARDANDO PAGAMENTO</MudChip>
+        break;
+
+    default:
+        <MudChip T="string" Color="Color.Info">Nao Identificado</MudChip>
+        break;
+}
+
+

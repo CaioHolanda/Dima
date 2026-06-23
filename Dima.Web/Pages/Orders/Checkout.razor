@@ -42,7 +42,7 @@
                     </div>
                 </MudList>
             </MudPaper>
-            <MudButton
+            <MudButton @onclick="OnValidSubmitAsync"
                 Variant="Variant.Filled"
                 Color="Color.Primary"
                 Disabled="@(!IsValid)"

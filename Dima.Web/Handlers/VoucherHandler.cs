@@ -11,7 +11,18 @@ namespace Dima.Web.Handlers
     {
         private readonly HttpClient _client=httpClientFactory.CreateClient(Configuration.HttpClientName);
         public async Task<Response<Voucher?>> GetByNumberAsync(GetVoucherByNumberRequest request)
-        =>await _client.GetFromJsonAsync<Response<Voucher?>>($"v1/voucher/{request.Number}")
-          ?? new Response<Voucher?>(null, 400, "[E064] Nao foi possivel obter o voucher");
+        {
+            var response = await _client.GetAsync($"v1/vouchers/{request.Number}");
+
+            if (!response.IsSuccessStatusCode)
+                return new Response<Voucher?>(
+                    null,
+                    (int)response.StatusCode,
+                    $"[E064] Nao foi possivel obter o voucher. Status: {response.StatusCode}");
+
+            var result = await response.Content.ReadFromJsonAsync<Response<Voucher?>>();
+
+            return result ?? new Response<Voucher?>(null, 400, "[E079] Resposta vazia da API");
+        }
     }
 }
