@@ -1,8 +1,10 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
+using Dima.Core.Requests.Stripe;
 using Dima.Web.Pages.Orders;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using MudBlazor;
 
 namespace Dima.Web.Components.Orders
@@ -20,7 +22,9 @@ namespace Dima.Web.Components.Orders
         #region Services
 
         [Inject] public IDialogService DialogService { get; set; } = null!;
+        [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
         [Inject] public IOrderHandler OrderHandler { get; set; } = null!;
+        [Inject] public IStripeHandler StripeHandler { get; set; } = null!;
         [Inject] public ISnackbar Snackbar { get; set; } = null!;
 
         #endregion
@@ -72,8 +76,35 @@ namespace Dima.Web.Components.Orders
 
         private async Task PayOrderAsync()
         {
-            await Task.Delay(1);
-            Snackbar.Add("Pagamento nao implementado", Severity.Error);
+            var request = new CreateSessionRequest{
+                OrderNumber        = Order.Number,
+                OrderTotal         = (int)(Math.Round(Order.Total * 100,2)),
+                ProductTitle       = Order.Product.Title,
+                ProductDescription = Order.Product.Description
+            };
+            try
+            {
+                var result = await StripeHandler.CreateSessionAsync(request);
+                if (result.IsSuccess == false)
+                {
+                    Snackbar.Add(result.Message, Severity.Error);
+                    return;
+                }
+                if (result.Data is null)
+                {
+                    Snackbar.Add(result.Message, Severity.Error);
+                    return;
+                }
+                await JsRuntime.InvokeVoidAsync("checkout", Configuration.StripePublickey, result.Data);
+            }
+            catch (JSException ex)
+            {
+                Snackbar.Add($"[JS] {ex.Message}", Severity.Error);
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"[E081] {ex.Message}", Severity.Error);
+            }
         }
 
         private async Task RefundOrderAsync()

@@ -3,13 +3,14 @@ using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
+using Dima.Core.Requests.Stripe;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Immutable;
 
 namespace Dima.Api.Handlers
 {
-    public class OrderHandler(AppDbContext context) : IOrderHandler
+    public class OrderHandler(AppDbContext context, IStripeHandler stripeHandler) : IOrderHandler
     {
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
@@ -194,14 +195,12 @@ namespace Dima.Api.Handlers
                     .Orders
                     .Include(x => x.Product)
                     .Include(x => x.Voucher)
-                    .FirstOrDefaultAsync(x=>x.Id == request.Id && x.UserId==request.UserId);
+                    .FirstOrDefaultAsync(x=>x.Number == request.Number && x.UserId==request.UserId);
                 if (order is null)
                     return new Response<Order?>(null, 404, "[E047] Pedido nao encontrado");
-
             }
             catch 
             {
-
                 return new Response<Order?>(null, 500, "[E048] Falha ao buscar pedido");
             }
             switch (order.Status)
@@ -217,7 +216,27 @@ namespace Dima.Api.Handlers
                 default:
                     return new Response<Order?>(order, 400, "[E052] Falha ao processar pagamento");
             }
-            //Neste ponto se insere o codigo do Stripe (PCI)
+            try
+            {
+                var getTransactionsRequest = new GetTransactionsByOrderNumberRequest
+                {
+                    Number = order.Number
+                };
+                var result = await stripeHandler.GetTransactionsByOrderNumberAsync(getTransactionsRequest);
+                if(result.IsSuccess == false)
+                    return new Response<Order?>(null, 500, "[E084] Nao foi possivel localizar o pagamento");
+                if(result.Data is null)
+                    return new Response<Order?>(null, 500, "[E085] Nao foi possivel localizar o pagamento");
+                if(result.Data.Any(x=>x.Refunded))
+                    return new Response<Order?>(null, 400, "[E086] Este pedido ja teve o pagamento informado");
+                if(!result.Data.Any(x=>x.Paid))
+                    return new Response<Order?>(null, 400, "[E087] Este pedido nao foi pago");
+                request.ExternalReference = result.Data[0].Id;
+            }
+            catch 
+            {
+                return new Response<Order?>(null, 400, "[E088] Nao foi possivel dar baixa no seu pedido");
+            }
             order.Status = EOrderStatus.Paid;
             order.ExternalReference=request.ExternalReference;
             order.UpdatedAt=DateTime.Now;

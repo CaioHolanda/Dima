@@ -10,7 +10,7 @@ namespace Dima.Api.Endpoints.Orders
     public class PayOrderEndpoint : IEndpoint
     {
         public static void Map(IEndpointRouteBuilder app)
-        => app.MapPost("/{id}/pay", HandleAsync)
+        => app.MapPost("/{number}/pay", HandleAsync)
                 .WithName("Pay Order")
                 .WithSummary("Pay Order: by number")
                 .WithDescription("Pay Order: by number")
@@ -18,11 +18,11 @@ namespace Dima.Api.Endpoints.Orders
                 .Produces<Response<Order?>>();
         private static async Task<IResult> HandleAsync(
             IOrderHandler handler,
-            long id,
+            string number,
             PayOrderRequest request,
             ClaimsPrincipal user)
         {
-            request.Id = id;
+            request.Number = number;
             request.UserId = user.Identity!.Name ?? string.Empty;
             var result = await handler.PayAsync(request);
             return result.IsSuccess

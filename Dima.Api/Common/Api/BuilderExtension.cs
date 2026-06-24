@@ -5,6 +5,7 @@ using Dima.Core;
 using Dima.Core.Handlers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 
 namespace Dima.Api.Common.Api
 {
@@ -18,6 +19,9 @@ namespace Dima.Api.Common.Api
                 .GetValue<string>("BackendUrl")?? string.Empty;
             Configuration.FrontendUrl=builder.Configuration
                 .GetValue<string>("FrontendUrl")?? string.Empty;
+            ApiConfiguration.StripeApiKey = builder.Configuration
+                .GetValue<string>("StripeApiKey") ?? string.Empty;
+            StripeConfiguration.ApiKey = ApiConfiguration.StripeApiKey;
         }
         public static void AddDocumentation(this WebApplicationBuilder builder)
         {
@@ -48,6 +52,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IProductHandler, ProductHandler>();
             builder.Services.AddTransient<IVoucherHandler, VoucherHandler>();
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
+            builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
 
         }

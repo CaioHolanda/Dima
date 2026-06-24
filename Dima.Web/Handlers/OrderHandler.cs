@@ -33,7 +33,7 @@ namespace Dima.Web.Handlers
 
         public async Task<Response<Order?>> PayAsync(PayOrderRequest request)
         {
-            var result = await _client.PostAsJsonAsync($"v1/orders/{request.Id}/pay", request);
+            var result = await _client.PostAsJsonAsync($"v1/orders/{request.Number}/pay", request);
             return await result.Content.ReadFromJsonAsync<Response<Order?>>()
                 ?? new Response<Order?>(null, 400, "[E069] Nao foi possivel pagar o pedido");
         }

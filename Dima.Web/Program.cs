@@ -9,6 +9,7 @@ using Dima.Web.Handlers;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 Configuration.BackendUrl=builder.Configuration.GetValue<string>("BackendUrl")??string.Empty;
+Configuration.StripePublickey=builder.Configuration.GetValue<string>("StripePublicKey")??string.Empty;
 
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -25,13 +26,14 @@ builder.Services
     })
     .AddHttpMessageHandler<CookieHandler>();
 
-builder.Services.AddTransient<IAccountHandler,      AccountHandler>();
+builder.Services.AddTransient<IAccountHandler,      AccountHandler    >();
 builder.Services.AddTransient<ITransactionHandler,  TransactionHandler>();
-builder.Services.AddTransient<IOrderHandler,        OrderHandler>();
-builder.Services.AddTransient<IProductHandler,      ProductHandler>();
-builder.Services.AddTransient<IVoucherHandler,      VoucherHandler>();
-builder.Services.AddTransient<ICategoryHandler,     CategoryHandler>();
-builder.Services.AddTransient<IReportHandler,       ReportHandler>();
+builder.Services.AddTransient<IOrderHandler,        OrderHandler      >();
+builder.Services.AddTransient<IStripeHandler,       StripeHandler     >();
+builder.Services.AddTransient<IProductHandler,      ProductHandler    >();
+builder.Services.AddTransient<IVoucherHandler,      VoucherHandler    >();
+builder.Services.AddTransient<ICategoryHandler,     CategoryHandler   >();
+builder.Services.AddTransient<IReportHandler,       ReportHandler     >();
 
 
 builder.Services.AddAuthorizationCore();
