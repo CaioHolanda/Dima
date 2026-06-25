@@ -218,12 +218,19 @@ namespace Dima.Api.Handlers
             }
             try
             {
+                Console.WriteLine($"[PAY] Order Number: {order.Number}");
                 var getTransactionsRequest = new GetTransactionsByOrderNumberRequest
                 {
                     Number = order.Number
                 };
                 var result = await stripeHandler.GetTransactionsByOrderNumberAsync(getTransactionsRequest);
-                if(result.IsSuccess == false)
+
+                Console.WriteLine($"[STRIPE] Success: {result.IsSuccess}");
+                Console.WriteLine($"[STRIPE] Message: {result.Message}");
+                Console.WriteLine($"[STRIPE] Data null: {result.Data is null}");
+                Console.WriteLine($"[STRIPE] Count: {result.Data?.Count}");
+
+                if (result.IsSuccess == false)
                     return new Response<Order?>(null, 500, "[E084] Nao foi possivel localizar o pagamento");
                 if(result.Data is null)
                     return new Response<Order?>(null, 500, "[E085] Nao foi possivel localizar o pagamento");

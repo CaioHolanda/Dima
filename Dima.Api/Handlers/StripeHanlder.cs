@@ -51,26 +51,38 @@ namespace Dima.Api.Handlers
 
         public async Task<Response<List<StripeTransactionResponse>>> GetTransactionsByOrderNumberAsync(GetTransactionsByOrderNumberRequest request)
         {
-            var options = new ChargeSearchOptions
+            var options = new PaymentIntentSearchOptions
             {
                 Query=$"metadata['order']:'{request.Number}'"
             };
-            var service = new ChargeService();
-            var result = await service.SearchAsync(options);
-            if (result.Data.Count == 0)
-                return new Response<List<StripeTransactionResponse>>(null, 404, "[E082] Nenhuma transacao encontrada");
+            var service = new PaymentIntentService();
             var data = new List<StripeTransactionResponse>();
-            foreach (var item in result.Data)
+            var list = await service.ListAsync(new PaymentIntentListOptions
+            {
+                Limit = 20
+            });
+
+            var transactions = list.Data
+                .Where(x =>
+                    x.Metadata is not null &&
+                    x.Metadata.TryGetValue("order", out var order) &&
+                    order == request.Number)
+                .ToList();
+
+            if (transactions.Count == 0)
+                return new Response<List<StripeTransactionResponse>>(null, 404, "[E082] Nenhuma transacao encontrada");
+
+            foreach (var item in transactions)
             {
                 data.Add(new StripeTransactionResponse
                 {
-                    Id=item.Id,
-                    Email = item.BillingDetails.Email,
+                    Id = item.Id,
+                    Email = item.ReceiptEmail,
                     Amount = item.Amount,
-                    AmountCaptures = item.AmountCaptured,
+                    AmountCaptures = item.AmountReceived,
                     Status = item.Status,
-                    Paid = item.Paid,
-                    Refunded = item.Refunded
+                    Paid = item.Status == "succeeded",
+                    Refunded = false
                 });
             }
             return new Response<List<StripeTransactionResponse>>(data);
