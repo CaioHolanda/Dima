@@ -1,0 +1,47 @@
+﻿@page "/premium"
+@inherits ListProductsPage
+
+<MudContainer Class="mt-16">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Premium</MudText>
+    <MudText Align="Align.Center">
+        Tenha acesso ilimitado a aplicacao, incluindo transacoes e categorias ilimitadas
+    </MudText>
+    <MudGrid Class="mt-8">
+
+        @foreach(var product in Products)
+        {
+            
+            <MudItem xs="12" sm="6" md="4" lg="4" xl="4">
+                <MudCard Elevation="25" Class="rounded-5 pb-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h5" Align="Align.Center">
+                                @product.Title
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <div class="d-flex justify-content-center">
+                            <MudText Typo="Typo.h3"
+                                     Style="width:100%; text-align:center;">
+                                @product.Price.ToString("C")
+                            </MudText>
+                        </div>
+                        <MudList T="string" Class="mx-auto mt-4" Style="width: 300px">
+                            <MudListItem Icon="@Icons.Material.Filled.Check">Transacoes Ilimitadas</MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Check">Categorias Ilimitadas</MudListItem>
+                            <MudListItem Icon="@Icons.Material.Filled.Check">Acesso Completo</MudListItem>
+                        </MudList>
+                    </MudCardContent>
+                    <MudCardActions Style="display:flex; justify-content:center; width:100%;">
+                        <MudButton Href="@($"/checkout/{product.Slug}")" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large">
+                            COMECAR AGORA
+                        </MudButton>
+
+
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+</MudContainer>

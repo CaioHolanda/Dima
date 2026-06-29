@@ -12,13 +12,17 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
 {
     public async Task<Response<Transaction?>> CreateAsync(CreateTransactionRequest request)
     {
+        if(request is { Type:Core.Enums.ETransactionType.Withdraw,Amount: >= 0})
+        {
+            request.Amount *= -1;
+        }
         try
         {
             var transaction = new Transaction
             {
                 UserId = request.UserId,
                 CategoryId = request.CategoryId,
-                CreateAt = DateTime.Now,
+                CreatedAt = DateTime.Now,
                 Amount = request.Amount,
                 PaidOrReceivedAt = request.PaidOrReceivedAt,
                 Title = request.Title,
@@ -109,6 +113,10 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
 
     public async Task<Response<Transaction?>> UpdateAsync(UpdateTransactionRequest request)
     {
+        if (request is { Type: Core.Enums.ETransactionType.Withdraw, Amount: >= 0 })
+        {
+            request.Amount *= -1;
+        }
         try
         {
             var transaction=await context
@@ -130,9 +138,9 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             return new Response<Transaction?>(transaction);
 
         }
-        catch
+        catch (Exception ex)
         {
-            return new Response<Transaction?>(null, 500, "[E010] Transaction update not possible. {ex.Message}");
+            return new Response<Transaction?>(null, 500, ex.Message);
         }
     }
 }

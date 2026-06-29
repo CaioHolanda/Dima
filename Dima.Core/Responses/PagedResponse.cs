@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json.Serialization;
-// testando um commit a partir do escritorio
 
 namespace Dima.Core.Responses
 {
@@ -12,6 +11,7 @@ namespace Dima.Core.Responses
         public int PageSize { get; set; } = Configuration.DefaultPageSize;
         public int TotalCount { get; set; }
         public int TotalPages => (int)Math.Ceiling(TotalCount / (double)PageSize);
+
         [JsonConstructor]
         public PagedResponse(
             TData? data,
@@ -24,6 +24,7 @@ namespace Dima.Core.Responses
             CurrentPage = currentPage;
             PageSize = pageSize;
         }
+
         public PagedResponse(
             TData? data,
             int code=Configuration.DefaultStatusCode,

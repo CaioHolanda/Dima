@@ -21,7 +21,7 @@ namespace Dima.Api.Data.Mappings
                 .IsRequired(true)
                 .HasColumnType("MONEY")
                 .HasMaxLength(255);
-            builder.Property(t => t.CreateAt)
+            builder.Property(t => t.CreatedAt)
                 .IsRequired(true);
             builder.Property(t => t.PaidOrReceivedAt)
                 .IsRequired(false);
