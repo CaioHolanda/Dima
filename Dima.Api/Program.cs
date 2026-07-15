@@ -18,6 +18,12 @@ app.UseCors(ApiConfiguration.CorsPolicyName);
 app.UserSecurity();
 app.MapEndpoints();
 
+app.MapGet("/ping", () => Results.Ok(new
+{
+    status = "Dima API is running",
+    environment = app.Environment.EnvironmentName
+}));
+
 app.Run();
 
 
