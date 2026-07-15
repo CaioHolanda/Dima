@@ -11,8 +11,13 @@ builder.AddDocumentation();
 builder.AddServices();
 
 var app = builder.Build();
-if (app.Environment.IsDevelopment())
-    app.ConfigureDevEnviroment();
+
+var enableSwagger =
+    app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>("EnableSwagger");
+
+if (enableSwagger)
+    app.ConfigureDevEnvironment();
 
 app.UseCors(ApiConfiguration.CorsPolicyName);
 app.UserSecurity();

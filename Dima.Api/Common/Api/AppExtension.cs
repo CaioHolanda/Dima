@@ -6,7 +6,7 @@ namespace Dima.Api.Common.Api
 {
     public static class AppExtension
     {
-        public static void ConfigureDevEnviroment(this WebApplication app)
+        public static void ConfigureDevEnvironment(this WebApplication app)
         {
             app.UseSwagger();
             app.UseSwaggerUI();
