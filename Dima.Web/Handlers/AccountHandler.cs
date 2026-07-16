@@ -2,7 +2,6 @@
 using Dima.Core.Requests.Account;
 using Dima.Core.Responses;
 using System.Net.Http.Json;
-using System.Text;
 
 namespace Dima.Web.Handlers
 {
@@ -19,8 +18,10 @@ namespace Dima.Web.Handlers
 
         public async Task LogoutAsync()
         {
-            var emptyContent = new StringContent("{}", Encoding.UTF8, "application/json");
-            await _client.PostAsJsonAsync("v1/identity/logout", emptyContent);
+            using var response =
+                await _client.PostAsync("v1/identity/logout", null);
+
+            response.EnsureSuccessStatusCode();
         }
 
         public async Task<Response<string>> RegisterAsync(RegisterRequest request)
