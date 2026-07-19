@@ -40,6 +40,21 @@
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <!--<script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>-->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations()
+                .then(registrations => {
+                    for (const registration of registrations)
+                        registration.unregister();
+                });
+
+            caches.keys()
+                .then(keys => {
+                    for (const key of keys)
+                        caches.delete(key);
+                });
+        }
+    </script>
     <script src="js/stripe-checkout.js"></script>
 </body>
 
