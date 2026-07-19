@@ -95,7 +95,9 @@ namespace Dima.Web.Components.Orders
                     Snackbar.Add(result.Message, Severity.Error);
                     return;
                 }
-                await JsRuntime.InvokeVoidAsync("checkout", Configuration.StripePublickey, result.Data);
+                await JsRuntime.InvokeVoidAsync(
+                    "checkout",
+                    result.Data);
             }
             catch (JSException ex)
             {
