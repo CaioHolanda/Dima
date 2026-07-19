@@ -10,45 +10,93 @@ namespace Dima.Api.Handlers
 {
     public class StripeHanlder : IStripeHandler
     {
-        public async Task<Response<string?>> CreateSessionAsync(CreateSessionRequest request)
+        public async Task<Response<string?>> CreateSessionAsync(
+            CreateSessionRequest request)
         {
-            var options = new SessionCreateOptions
+            try
             {
-                CustomerEmail = request.UserId,
-                PaymentIntentData = new SessionPaymentIntentDataOptions
+                if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
                 {
-                    Metadata = new Dictionary<string, string>
-                    {
-                        {"order",request.OrderNumber }
-                    }
-                },
-                PaymentMethodTypes = 
-                [
-                    "card"
-                ],
-                LineItems = [
-                    new SessionLineItemOptions{
-                        PriceData = new SessionLineItemPriceDataOptions{
-                            Currency="brl",
-                            ProductData = new SessionLineItemPriceDataProductDataOptions{
-                                Name = request.ProductTitle,
-                                Description = request.ProductDescription
-                            },
-                            UnitAmount=request.OrderTotal,
+                    return new Response<string?>(
+                        null,
+                        500,
+                        "[E089] StripeApiKey não configurada");
+                }
+
+                var options = new SessionCreateOptions
+                {
+                    CustomerEmail = request.UserId,
+
+                    PaymentIntentData =
+                        new SessionPaymentIntentDataOptions
+                        {
+                            Metadata = new Dictionary<string, string>
+                            {
+                                ["order"] = request.OrderNumber
+                            }
                         },
-                        Quantity=1
-                    }
+
+                    PaymentMethodTypes = ["card"],
+
+                    LineItems =
+                    [
+                        new SessionLineItemOptions
+                {
+                    PriceData =
+                        new SessionLineItemPriceDataOptions
+                        {
+                            Currency = "brl",
+                            ProductData =
+                                new SessionLineItemPriceDataProductDataOptions
+                                {
+                                    Name = request.ProductTitle,
+                                    Description =
+                                        request.ProductDescription
+                                },
+                            UnitAmount = request.OrderTotal
+                        },
+
+                    Quantity = 1
+                }
                     ],
-                Mode="payment",
-                SuccessUrl=$"{Configuration.FrontendUrl}/pedidos/{request.OrderNumber}/confirmar",
-                CancelUrl=$"{Configuration.FrontendUrl}/pedidos/{request.OrderNumber}/cancelar"
-            };
-            var service = new SessionService();
-            var session = await service.CreateAsync(options);
 
-            return new Response<string?>(session.Id);
+                    Mode = "payment",
+
+                    SuccessUrl =
+                        $"{Configuration.FrontendUrl}/pedidos/" +
+                        $"{request.OrderNumber}/confirmar",
+
+                    CancelUrl =
+                        $"{Configuration.FrontendUrl}/pedidos/" +
+                        $"{request.OrderNumber}/cancelar"
+                };
+
+                var service = new SessionService();
+                var session = await service.CreateAsync(options);
+
+                return new Response<string?>(session.Url);
+            }
+            catch (StripeException ex)
+            {
+                Console.WriteLine(
+                    $"[STRIPE CREATE SESSION] {ex.Message}");
+
+                return new Response<string?>(
+                    null,
+                    502,
+                    $"[E090] Falha no Stripe: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[STRIPE CREATE SESSION] {ex}");
+
+                return new Response<string?>(
+                    null,
+                    500,
+                    "[E091] Falha interna ao criar sessão de pagamento");
+            }
         }
-
         public async Task<Response<List<StripeTransactionResponse>>> GetTransactionsByOrderNumberAsync(GetTransactionsByOrderNumberRequest request)
         {
             var options = new PaymentIntentSearchOptions

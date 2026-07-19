@@ -3,17 +3,43 @@ using Dima.Core.Requests.Stripe;
 using Dima.Core.Responses;
 using Dima.Core.Responses.Stripe;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Dima.Web.Handlers
 {
     public class StripeHandler(IHttpClientFactory httpClientFactory) : IStripeHandler
     {
         private readonly HttpClient _client = httpClientFactory.CreateClient(Configuration.HttpClientName);
-        public async Task<Response<string?>> CreateSessionAsync(CreateSessionRequest request)
+
+        public async Task<Response<string?>> CreateSessionAsync(
+            CreateSessionRequest request)
         {
-            var result = await _client.PostAsJsonAsync("v1/payments/stripe/session", request);
-            return await result.Content.ReadFromJsonAsync<Response<string?>>()
-                ?? new Response<string?>(null, 400, "[E080] Falha a criar sessao no Stripe");
+            using var response =
+                await _client.PostAsJsonAsync(
+                    "v1/payments/stripe/session",
+                    request);
+
+            var content =
+                await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new Response<string?>(
+                    null,
+                    (int)response.StatusCode,
+                    $"Falha ao criar sessão Stripe: {content}");
+            }
+
+            return JsonSerializer.Deserialize<Response<string?>>(
+                       content,
+                       new JsonSerializerOptions
+                       {
+                           PropertyNameCaseInsensitive = true
+                       })
+                   ?? new Response<string?>(
+                       null,
+                       400,
+                       "[E080] Resposta inválida da API");
         }
 
         public async Task<Response<List<StripeTransactionResponse>>> GetTransactionsByOrderNumberAsync(GetTransactionsByOrderNumberRequest request)
