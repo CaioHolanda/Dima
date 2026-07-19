@@ -6,6 +6,8 @@ using Dima.Core.Handlers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 
 namespace Dima.Api.Common.Api
 {
@@ -30,10 +32,29 @@ namespace Dima.Api.Common.Api
         }
         public static void AddSecurity(this WebApplicationBuilder builder)
         {
-            builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
-                            .AddIdentityCookies();
-            builder.Services.AddAuthorization();
+            builder.Services
+                .AddAuthentication(IdentityConstants.ApplicationScheme)
+                .AddIdentityCookies();
 
+            builder.Services.Configure<CookieAuthenticationOptions>(
+                IdentityConstants.ApplicationScheme,
+                options =>
+                {
+                    options.Cookie.HttpOnly = true;
+
+                    if (builder.Environment.IsDevelopment())
+                    {
+                        options.Cookie.SameSite = SameSiteMode.Lax;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                    }
+                    else
+                    {
+                        options.Cookie.SameSite = SameSiteMode.None;
+                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    }
+                });
+
+            builder.Services.AddAuthorization();
         }
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
