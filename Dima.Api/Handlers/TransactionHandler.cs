@@ -93,6 +93,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             var query = context
                 .Transactions
                 .AsNoTracking()
+                .Include(x=>x.Category)
                 .Where(x =>
                         x.PaidOrReceivedAt >= request.StartDate &&
                         x.PaidOrReceivedAt <= request.EndDate &&
@@ -103,7 +104,11 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
                 .Take(request.PageSize)
                 .ToListAsync();
             var count=await query.CountAsync();
-            return new PagedResponse<List<Transaction>?>(transactions, count, request.PageNumber, request.PageSize);
+            return new PagedResponse<List<Transaction>?>
+                (transactions, 
+                 count, 
+                 request.PageNumber, 
+                 request.PageSize);
         }
         catch
         {

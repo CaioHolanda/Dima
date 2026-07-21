@@ -49,8 +49,8 @@
         </MudTextField>
     </ToolBarContent>
     <Columns>
-        <PropertyColumn Property="x => x.Title" Title="Lancamento"></PropertyColumn>
-        <TemplateColumn Title="Tipo" Filterable="true">
+        <PropertyColumn Property="x => x.Title" Title="Titulo" CellStyle="width:230px" />
+        <TemplateColumn Title="Tipo" Filterable="true" CellStyle="width:90px">
             <CellTemplate>
                 @if(context.Item.Type == ETransactionType.Deposit)
                 {
@@ -66,15 +66,20 @@
                 }
             </CellTemplate>
         </TemplateColumn>
-        <PropertyColumn     Property="x=>x.Amount" 
+        <PropertyColumn Property="x => x.Category.Title" Title="Categoria" CellStyle="width:200px"/>  
+        <PropertyColumn Property="x => x.PaidOrReceivedAt" Title="Efetiva em" Format="dd/MM/yyyy" CellStyle="width:200px" />
+        <PropertyColumn Property="x => x.Amount"
                             Format="C" 
                             Title="Valor" 
-                            Sortable="true">
+                            Sortable="true"
+                            Filterable="false"
+                        >
             <FooterTemplate>
                 @context.Items.Sum(x=>x.Amount).ToString("C")
             </FooterTemplate>
         </PropertyColumn>
-        <TemplateColumn Title="" Sortable="false" Filterable="false">
+
+        <TemplateColumn Title="" Sortable="false" Filterable="false" CellStyle="width:70px">
             <CellTemplate>
                 <MudStack Row="true" Justify="Justify.FlexEnd" Spacing="1">
                     <MudIconButton 

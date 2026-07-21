@@ -116,6 +116,12 @@ namespace Dima.Web.Pages.Transactions
                 return true;
             if (transaction.Title.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))
                 return true;
+            if (transaction.Category?.Title.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) is true)
+                return true;
+            if (transaction.PaidOrReceivedAt?
+                .ToString("dd/MM/yyyy")
+                .Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) is true)
+                return true;
             return false;
         };
 
