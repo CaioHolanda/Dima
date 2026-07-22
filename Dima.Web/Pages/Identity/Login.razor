@@ -25,9 +25,20 @@
                 <MudTextField T="string"
                               Label="Password"
                               HelperText="Senha Obrigatoria"
-                              InputType="InputType.Password"
-                              For="@(()=>InputModel.Password)"
-                              @bind-Value="InputModel.Password" />
+                              InputType="@PasswordInputType"
+                              For="@(() => InputModel.Password)"
+                              @bind-Value="InputModel.Password"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@PasswordVisibilityIcon"
+                              AdornmentAriaLabel="@PasswordVisibilityAriaLabel"
+                              OnAdornmentClick="TogglePasswordVisibility" />
+                <div class="d-flex justify-end mt-1">
+                    <MudLink Href="/esqueci-minha-senha"
+                             Typo="Typo.body2"
+                             Underline="Underline.Hover">
+                        Esqueci minha senha
+                    </MudLink>
+                </div>
                 <div class="d-flex mt-8">
                     @if (IsBusy)
                     {

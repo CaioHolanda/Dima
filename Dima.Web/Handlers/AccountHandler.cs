@@ -31,5 +31,41 @@ namespace Dima.Web.Handlers
                 ? new Response<string>("Cadastro realizado com sucesso!", 201, "Cadastro realizado com sucesso!")
                 : new Response<string>(null, 400, "[E017] Register not possible.");
         }
+        public async Task<Response<string>> ForgotPasswordAsync(
+                                            ForgotPasswordRequest request)
+        {
+            var result = await _client.PostAsJsonAsync(
+                "v1/identity/forgotPassword",
+                request);
+
+            return result.IsSuccessStatusCode
+                ? new Response<string>(
+                    "Se o e-mail estiver cadastrado, enviaremos as instruções.")
+                : new Response<string>(
+                    null,
+                    400,
+                    "Não foi possível processar a solicitação.");
+        }
+        public async Task<Response<string>> ResetPasswordAsync(
+                                            ResetPasswordRequest request)
+        {
+            var payload = new
+            {
+                request.Email,
+                request.ResetCode,
+                request.NewPassword
+            };
+
+            var result = await _client.PostAsJsonAsync(
+                "v1/identity/resetPassword",
+                payload);
+
+            return result.IsSuccessStatusCode
+                ? new Response<string>("Senha redefinida com sucesso.")
+                : new Response<string>(
+                    null,
+                    400,
+                    "Código inválido, expirado ou senha não aceita.");
+        }
     }
 }
