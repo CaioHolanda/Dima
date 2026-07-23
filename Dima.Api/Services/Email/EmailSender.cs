@@ -49,7 +49,7 @@ public class EmailSender : IEmailSender<User>
         var recipientName = user.Email ?? email;
 
         var resetUrl =
-            $"{_options.FrontendBaseUrl}" +
+            $"{_options.FrontendBaseUrl.TrimEnd('/')}/reset-password" +
             $"?email={Uri.EscapeDataString(email)}" +
             $"&code={Uri.EscapeDataString(resetCode)}";
 

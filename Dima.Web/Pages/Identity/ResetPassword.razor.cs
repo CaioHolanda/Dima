@@ -1,6 +1,6 @@
 ﻿namespace Dima.Web.Pages.Identity
 {
-    public class ResetPassword
+    public partial class ResetPassword
     {
     }
 }

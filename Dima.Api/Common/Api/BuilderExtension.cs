@@ -69,7 +69,17 @@ namespace Dima.Api.Common.Api
             builder.Services.AddDbContext<AppDbContext>
                     (x => { x.UseSqlServer(Configuration.ConnectionString); });
             builder.Services
-                    .AddIdentityCore<User>()
+                    .AddIdentityCore<User>(options =>
+                    {
+                        options.SignIn.RequireConfirmedEmail = true;
+                        options.User.RequireUniqueEmail = true;
+
+                        options.Password.RequiredLength = 8;
+                        options.Password.RequireDigit = true;
+                        options.Password.RequireLowercase = true;
+                        options.Password.RequireUppercase = true;
+                        options.Password.RequireNonAlphanumeric = false;
+                    })
                     .AddRoles<IdentityRole<long>>()
                     .AddEntityFrameworkStores<AppDbContext>()
                     .AddApiEndpoints();
