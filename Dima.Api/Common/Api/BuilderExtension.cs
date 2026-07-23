@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using Dima.Api.Services.Email;
 
 namespace Dima.Api.Common.Api
 {
@@ -56,6 +57,13 @@ namespace Dima.Api.Common.Api
 
             builder.Services.AddAuthorization();
         }
+        public static void AddEmailServices(this WebApplicationBuilder builder)
+        {
+            builder.Services.Configure<EmailOptions>(
+                builder.Configuration.GetSection(EmailOptions.SectionName));
+
+            builder.Services.AddTransient<IEmailSender<User>, EmailSender>();
+        }
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<AppDbContext>
@@ -75,7 +83,6 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
             builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
-
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

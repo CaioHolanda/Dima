@@ -9,6 +9,7 @@ builder.AddDataContexts();
 builder.AddCrossOrigin();
 builder.AddDocumentation();
 builder.AddServices();
+builder.AddEmailServices();
 
 var app = builder.Build();
 
