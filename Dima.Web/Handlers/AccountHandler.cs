@@ -85,7 +85,7 @@ namespace Dima.Web.Handlers
                 "[E094] Não foi possível processar a solicitação.");
         }
         public async Task<Response<string>> ResetPasswordAsync(
-                                            ResetPasswordRequest request)
+            ResetPasswordRequest request)
         {
             var payload = new
             {
@@ -98,12 +98,18 @@ namespace Dima.Web.Handlers
                 "v1/identity/resetPassword",
                 payload);
 
-            return result.IsSuccessStatusCode
-                ? new Response<string>("Senha redefinida com sucesso.")
-                : new Response<string>(
-                    null,
-                    400,
-                    "[E091] Código inválido, expirado ou senha não aceita.");
+            if (result.IsSuccessStatusCode)
+            {
+                return new Response<string>(
+                    "Senha redefinida com sucesso.",
+                    200,
+                    "Senha redefinida com sucesso.");
+            }
+
+            return new Response<string>(
+                null,
+                (int)result.StatusCode,
+                "[E095] O link é inválido, expirou ou a senha não atende aos requisitos.");
         }
     }
 }
