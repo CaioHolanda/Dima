@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using Dima.Api.Services.Email;
 
 namespace Dima.Api.Common.Api
 {
@@ -56,12 +57,29 @@ namespace Dima.Api.Common.Api
 
             builder.Services.AddAuthorization();
         }
+        public static void AddEmailServices(this WebApplicationBuilder builder)
+        {
+            builder.Services.Configure<EmailOptions>(
+                builder.Configuration.GetSection(EmailOptions.SectionName));
+
+            builder.Services.AddTransient<IEmailSender<User>, EmailSender>();
+        }
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<AppDbContext>
                     (x => { x.UseSqlServer(Configuration.ConnectionString); });
             builder.Services
-                    .AddIdentityCore<User>()
+                    .AddIdentityCore<User>(options =>
+                    {
+                        options.SignIn.RequireConfirmedEmail = true;
+                        options.User.RequireUniqueEmail = true;
+
+                        options.Password.RequiredLength = 8;
+                        options.Password.RequireDigit = true;
+                        options.Password.RequireLowercase = true;
+                        options.Password.RequireUppercase = true;
+                        options.Password.RequireNonAlphanumeric = false;
+                    })
                     .AddRoles<IdentityRole<long>>()
                     .AddEntityFrameworkStores<AppDbContext>()
                     .AddApiEndpoints();
@@ -75,7 +93,6 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
             builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
-
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

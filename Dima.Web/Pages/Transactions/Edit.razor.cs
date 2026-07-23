@@ -88,7 +88,6 @@ namespace Dima.Web.Pages.Transactions
                 if (result.IsSuccess)
                 {
                     Categories = result.Data ?? [];
-                    InputModel.CategoryId = Categories.FirstOrDefault()?.Id ?? 0;
                 }
             }
             catch (Exception ex)
