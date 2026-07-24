@@ -43,8 +43,11 @@ namespace Dima.Web.Pages.Identity
                 var result = await Handler.RegisterAsync(InputModel);
                 if (result.IsSuccess)
                 {
-                    Snackbar.Add(result.Message, Severity.Success);
-                    NavigationManager.NavigateTo("/login");
+                    Snackbar.Add(
+                        "Cadastro realizado com sucesso! Verifique seu e-mail para ativar sua conta.",
+                        Severity.Success);
+
+                    NavigationManager.NavigateTo("/registration-completed");
                 }
                 else
                 {

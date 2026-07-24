@@ -27,11 +27,17 @@ public class EmailSender : IEmailSender<User>
     {
         const string subject = "Confirme o e-mail cadastrado";
 
+        var originalUri = new Uri(confirmationLink);
+        var query = originalUri.Query;
+
+        var frontendConfirmationUrl =
+            $"{_options.FrontendBaseUrl.TrimEnd('/')}/confirm-email{query}";
+
         var recipientName = user.Email ?? email;
 
         var body = EmailTemplates.Confirmation(
             recipientName,
-            confirmationLink);
+            frontendConfirmationUrl);
 
         return SendEmailAsync(
             email,

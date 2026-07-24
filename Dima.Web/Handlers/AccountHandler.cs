@@ -111,5 +111,28 @@ namespace Dima.Web.Handlers
                 (int)result.StatusCode,
                 "[E095] O link é inválido, expirou ou a senha não atende aos requisitos.");
         }
+
+        public async Task<Response<string>> ConfirmEmailAsync(string userId, string code)
+        {
+            var url =
+                    $"v1/identity/confirmEmail" +
+                    $"?userId={Uri.EscapeDataString(userId)}" +
+                    $"&code={Uri.EscapeDataString(code)}";
+
+            using var result = await _client.GetAsync(url);
+
+            if (result.IsSuccessStatusCode)
+            {
+                return new Response<string>(
+                    "E-mail confirmado com sucesso.",
+                    200,
+                    "E-mail confirmado com sucesso.");
+            }
+
+            return new Response<string>(
+                null,
+                (int)result.StatusCode,
+                "[E096] O link de confirmação é inválido ou expirou.");
+        }
     }
 }
