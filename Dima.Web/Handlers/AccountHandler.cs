@@ -61,8 +61,14 @@ namespace Dima.Web.Handlers
         {
             var result = await _client.PostAsJsonAsync("v1/identity/register", request);
             return result.IsSuccessStatusCode
-                ? new Response<string>("Cadastro realizado com sucesso!", 201, "Cadastro realizado com sucesso!")
-                : new Response<string>(null, 400, "[E017] Register not possible.");
+                ? new Response<string>(
+                    "Cadastro realizado. Verifique seu e-mail para ativar a conta.",
+                    201,
+                    "Cadastro realizado. Verifique seu e-mail para ativar a conta.")
+                : new Response<string>(
+                    null,
+                    (int)result.StatusCode,
+                    "[E017] Não foi possível realizar o cadastro.");
         }
         public async Task<Response<string>> ForgotPasswordAsync(
                                             ForgotPasswordRequest request)
@@ -133,6 +139,30 @@ namespace Dima.Web.Handlers
                 null,
                 (int)result.StatusCode,
                 "[E096] O link de confirmação é inválido ou expirou.");
+        }
+        public async Task<Response<string>> ResendConfirmationEmailAsync(string email)
+        {
+            var payload = new
+            {
+                Email = email
+            };
+
+            using var result = await _client.PostAsJsonAsync(
+                "v1/identity/resendConfirmationEmail",
+                payload);
+
+            if (result.IsSuccessStatusCode)
+            {
+                return new Response<string>(
+                    "Um novo e-mail de confirmação foi enviado.",
+                    200,
+                    "Um novo e-mail de confirmação foi enviado.");
+            }
+
+            return new Response<string>(
+                null,
+                (int)result.StatusCode,
+                "[E101] Não foi possível reenviar o e-mail de confirmação.");
         }
     }
 }

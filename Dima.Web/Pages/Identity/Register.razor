@@ -1,50 +1,79 @@
 ﻿@page "/comecar"
 @layout HeadlessLayout
 
-<PageTitle>Dima-Entrar</PageTitle>
+<PageTitle>Dima - Cadastro</PageTitle>
 
 <MudGrid Justify="Justify.Center">
-    <MudItem xs="12" sm="12" md="8" lg="6" xl="6" xxl="6">
+    <MudItem xs="12"
+             sm="12"
+             md="8"
+             lg="6"
+             xl="6"
+             xxl="6">
+
         <MudPaper Class="mud-width-full pa-8">
+
             <div class="d-flex justify-center pb-8 pt-8">
                 <img src="imgs/dima.png"
-                     alt="Dima-Controle Financeiro"
+                     alt="Dima - Controle Financeiro"
                      width="200" />
             </div>
-            <EditForm Model="@InputModel" OnValidSubmit="OnValidSubmitAsync">
-                <DataAnnotationsValidator/>
-                <MudTextField
-                    T="string"
-                    Label="E-mail"
-                    HelperText="Email required"
-                    InputType="InputType.Email"
-                    For="@(()=>InputModel.Email)"
-                    @bind-Value="InputModel.Email"
-                />
-                <MudTextField 
-                    T="string"
-                    Label="Password"
-                    HelperText="Password required"
-                    InputType="InputType.Password"
-                    For="@(()=>InputModel.Password)"
-                    @bind-Value="InputModel.Password"
-                />
+
+            <EditForm Model="@InputModel"
+                      OnValidSubmit="OnValidSubmitAsync">
+
+                <DataAnnotationsValidator />
+
+                <MudTextField T="string"
+                              Label="E-mail"
+                              HelperText="Informe um endereço de e-mail válido"
+                              InputType="InputType.Email"
+                              For="@(() => InputModel.Email)"
+                              @bind-Value="InputModel.Email" />
+
+                <MudTextField T="string"
+                              Label="Senha"
+                              HelperText="A senha deve possuir pelo menos 8 caracteres"
+                              InputType="InputType.Password"
+                              For="@(() => InputModel.Password)"
+                              @bind-Value="InputModel.Password" />
+
+                <MudAlert Severity="Severity.Info"
+                          Variant="Variant.Outlined"
+                          Class="mt-5">
+
+                    Após concluir o cadastro, enviaremos um e-mail para
+                    confirmar e ativar sua conta.
+
+                </MudAlert>
+
                 <div class="d-flex mt-8">
+
                     @if (IsBusy)
                     {
-                        <MudProgressCircular Color="Color.Info" Indeterminate="true"/>
+                        <MudProgressCircular Color="Color.Info"
+                                             Indeterminate="true" />
                     }
                     else
                     {
                         <MudButton ButtonType="ButtonType.Submit"
                                    Variant="Variant.Filled"
-                                   Color="Color.Primary">START</MudButton>
-                        <MudSpacer/>
-                        <MudButton Href="/login">I have an account</MudButton>
+                                   Color="Color.Primary">
+                            Cadastrar
+                        </MudButton>
+
+                        <MudSpacer />
+
+                        <MudButton Href="/login">
+                            Já tenho uma conta
+                        </MudButton>
                     }
+
                 </div>
+
             </EditForm>
+
         </MudPaper>
+
     </MudItem>
 </MudGrid>
-

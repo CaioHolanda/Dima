@@ -38,26 +38,35 @@ namespace Dima.Web.Pages.Identity
         public async Task OnValidSubmitAsync()
         {
             IsBusy = true;
+
             try
             {
                 var result = await Handler.RegisterAsync(InputModel);
-                if (result.IsSuccess)
+
+                if (!result.IsSuccess)
                 {
                     Snackbar.Add(
-                        "Cadastro realizado com sucesso! Verifique seu e-mail para ativar sua conta.",
-                        Severity.Success);
+                        result.Message,
+                        Severity.Error);
 
-                    NavigationManager.NavigateTo("/registration-completed");
+                    return;
                 }
-                else
-                {
-                    Snackbar.Add(result.Message, Severity.Error);
 
-                }
+                Snackbar.Add(
+                    "Cadastro realizado com sucesso.",
+                    Severity.Success);
+
+                var email = Uri.EscapeDataString(
+                    InputModel.Email);
+
+                NavigationManager.NavigateTo(
+                    $"/registration-completed?email={email}");
             }
             catch (Exception ex)
             {
-                Snackbar.Add(ex.Message, Severity.Error);
+                Snackbar.Add(
+                    ex.Message,
+                    Severity.Error);
             }
             finally
             {

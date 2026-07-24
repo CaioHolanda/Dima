@@ -1,5 +1,110 @@
-﻿<h3>RegistrationCompleted</h3>
+﻿@page "/registration-completed"
+@layout HeadlessLayout
 
-@code {
+<PageTitle>Cadastro realizado</PageTitle>
 
-}
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12"
+             sm="10"
+             md="8"
+             lg="6"
+             xl="5">
+
+        <MudPaper Class="mud-width-full pa-8">
+
+            <div class="d-flex justify-center pb-6 pt-4">
+                <img src="imgs/dima.png"
+                     alt="Dima - Controle Financeiro"
+                     width="200" />
+            </div>
+
+            <MudStack AlignItems="AlignItems.Center"
+                      Spacing="3">
+
+                <MudIcon Icon="@Icons.Material.Filled.MarkEmailUnread"
+                         Color="Color.Primary"
+                         Size="Size.Large" />
+
+                <MudText Typo="Typo.h5"
+                         Align="Align.Center">
+                    Confirme seu e-mail
+                </MudText>
+
+                <MudText Typo="Typo.body1"
+                         Align="Align.Center">
+                    Seu cadastro foi realizado com sucesso.
+                </MudText>
+
+                @if (!string.IsNullOrWhiteSpace(Email))
+                {
+                    <MudText Typo="Typo.body1"
+                             Align="Align.Center">
+                        Enviamos uma mensagem para:
+                    </MudText>
+
+                    <MudText Typo="Typo.subtitle1"
+                             Align="Align.Center">
+                        <strong>@Email</strong>
+                    </MudText>
+                }
+
+                <MudText Typo="Typo.body2"
+                         Align="Align.Center">
+                    Clique no link recebido para ativar sua conta.
+                </MudText>
+
+                <MudAlert Severity="Severity.Info"
+                          Variant="Variant.Outlined"
+                          Class="mud-width-full mt-2">
+
+                    Caso não encontre a mensagem, verifique também as pastas
+                    Spam, Promoções ou Lixo Eletrônico.
+
+                </MudAlert>
+
+                @if (!string.IsNullOrWhiteSpace(StatusMessage))
+                {
+                    <MudAlert Severity="@StatusSeverity"
+                              Variant="Variant.Outlined"
+                              Class="mud-width-full">
+                        @StatusMessage
+                    </MudAlert>
+                }
+
+                <MudStack Row="true"
+                          Justify="Justify.Center"
+                          Spacing="2"
+                          Class="mt-4">
+
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               OnClick="NavigateToLogin">
+                        Ir para o login
+                    </MudButton>
+
+                    @if (!string.IsNullOrWhiteSpace(Email))
+                    {
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Disabled="@IsBusy"
+                                   OnClick="ResendConfirmationEmailAsync">
+
+                            @if (IsBusy)
+                            {
+                                <MudProgressCircular Size="Size.Small"
+                                                     Indeterminate="true"
+                                                     Class="mr-2" />
+                            }
+
+                            Reenviar e-mail
+                        </MudButton>
+                    }
+
+                </MudStack>
+
+            </MudStack>
+
+        </MudPaper>
+
+    </MudItem>
+</MudGrid>
