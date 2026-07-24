@@ -1,14 +1,15 @@
 ﻿using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
+using Dima.Api.Services.Email;
 using Dima.Core;
 using Dima.Core.Handlers;
+using Dima.Core.Security;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Identity;
-using Dima.Api.Services.Email;
 
 namespace Dima.Api.Common.Api
 {
@@ -55,7 +56,12 @@ namespace Dima.Api.Common.Api
                     }
                 });
 
-            builder.Services.AddAuthorization();
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy(
+                    AppPolicies.AdminOnly,
+                    policy => policy.RequireRole(AppRoles.Admin));
+            });
         }
         public static void AddEmailServices(this WebApplicationBuilder builder)
         {

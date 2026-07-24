@@ -1,5 +1,6 @@
 using Dima.Api;
 using Dima.Api.Common.Api;
+using Dima.Api.Data.Seed;
 using Dima.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,7 @@ app.ConfigureDevEnvironment();
 
 app.UseCors(ApiConfiguration.CorsPolicyName);
 app.UserSecurity();
+await app.SeedRolesAsync();
 app.MapEndpoints();
 
 app.MapGet("/ping", () => Results.Ok(new

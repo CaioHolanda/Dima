@@ -59,7 +59,7 @@ namespace Dima.Web.Handlers
 
         public async Task<Response<string>> RegisterAsync(RegisterRequest request)
         {
-            var result = await _client.PostAsJsonAsync("v1/identity/register", request);
+            var result = await _client.PostAsJsonAsync("v1/identity/register-user", request);
             return result.IsSuccessStatusCode
                 ? new Response<string>(
                     "Cadastro realizado. Verifique seu e-mail para ativar a conta.",
