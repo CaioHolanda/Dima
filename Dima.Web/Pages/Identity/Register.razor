@@ -34,9 +34,14 @@
                 <MudTextField T="string"
                               Label="Senha"
                               HelperText="A senha deve possuir pelo menos 8 caracteres"
-                              InputType="InputType.Password"
+                              InputType="@PasswordInputType"
                               For="@(() => InputModel.Password)"
-                              @bind-Value="InputModel.Password" />
+                              @bind-Value="InputModel.Password"
+                              Disabled="@IsBusy"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@PasswordVisibilityIcon"
+                              AdornmentAriaLabel="@PasswordVisibilityAriaLabel"
+                              OnAdornmentClick="TogglePasswordVisibility" />
 
                 <MudAlert Severity="Severity.Info"
                           Variant="Variant.Outlined"

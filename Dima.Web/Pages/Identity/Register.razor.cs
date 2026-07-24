@@ -22,6 +22,22 @@ namespace Dima.Web.Pages.Identity
         #region Properties
         public bool IsBusy {  get; set; }=false;
         public RegisterRequest InputModel { get; set; } = new();
+        public bool IsPasswordVisible { get; set; }
+
+        public InputType PasswordInputType =>
+            IsPasswordVisible
+                ? InputType.Text
+                : InputType.Password;
+
+        public string PasswordVisibilityIcon =>
+            IsPasswordVisible
+                ? Icons.Material.Filled.VisibilityOff
+                : Icons.Material.Filled.Visibility;
+
+        public string PasswordVisibilityAriaLabel =>
+            IsPasswordVisible
+                ? "Ocultar senha"
+                : "Exibir senha";
         #endregion
 
         #region Overrides
@@ -35,6 +51,10 @@ namespace Dima.Web.Pages.Identity
         #endregion
 
         #region Methods
+        public void TogglePasswordVisibility()
+        {
+            IsPasswordVisible = !IsPasswordVisible;
+        }
         public async Task OnValidSubmitAsync()
         {
             IsBusy = true;
