@@ -27,11 +27,17 @@ public class EmailSender : IEmailSender<User>
     {
         const string subject = "Confirme o e-mail cadastrado";
 
+        var originalUri = new Uri(confirmationLink);
+        var query = originalUri.Query;
+
+        var frontendConfirmationUrl =
+            $"{_options.FrontendBaseUrl.TrimEnd('/')}/confirm-email{query}";
+
         var recipientName = user.Email ?? email;
 
         var body = EmailTemplates.Confirmation(
             recipientName,
-            confirmationLink);
+            frontendConfirmationUrl);
 
         return SendEmailAsync(
             email,
@@ -144,36 +150,50 @@ public class EmailSender : IEmailSender<User>
         if (string.IsNullOrWhiteSpace(_options.Host))
         {
             throw new InvalidOperationException(
-                "A configuração Email:Host não foi informada.");
+                "[E102] A configuração Email:Host não foi informada.");
         }
 
         if (_options.Port <= 0)
         {
             throw new InvalidOperationException(
-                "A configuração Email:Port é inválida.");
+                "[E103] A configuração Email:Port é inválida.");
         }
 
         if (string.IsNullOrWhiteSpace(_options.UserName))
         {
             throw new InvalidOperationException(
-                "A configuração Email:UserName não foi informada.");
+                "[E104] A configuração Email:UserName não foi informada.");
         }
 
         if (string.IsNullOrWhiteSpace(_options.Password))
         {
             throw new InvalidOperationException(
-                "A configuração Email:Password não foi informada.");
+                "[E105] A configuração Email:Password não foi informada.");
         }
 
         if (string.IsNullOrWhiteSpace(_options.FromAddress))
         {
             throw new InvalidOperationException(
-                "A configuração Email:FromAddress não foi informada.");
+                "[E106] A configuração Email:FromAddress não foi informada.");
         }
         if (string.IsNullOrWhiteSpace(_options.FrontendBaseUrl))
         {
             throw new InvalidOperationException(
-                "A configuração Email:FrontendBaseUrl não foi informada.");
+                "[E107] A configuração Email:FrontendBaseUrl não foi informada.");
+        }
+        if (!Uri.TryCreate(
+        _options.FrontendBaseUrl,
+        UriKind.Absolute,
+        out var frontendUri))
+        {
+            throw new InvalidOperationException(
+                "[E108] A configuração Email:FrontendBaseUrl não contém uma URL válida.");
+        }
+
+        if (frontendUri.AbsolutePath != "/")
+        {
+            throw new InvalidOperationException(
+                "[E109] A configuração Email:FrontendBaseUrl deve conter somente a raiz do frontend, sem caminhos adicionais.");
         }
     }
 }

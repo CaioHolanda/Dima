@@ -22,6 +22,22 @@ namespace Dima.Web.Pages.Identity
         #region Properties
         public bool IsBusy {  get; set; }=false;
         public RegisterRequest InputModel { get; set; } = new();
+        public bool IsPasswordVisible { get; set; }
+
+        public InputType PasswordInputType =>
+            IsPasswordVisible
+                ? InputType.Text
+                : InputType.Password;
+
+        public string PasswordVisibilityIcon =>
+            IsPasswordVisible
+                ? Icons.Material.Filled.VisibilityOff
+                : Icons.Material.Filled.Visibility;
+
+        public string PasswordVisibilityAriaLabel =>
+            IsPasswordVisible
+                ? "Ocultar senha"
+                : "Exibir senha";
         #endregion
 
         #region Overrides
@@ -35,26 +51,42 @@ namespace Dima.Web.Pages.Identity
         #endregion
 
         #region Methods
+        public void TogglePasswordVisibility()
+        {
+            IsPasswordVisible = !IsPasswordVisible;
+        }
         public async Task OnValidSubmitAsync()
         {
             IsBusy = true;
+
             try
             {
                 var result = await Handler.RegisterAsync(InputModel);
-                if (result.IsSuccess)
-                {
-                    Snackbar.Add(result.Message, Severity.Success);
-                    NavigationManager.NavigateTo("/login");
-                }
-                else
-                {
-                    Snackbar.Add(result.Message, Severity.Error);
 
+                if (!result.IsSuccess)
+                {
+                    Snackbar.Add(
+                        result.Message,
+                        Severity.Error);
+
+                    return;
                 }
+
+                Snackbar.Add(
+                    "Cadastro realizado com sucesso.",
+                    Severity.Success);
+
+                var email = Uri.EscapeDataString(
+                    InputModel.Email);
+
+                NavigationManager.NavigateTo(
+                    $"/registration-completed?email={email}");
             }
             catch (Exception ex)
             {
-                Snackbar.Add(ex.Message, Severity.Error);
+                Snackbar.Add(
+                    ex.Message,
+                    Severity.Error);
             }
             finally
             {

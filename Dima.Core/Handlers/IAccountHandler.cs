@@ -13,5 +13,7 @@ namespace Dima.Core.Handlers
         Task LogoutAsync();
         Task<Response<string>> ForgotPasswordAsync(ForgotPasswordRequest request);
         Task<Response<string>> ResetPasswordAsync(ResetPasswordRequest request);
+        Task<Response<string>> ConfirmEmailAsync(string userId,string code);
+        Task<Response<string>> ResendConfirmationEmailAsync(string email);
     }
 }
