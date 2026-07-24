@@ -25,7 +25,6 @@ public class RegisterEndpoint : IEndpoint
         RegisterRequest request,
         UserManager<User> userManager,
         IEmailSender<User> emailSender,
-        LinkGenerator linkGenerator,
         HttpContext httpContext)
     {
         var user = new User
@@ -40,14 +39,7 @@ public class RegisterEndpoint : IEndpoint
 
         if (!createResult.Succeeded)
         {
-            return Results.ValidationProblem(
-                createResult.Errors
-                    .GroupBy(error => error.Code)
-                    .ToDictionary(
-                        group => group.Key,
-                        group => group
-                            .Select(error => error.Description)
-                            .ToArray()));
+            return CreateValidationProblem(createResult);
         }
 
         var roleResult = await userManager.AddToRoleAsync(
@@ -58,14 +50,7 @@ public class RegisterEndpoint : IEndpoint
         {
             await userManager.DeleteAsync(user);
 
-            return Results.ValidationProblem(
-                roleResult.Errors
-                    .GroupBy(error => error.Code)
-                    .ToDictionary(
-                        group => group.Key,
-                        group => group
-                            .Select(error => error.Description)
-                            .ToArray()));
+            return CreateValidationProblem(roleResult);
         }
 
         var confirmationToken =
@@ -74,20 +59,16 @@ public class RegisterEndpoint : IEndpoint
         var encodedToken = WebEncoders.Base64UrlEncode(
             Encoding.UTF8.GetBytes(confirmationToken));
 
-        var confirmationLink = linkGenerator.GetUriByName(
-            httpContext,
-            "Identity: ConfirmEmail",
-            new
+        var confirmationLink = QueryHelpers.AddQueryString(
+            $"{httpContext.Request.Scheme}://" +
+            $"{httpContext.Request.Host}" +
+            $"{httpContext.Request.PathBase}" +
+            "/v1/identity/confirmEmail",
+            new Dictionary<string, string?>
             {
-                userId = user.Id,
-                code = encodedToken
+                ["userId"] = user.Id.ToString(),
+                ["code"] = encodedToken
             });
-
-        if (string.IsNullOrWhiteSpace(confirmationLink))
-        {
-            throw new InvalidOperationException(
-                "[E110] Não foi possível gerar o link de confirmação de e-mail.");
-        }
 
         await emailSender.SendConfirmationLinkAsync(
             user,
@@ -95,5 +76,19 @@ public class RegisterEndpoint : IEndpoint
             confirmationLink);
 
         return Results.Ok();
+    }
+
+    private static IResult CreateValidationProblem(
+        IdentityResult result)
+    {
+        var errors = result.Errors
+            .GroupBy(error => error.Code)
+            .ToDictionary(
+                group => group.Key,
+                group => group
+                    .Select(error => error.Description)
+                    .ToArray());
+
+        return Results.ValidationProblem(errors);
     }
 }
