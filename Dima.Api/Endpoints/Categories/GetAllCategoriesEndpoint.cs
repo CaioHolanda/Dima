@@ -6,6 +6,8 @@ using Dima.Core.Requests.Categories;
 using Dima.Core.Responses;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using CoreConfiguration = Dima.Core.Configuration;
+
 
 namespace Dima.Api.Endpoints.Categories
 {
@@ -22,8 +24,8 @@ namespace Dima.Api.Endpoints.Categories
         private static async Task<IResult> HandleAsync(
             ClaimsPrincipal user,
             ICategoryHandler handler,
-            [FromQuery] int pageNumber = Configuration.DefaultPageNumber,
-            [FromQuery] int pageSize = Configuration.DefaultPageSize)
+            [FromQuery] int pageNumber = CoreConfiguration.DefaultPageNumber,
+            [FromQuery] int pageSize = CoreConfiguration.DefaultPageSize)
         {
             var request = new GetAllCategoriesRequest
             {

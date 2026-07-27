@@ -5,6 +5,7 @@ using Dima.Core.Responses;
 using Dima.Core.Responses.Stripe;
 using Stripe;
 using Stripe.Checkout;
+using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Handlers
 {
@@ -63,11 +64,11 @@ namespace Dima.Api.Handlers
                     Mode = "payment",
 
                     SuccessUrl =
-                        $"{Configuration.FrontendUrl}/pedidos/" +
+                        $"{CoreConfiguration.FrontendUrl}/pedidos/" +
                         $"{request.OrderNumber}/confirmar",
 
                     CancelUrl =
-                        $"{Configuration.FrontendUrl}/pedidos/" +
+                        $"{CoreConfiguration.FrontendUrl}/pedidos/" +
                         $"{request.OrderNumber}/cancelar"
                 };
 

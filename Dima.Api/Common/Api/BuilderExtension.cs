@@ -8,6 +8,8 @@ using Dima.Core.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Dima.Api.Configuration;
+using CoreConfiguration = Dima.Core.Configuration;
 using Stripe;
 
 namespace Dima.Api.Common.Api
@@ -16,11 +18,13 @@ namespace Dima.Api.Common.Api
     {
         public static void AddConfiguration(this WebApplicationBuilder builder)
         {
-            Configuration.ConnectionString=builder.Configuration
+            builder.Services.Configure<InitialAdminOptions>
+                (builder.Configuration.GetSection(InitialAdminOptions.SectionName));
+            CoreConfiguration.ConnectionString=builder.Configuration
                 .GetConnectionString("DefaultConnection") ?? string.Empty;
-            Configuration.BackendUrl=builder.Configuration
+            CoreConfiguration.BackendUrl=builder.Configuration
                 .GetValue<string>("BackendUrl")?? string.Empty;
-            Configuration.FrontendUrl=builder.Configuration
+            CoreConfiguration.FrontendUrl=builder.Configuration
                 .GetValue<string>("FrontendUrl")?? string.Empty;
             ApiConfiguration.StripeApiKey = builder.Configuration
                 .GetValue<string>("StripeApiKey") ?? string.Empty;
@@ -72,7 +76,7 @@ namespace Dima.Api.Common.Api
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<AppDbContext>
-                    (x => { x.UseSqlServer(Configuration.ConnectionString); });
+                    (x => { x.UseSqlServer(CoreConfiguration.ConnectionString); });
             builder.Services
                     .AddIdentityCore<User>(options =>
                     {
@@ -106,8 +110,8 @@ namespace Dima.Api.Common.Api
                     ApiConfiguration.CorsPolicyName,
                     policy => policy
                     .WithOrigins([
-                        Configuration.BackendUrl,
-                        Configuration.FrontendUrl
+                        CoreConfiguration.BackendUrl,
+                        CoreConfiguration.FrontendUrl
                         ])
                     .AllowAnyMethod()
                     .AllowAnyHeader()
