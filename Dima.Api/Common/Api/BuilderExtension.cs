@@ -47,15 +47,33 @@ namespace Dima.Api.Common.Api
                 {
                     options.Cookie.HttpOnly = true;
 
+                    options.Events.OnRedirectToLogin = context =>
+                    {
+                        context.Response.StatusCode =
+                            StatusCodes.Status401Unauthorized;
+
+                        return Task.CompletedTask;
+                    };
+
+                    options.Events.OnRedirectToAccessDenied = context =>
+                    {
+                        context.Response.StatusCode =
+                            StatusCodes.Status403Forbidden;
+
+                        return Task.CompletedTask;
+                    };
+
                     if (builder.Environment.IsDevelopment())
                     {
                         options.Cookie.SameSite = SameSiteMode.Lax;
-                        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                        options.Cookie.SecurePolicy =
+                            CookieSecurePolicy.SameAsRequest;
                     }
                     else
                     {
                         options.Cookie.SameSite = SameSiteMode.None;
-                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                        options.Cookie.SecurePolicy =
+                            CookieSecurePolicy.Always;
                     }
                 });
 

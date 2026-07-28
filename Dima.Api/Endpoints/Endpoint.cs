@@ -7,7 +7,10 @@ using Dima.Api.Endpoints.Stripe;
 using Dima.Api.Endpoints.Transactions;
 using Dima.Api.Models;
 using Dima.Core.Requests.Categories;
+using Dima.Api.Endpoints.Admin;
+
 namespace Dima.Api.Endpoints;
+
 public static class Endpoint
 {
     // Extension Method
@@ -72,6 +75,10 @@ public static class Endpoint
             .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
             .MapEndpoint<GetRolesEndpoint>();
+
+        endpoint.MapGroup("v1/admin")
+            .WithTags("Admin")
+            .MapEndpoint<ValidateAdminEndpoint>();
 
         endpoint.MapGroup("v1/reports")
             .WithTags("Reports")
