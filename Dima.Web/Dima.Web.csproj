@@ -7,6 +7,7 @@
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
 	<BlazorWebAssemblyLoadAllGlobalizationData>true</BlazorWebAssemblyLoadAllGlobalizationData>
+	<UserSecretsId>b0effc8c-18ed-4562-bc10-223cb4fd7e89</UserSecretsId>
 	  
   </PropertyGroup>
 

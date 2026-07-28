@@ -1,7 +1,7 @@
-﻿using Dima.Core.Security;
-using Microsoft.AspNetCore.Identity;
-using Dima.Api.Configuration;
+﻿using Dima.Api.Configuration;
 using Dima.Api.Models;
+using Dima.Core.Security;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
 namespace Dima.Api.Data.Seed;
@@ -14,7 +14,7 @@ public static class IdentitySeeder
 
         var roleManager = scope.ServiceProvider
             .GetRequiredService<RoleManager<IdentityRole<long>>>();
- 
+
         var userManager = scope.ServiceProvider
             .GetRequiredService<UserManager<User>>();
 
@@ -22,6 +22,21 @@ public static class IdentitySeeder
             .GetRequiredService<IOptions<InitialAdminOptions>>()
             .Value;
 
+        var logger = scope.ServiceProvider
+            .GetRequiredService<ILoggerFactory>()
+            .CreateLogger("IdentitySeeder");
+
+        await CreateRolesAsync(roleManager);
+
+        await PromoteInitialAdminAsync(
+            userManager,
+            adminOptions,
+            logger);
+    }
+
+    private static async Task CreateRolesAsync(
+        RoleManager<IdentityRole<long>> roleManager)
+    {
         foreach (var roleName in AppRoles.All)
         {
             if (await roleManager.RoleExistsAsync(roleName))
@@ -41,6 +56,13 @@ public static class IdentitySeeder
             throw new InvalidOperationException(
                 $"[E110] Não foi possível criar a role '{roleName}': {errors}");
         }
+    }
+
+    private static async Task PromoteInitialAdminAsync(
+        UserManager<User> userManager,
+        InitialAdminOptions adminOptions,
+        ILogger logger)
+    {
         if (!adminOptions.Enabled)
             return;
 
@@ -55,27 +77,30 @@ public static class IdentitySeeder
                 $"[E112] User '{adminOptions.Email}' was not found.");
 
         if (await userManager.IsInRoleAsync(user, AppRoles.Admin))
+        {
+            logger.LogInformation(
+                "User '{Email}' is already an administrator.",
+                adminOptions.Email);
+
             return;
+        }
 
-        var promoteResult =
-        await userManager.AddToRoleAsync(user, AppRoles.Admin);
+        var result = await userManager.AddToRoleAsync(
+            user,
+            AppRoles.Admin);
 
-        if (!promoteResult.Succeeded)
+        if (!result.Succeeded)
         {
             var errors = string.Join(
                 "; ",
-                promoteResult.Errors.Select(x => x.Description));
+                result.Errors.Select(error => error.Description));
 
             throw new InvalidOperationException(
                 $"[E113] Could not promote '{adminOptions.Email}' to Admin: {errors}");
         }
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("IdentitySeeder");
 
         logger.LogInformation(
             "User '{Email}' promoted to administrator.",
             adminOptions.Email);
-
     }
 }
