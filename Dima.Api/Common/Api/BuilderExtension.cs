@@ -120,6 +120,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
             builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
+            builder.Services.AddTransient<IProductHandler, ProductHandler>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

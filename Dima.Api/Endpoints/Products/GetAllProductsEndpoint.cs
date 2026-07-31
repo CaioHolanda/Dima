@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using CoreConfiguration = Dima.Core.Configuration;
 
-namespace Dima.Api.Endpoints.Orders
+namespace Dima.Api.Endpoints.Products
 {
     public class GetAllProductsEndpoint : IEndpoint
     {

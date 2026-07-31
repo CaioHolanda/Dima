@@ -6,7 +6,7 @@ using Dima.Core.Requests.Order;
 using Dima.Core.Responses;
 using System.Security.Claims;
 
-namespace Dima.Api.Endpoints.Orders
+namespace Dima.Api.Endpoints.Products
 {
     public class GetProductBySlugEndpoint : IEndpoint
     {

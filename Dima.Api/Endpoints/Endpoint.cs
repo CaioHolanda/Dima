@@ -8,6 +8,7 @@ using Dima.Api.Endpoints.Transactions;
 using Dima.Api.Models;
 using Dima.Core.Requests.Categories;
 using Dima.Api.Endpoints.Admin;
+using Dima.Api.Endpoints.Products;
 
 namespace Dima.Api.Endpoints;
 
@@ -46,6 +47,13 @@ public static class Endpoint
             .MapEndpoint<GetAllProductsEndpoint>()
             .MapEndpoint<GetProductBySlugEndpoint>();
 
+        endpoint.MapGroup("v1/admin/products")
+            .WithTags("Admin - Products")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<CreateProductEndpoint>()
+            .MapEndpoint<UpdateProductEndpoint>()
+            .MapEndpoint<DeactivateProductEndpoint>();
+
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
             .RequireAuthorization()
@@ -79,6 +87,7 @@ public static class Endpoint
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
             .MapEndpoint<ValidateAdminEndpoint>();
+
 
         endpoint.MapGroup("v1/reports")
             .WithTags("Reports")
