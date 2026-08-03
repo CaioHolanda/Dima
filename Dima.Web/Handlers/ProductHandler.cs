@@ -29,6 +29,16 @@ namespace Dima.Web.Handlers
             return result;
         }
 
+        public Task<PagedResponse<List<Product>?>> GetAllForAdminAsync(GetAllAdminProductsRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Response<Product?>> GetByIdForAdminAsync(GetProductByIdRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<Response<Product?>> GetBySlugAsync(GetProductBySlugRequest request)
         {
             var result = await _client.GetFromJsonAsync<Response<Product?>>($"v1/products/{request.Slug}");
@@ -41,5 +51,6 @@ namespace Dima.Web.Handlers
         {
             throw new NotImplementedException();
         }
+
     }
 }

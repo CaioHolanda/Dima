@@ -5,31 +5,52 @@ using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Products;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 
 namespace Dima.Api.Handlers
 {
     public class ProductHandler(AppDbContext context) : IProductHandler
     {
         public async Task<Response<Product?>> CreateAsync(
-                                                CreateProductRequest request)
+            CreateProductRequest request)
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(request.Slug))
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E126] O slug é obrigatório");
+                }
+
+                var slug = request.Slug.Trim();
+
+                if (!SlugPattern.IsMatch(slug))
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E126] O slug deve conter apenas letras minúsculas, números e hífens");
+                }
+
                 var slugExists = await context.Products
-                    .AnyAsync(x => x.Slug == request.Slug);
+                    .AnyAsync(x => x.Slug == slug);
 
                 if (slugExists)
+                {
                     return new Response<Product?>(
                         null,
                         StatusCodes.Status409Conflict,
                         "[E114] Já existe um produto com este slug");
+                }
 
                 var product = new Product
                 {
                     Title = request.Title,
                     Description = request.Description ?? string.Empty,
                     Price = request.Price,
-                    Slug = request.Slug,
+                    Slug = slug,
                     IsActive = request.IsActive
                 };
 
@@ -38,19 +59,19 @@ namespace Dima.Api.Handlers
 
                 return new Response<Product?>(
                     product,
-                    201,
+                    StatusCodes.Status201Created,
                     "Produto criado com sucesso");
             }
             catch
             {
                 return new Response<Product?>(
                     null,
-                    500,
+                    StatusCodes.Status500InternalServerError,
                     "[E115] Não foi possível criar o produto");
             }
         }
         public async Task<Response<Product?>> UpdateAsync(
-                                                UpdateProductRequest request)
+            UpdateProductRequest request)
         {
             try
             {
@@ -58,40 +79,63 @@ namespace Dima.Api.Handlers
                     .FirstOrDefaultAsync(x => x.Id == request.Id);
 
                 if (product is null)
+                {
                     return new Response<Product?>(
                         null,
-                        404,
+                        StatusCodes.Status404NotFound,
                         "[E116] Produto não encontrado");
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Slug))
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E128] O slug é obrigatório");
+                }
+
+                var slug = request.Slug.Trim();
+
+                if (!SlugPattern.IsMatch(slug))
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E127] O slug deve conter apenas letras minúsculas, números e hífens");
+                }
 
                 var slugExists = await context.Products
                     .AnyAsync(x =>
-                        x.Slug == request.Slug &&
+                        x.Slug == slug &&
                         x.Id != request.Id);
 
                 if (slugExists)
+                {
                     return new Response<Product?>(
                         null,
-                        400,
+                        StatusCodes.Status409Conflict,
                         "[E117] Já existe outro produto com este slug");
+                }
 
                 product.Title = request.Title;
-                product.Description = request.Description;
+                product.Description =
+                    request.Description ?? string.Empty;
                 product.Price = request.Price;
-                product.Slug = request.Slug;
+                product.Slug = slug;
                 product.IsActive = request.IsActive;
 
                 await context.SaveChangesAsync();
 
                 return new Response<Product?>(
                     product,
-                    200,
+                    StatusCodes.Status200OK,
                     "Produto atualizado com sucesso");
             }
             catch
             {
                 return new Response<Product?>(
                     null,
-                    500,
+                    StatusCodes.Status500InternalServerError,
                     "[E118] Não foi possível atualizar o produto");
             }
         }
@@ -115,7 +159,6 @@ namespace Dima.Api.Handlers
                 return new PagedResponse<List<Product>?>(null, 500, "Nao foi possivel consultar os produtos");
             }
         }
-
         public async Task<Response<Product?>> GetBySlugAsync(GetProductBySlugRequest request)
         {
             try
@@ -133,7 +176,6 @@ namespace Dima.Api.Handlers
                 return new Response<Product?>(null, 500, "Nao foi possivel buscar produto");
             }
         }
-
         public async Task<Response<Product?>> DeactivateAsync(
             DeactivateProductRequest request)
         {
@@ -165,5 +207,60 @@ namespace Dima.Api.Handlers
                     "[E120] Não foi possível desativar o produto");
             }
         }
+        public async Task<PagedResponse<List<Product>?>> GetAllForAdminAsync(GetAllAdminProductsRequest request)
+        {
+            try
+            {
+                var query = context.Products
+                    .AsNoTracking()
+                    .OrderByDescending(x => x.IsActive)
+                    .ThenByDescending(x => x.Price);
+
+                var products = await query
+                    .Skip((request.PageNumber - 1) * request.PageSize)
+                    .Take(request.PageSize)
+                    .ToListAsync();
+
+                var count = await query.CountAsync();
+
+                return new PagedResponse<List<Product>?>(
+                    products,
+                    count,
+                    request.PageNumber,
+                    request.PageSize);
+            }
+            catch
+            {
+                return new PagedResponse<List<Product>?>(
+                    null,
+                    StatusCodes.Status500InternalServerError,
+                    "[E123] Não foi possível consultar os produtos");
+            }
+        }
+        public async Task<Response<Product?>> GetByIdForAdminAsync(GetProductByIdRequest request)
+        {
+            try
+            {
+                var product = await context.Products
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == request.Id);
+
+                return product is null
+                    ? new Response<Product?>(
+                        null,
+                        StatusCodes.Status404NotFound,
+                        "[E124] Produto não encontrado")
+                    : new Response<Product?>(product);
+            }
+            catch
+            {
+                return new Response<Product?>(
+                    null,
+                    StatusCodes.Status500InternalServerError,
+                    "[E125] Não foi possível consultar o produto");
+            }
+        }
+        private static readonly Regex SlugPattern = new("^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                RegexOptions.Compiled);
     }
 }

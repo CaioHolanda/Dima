@@ -15,5 +15,8 @@ namespace Dima.Core.Handlers
         Task<Response<Product?>> CreateAsync(CreateProductRequest request);
         Task<Response<Product?>> UpdateAsync(UpdateProductRequest request);
         Task<Response<Product?>> DeactivateAsync(DeactivateProductRequest request);
+        Task<PagedResponse<List<Product>?>> GetAllForAdminAsync(GetAllAdminProductsRequest request);
+
+        Task<Response<Product?>> GetByIdForAdminAsync(GetProductByIdRequest request);
     }
 }

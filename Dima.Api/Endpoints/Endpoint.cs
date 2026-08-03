@@ -50,6 +50,8 @@ public static class Endpoint
         endpoint.MapGroup("v1/admin/products")
             .WithTags("Admin - Products")
             .RequireAuthorization("AdminOnly")
+            .MapEndpoint<GetAllAdminProductsEndpoint>()
+            .MapEndpoint<GetAdminProductByIdEndpoint>()
             .MapEndpoint<CreateProductEndpoint>()
             .MapEndpoint<UpdateProductEndpoint>()
             .MapEndpoint<DeactivateProductEndpoint>();
@@ -87,7 +89,6 @@ public static class Endpoint
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
             .MapEndpoint<ValidateAdminEndpoint>();
-
 
         endpoint.MapGroup("v1/reports")
             .WithTags("Reports")
