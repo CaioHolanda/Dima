@@ -260,6 +260,40 @@ namespace Dima.Api.Handlers
                     "[E125] Não foi possível consultar o produto");
             }
         }
+
+        public async Task<Response<Product?>> ActivateAsync(ActivateProductRequest request)
+        {
+            try
+            {
+                var product = await context.Products
+                    .FirstOrDefaultAsync(x => x.Id == request.Id);
+
+                if (product is null)
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status404NotFound,
+                        "[E130] Produto não encontrado");
+                }
+
+                product.IsActive = true;
+
+                await context.SaveChangesAsync();
+
+                return new Response<Product?>(
+                    product,
+                    StatusCodes.Status200OK,
+                    "Produto ativado com sucesso");
+            }
+            catch
+            {
+                return new Response<Product?>(
+                    null,
+                    StatusCodes.Status500InternalServerError,
+                    "[E131] Não foi possível ativar o produto");
+            }
+        }
+
         private static readonly Regex SlugPattern = new("^[a-z0-9]+(?:-[a-z0-9]+)*$",
                 RegexOptions.Compiled);
     }

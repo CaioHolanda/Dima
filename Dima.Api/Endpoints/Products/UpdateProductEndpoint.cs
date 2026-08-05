@@ -16,7 +16,8 @@ public class UpdateProductEndpoint : IEndpoint
             .WithOrder(2)
             .Produces<Response<Product?>>(StatusCodes.Status200OK)
             .Produces<Response<Product?>>(StatusCodes.Status400BadRequest)
-            .Produces<Response<Product?>>(StatusCodes.Status404NotFound);
+            .Produces<Response<Product?>>(StatusCodes.Status404NotFound)
+            .Produces<Response<Product?>>(StatusCodes.Status409Conflict);
 
     private static async Task<IResult> HandleAsync(
         IProductHandler handler,

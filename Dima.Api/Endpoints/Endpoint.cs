@@ -54,7 +54,8 @@ public static class Endpoint
             .MapEndpoint<GetAdminProductByIdEndpoint>()
             .MapEndpoint<CreateProductEndpoint>()
             .MapEndpoint<UpdateProductEndpoint>()
-            .MapEndpoint<DeactivateProductEndpoint>();
+            .MapEndpoint<DeactivateProductEndpoint>()
+            .MapEndpoint<ActivateProductEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
