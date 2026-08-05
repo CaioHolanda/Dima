@@ -126,4 +126,5 @@ public partial class ListAdminProductsPage
             IsBusy = false;
         }
     }
+
 }

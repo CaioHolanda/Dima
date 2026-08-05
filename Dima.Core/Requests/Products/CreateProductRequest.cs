@@ -8,6 +8,7 @@ public class CreateProductRequest
     [MaxLength(80, ErrorMessage = "O título deve ter no máximo 80 caracteres")]
     public string Title { get; set; } = string.Empty;
 
+    [Required(ErrorMessage = "A descrição é obrigatória")]
     [MaxLength(255, ErrorMessage = "A descrição deve ter no máximo 255 caracteres")]
     public string Description { get; set; } = string.Empty;
 
