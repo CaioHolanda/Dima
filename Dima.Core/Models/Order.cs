@@ -13,7 +13,9 @@ namespace Dima.Core.Models
         public Product Product { get; set; } = null!;
         public long? VoucherId { get; set; }
         public Voucher? Voucher { get; set; }
-        public decimal Total => Product.Price - (Voucher?.Amount ?? 0);
+        public decimal OriginalPrice { get; set; }
+        public decimal DiscountAmount { get; set; }
+        public decimal Total { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public string? ExternalReference { get; set; }

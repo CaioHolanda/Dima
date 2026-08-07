@@ -4,7 +4,6 @@ using Dima.Core.Models.Reports;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 using System.Security.Principal;
 
 namespace Dima.Api.Data
@@ -25,6 +24,7 @@ namespace Dima.Api.Data
         public DbSet<IncomesAndExpenses> IncomesAndExpenses { get; set; } = null!;
         public DbSet<IncomesByCategory> IncomesByCategory { get; set; } = null!;
         public DbSet<ExpensesByCategory> ExpensesByCategory { get; set; } = null!;
+        public DbSet<VoucherRedemption> VoucherRedemptions { get; set; } = null!;
         public DbSet<Product> Products { get; set; } = null!;
         public DbSet<Voucher> Vouchers { get; set; } = null!;
         public DbSet<Order> Orders { get; set; } = null!;
@@ -33,7 +33,9 @@ namespace Dima.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+            modelBuilder.ApplyConfigurationsFromAssembly(
+                typeof(AppDbContext).Assembly);
 
             modelBuilder.Entity<IncomesAndExpenses>()
                 .HasNoKey()
