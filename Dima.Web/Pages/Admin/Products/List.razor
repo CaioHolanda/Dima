@@ -73,12 +73,22 @@
                                    Href="@($"/admin/produtos/editar/{context.Item.Id}")"
                                    Color="Color.Primary" />
 
-                    <MudIconButton Icon="@Icons.Material.Filled.Block"
-                                   Color="Color.Error"
-                                   Disabled="@(!context.Item.IsActive)"
-                                   OnClick="@(() =>
-                                                               OnDeactivateButtonClickedAsync(
-                                                                   context.Item))" />
+                    <MudTooltip Text="@(context.Item.IsActive
+                                ? "Desativar produto"
+                                : "Reativar produto")">
+
+                        <MudIconButton Icon="@(context.Item.IsActive
+                                               ? Icons.Material.Filled.Block
+                                           : Icons.Material.Filled.CheckCircle)"
+                                       Color="@(context.Item.IsActive
+                                                ? Color.Error
+                                                : Color.Success)"
+                                       Disabled="@ProductsBeingUpdated.Contains(
+                                               context.Item.Id)"
+                                       OnClick="@(() =>
+                                               OnStatusButtonClickedAsync(
+                                                   context.Item))" />
+                    </MudTooltip>
                 </MudStack>
             </CellTemplate>
         </TemplateColumn>

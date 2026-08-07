@@ -12,6 +12,7 @@ public partial class ListAdminProductsPage
     public bool IsBusy { get; set; }
     public List<Product> Products { get; set; } = [];
     public string SearchTerm { get; set; } = string.Empty;
+    public HashSet<long> ProductsBeingUpdated { get; set; } = [];
 
     [Inject]
     public IAdminProductHandler Handler { get; set; } = null!;
@@ -41,54 +42,79 @@ public partial class ListAdminProductsPage
                    StringComparison.OrdinalIgnoreCase);
     };
 
-    public async Task OnDeactivateButtonClickedAsync(
-        Product product)
+    public async Task OnStatusButtonClickedAsync(
+    Product product)
     {
+        var action = product.IsActive
+            ? "desativado"
+            : "reativado";
+
+        var consequence = product.IsActive
+            ? "e deixará de ser oferecido"
+            : "e voltará a ser oferecido";
+
         var confirmed =
             await DialogService.ShowMessageBoxAsync(
                 "ATENÇÃO",
                 $"O produto \"{product.Title}\" será " +
-                "desativado e deixará de ser oferecido. " +
-                "Deseja continuar?",
-                yesText: "DESATIVAR",
+                $"{action} {consequence}. Deseja continuar?",
+                yesText: product.IsActive
+                    ? "DESATIVAR"
+                    : "REATIVAR",
                 cancelText: "Cancelar");
 
         if (confirmed is not true)
             return;
 
-        await OnDeactivateAsync(product);
+        await OnStatusChangeAsync(product);
     }
 
-    private async Task OnDeactivateAsync(Product product)
+    private async Task OnStatusChangeAsync(Product product)
     {
+        var wasActive = product.IsActive;
+
+        ProductsBeingUpdated.Add(product.Id);
+
         try
         {
-            var result = await Handler.DeactivateAsync(
-                new DeactivateProductRequest
-                {
-                    Id = product.Id
-                });
+            var result = wasActive
+                ? await Handler.DeactivateAsync(
+                    new DeactivateProductRequest
+                    {
+                        Id = product.Id
+                    })
+                : await Handler.ActivateAsync(
+                    new ActivateProductRequest
+                    {
+                        Id = product.Id
+                    });
 
             if (!result.IsSuccess)
             {
                 Snackbar.Add(
                     result.Message ??
-                    "Não foi possível desativar o produto",
+                    "Não foi possível alterar o estado do produto",
                     Severity.Error);
 
                 return;
             }
 
-            product.IsActive = false;
+            product.IsActive = !wasActive;
 
             Snackbar.Add(
                 result.Message ??
-                $"Produto {product.Title} desativado",
+                (wasActive
+                    ? $"Produto {product.Title} desativado"
+                    : $"Produto {product.Title} reativado"),
                 Severity.Success);
         }
         catch (Exception ex)
         {
             Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            ProductsBeingUpdated.Remove(product.Id);
         }
     }
 

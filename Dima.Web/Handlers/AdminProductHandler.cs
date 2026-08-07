@@ -64,6 +64,17 @@ public class AdminProductHandler(
     }
 
     public async Task<Response<Product?>>
+        ActivateAsync(
+            ActivateProductRequest request)
+    {
+        var response = await _client.PutAsync(
+            $"v1/admin/products/{request.Id}/activate",
+            null);
+
+        return await ReadResponseAsync(response);
+    }
+
+    public async Task<Response<Product?>>
         DeactivateAsync(
             DeactivateProductRequest request)
     {
