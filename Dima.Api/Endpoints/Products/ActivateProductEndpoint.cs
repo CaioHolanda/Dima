@@ -20,7 +20,7 @@ public class ActivateProductEndpoint : IEndpoint
                 StatusCodes.Status404NotFound);
 
     private static async Task<IResult> HandleAsync(
-        IProductHandler handler,
+        IAdminProductHandler handler,
         long id)
     {
         var request = new ActivateProductRequest

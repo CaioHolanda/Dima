@@ -20,7 +20,7 @@ public class GetAllAdminProductsEndpoint : IEndpoint
                 StatusCodes.Status200OK);
 
     private static async Task<IResult> HandleAsync(
-        IProductHandler handler,
+        IAdminProductHandler handler,
         [FromQuery] int pageSize =
             CoreConfiguration.DefaultPageSize,
         [FromQuery] int pageNumber =

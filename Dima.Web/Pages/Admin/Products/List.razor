@@ -78,11 +78,11 @@
                                 : "Reativar produto")">
 
                         <MudIconButton Icon="@(context.Item.IsActive
-                                               ? Icons.Material.Filled.Block
-                                           : Icons.Material.Filled.CheckCircle)"
+                                               ? Icons.Material.Filled.CheckCircle
+                                           : Icons.Material.Filled.Block)"
                                        Color="@(context.Item.IsActive
-                                                ? Color.Error
-                                                : Color.Success)"
+                                                ? Color.Success
+                                                : Color.Error)"
                                        Disabled="@ProductsBeingUpdated.Contains(
                                                context.Item.Id)"
                                        OnClick="@(() =>

@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace Dima.Api.Handlers
 {
-    public class ProductHandler(AppDbContext context) : IProductHandler
+    public class ProductHandler(AppDbContext context) : IProductHandler, IAdminProductHandler
     {
         public async Task<Response<Product?>> CreateAsync(
             CreateProductRequest request)

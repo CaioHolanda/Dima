@@ -26,11 +26,5 @@ namespace Dima.Web.Handlers
                 return new Response<Product?>(null, 400, "[E066] Nao foi possivel obter o produto");
             return result;
         }
-
-        public Task<Response<Product?>> UpdateAsync(UpdateProductRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

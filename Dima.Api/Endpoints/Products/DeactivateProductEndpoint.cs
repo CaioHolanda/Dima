@@ -18,7 +18,7 @@ public class DeactivateProductEndpoint : IEndpoint
             .Produces<Response<Product?>>(StatusCodes.Status404NotFound);
 
     private static async Task<IResult> HandleAsync(
-        IProductHandler handler,
+        IAdminProductHandler handler,
         long id)
     {
         var request = new DeactivateProductRequest

@@ -18,7 +18,7 @@ public class CreateProductEndpoint : IEndpoint
             .Produces<Response<Product?>>(StatusCodes.Status400BadRequest);
 
     private static async Task<IResult> HandleAsync(
-        IProductHandler handler,
+        IAdminProductHandler handler,
         CreateProductRequest request)
     {
         var result = await handler.CreateAsync(request);

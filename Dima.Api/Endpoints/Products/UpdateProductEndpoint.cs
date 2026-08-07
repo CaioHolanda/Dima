@@ -20,7 +20,7 @@ public class UpdateProductEndpoint : IEndpoint
             .Produces<Response<Product?>>(StatusCodes.Status409Conflict);
 
     private static async Task<IResult> HandleAsync(
-        IProductHandler handler,
+        IAdminProductHandler handler,
         UpdateProductRequest request,
         long id)
     {
