@@ -1,8 +1,7 @@
-﻿namespace Dima.Core.Enums
+﻿namespace Dima.Core.Enums;
+
+public enum EVoucherDiscountType
 {
-    public enum EVoucherDiscountType
-    {
-        FixedAmount = 1,
-        Percentage = 2
-    }
+    FixedAmount = 1,
+    Percentage = 2
 }

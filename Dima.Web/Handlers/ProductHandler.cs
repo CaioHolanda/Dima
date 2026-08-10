@@ -11,12 +11,37 @@ namespace Dima.Web.Handlers
     {
         private readonly HttpClient _client = httpClientFactory.CreateClient(Configuration.HttpClientName);
 
+        public Task<Response<Product?>> ActivateAsync(ActivateProductRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Response<Product?>> CreateAsync(CreateProductRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Response<Product?>> DeactivateAsync(DeactivateProductRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task<PagedResponse<List<Product>?>> GetAllAsync(GetAllProductsRequest request)
         {
             var result = await _client.GetFromJsonAsync<PagedResponse<List<Product>?>>("v1/products");
             if (result is null)
                 return new PagedResponse<List<Product>?>(null, 400, "[E065] Nao foi possivel obter os produtos");
             return result;
+        }
+
+        public Task<PagedResponse<List<Product>?>> GetAllForAdminAsync(GetAllAdminProductsRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<Response<Product?>> GetByIdForAdminAsync(GetProductByIdRequest request)
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<Response<Product?>> GetBySlugAsync(GetProductBySlugRequest request)
@@ -26,5 +51,11 @@ namespace Dima.Web.Handlers
                 return new Response<Product?>(null, 400, "[E066] Nao foi possivel obter o produto");
             return result;
         }
+
+        public Task<Response<Product?>> UpdateAsync(UpdateProductRequest request)
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }
