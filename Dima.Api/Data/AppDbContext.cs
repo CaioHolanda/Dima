@@ -37,17 +37,35 @@ namespace Dima.Api.Data
             modelBuilder.ApplyConfigurationsFromAssembly(
                 typeof(AppDbContext).Assembly);
 
-            modelBuilder.Entity<IncomesAndExpenses>()
-                .HasNoKey()
-                .ToView("vwGetIncomesAndExpenses");
+            modelBuilder.Entity<IncomesAndExpenses>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("vwGetIncomesAndExpenses");
 
-            modelBuilder.Entity<IncomesByCategory>()
-                .HasNoKey()
-                .ToView("vwGetIncomesByCategory");
+                entity.Property(x => x.Incomes)
+                    .HasPrecision(18, 2);
 
-            modelBuilder.Entity<ExpensesByCategory>()
-                .HasNoKey()
-                .ToView("vwGetExpensesByCategory");
+                entity.Property(x => x.Expenses)
+                    .HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<IncomesByCategory>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("vwGetIncomesByCategory");
+
+                entity.Property(x => x.Incomes)
+                    .HasPrecision(18, 2);
+            });
+
+            modelBuilder.Entity<ExpensesByCategory>(entity =>
+            {
+                entity.HasNoKey();
+                entity.ToView("vwGetExpensesByCategory");
+
+                entity.Property(x => x.Expenses)
+                    .HasPrecision(18, 2);
+            });
         }
     }
 }

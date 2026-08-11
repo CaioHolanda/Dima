@@ -4,6 +4,7 @@ using Dima.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Dima.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260811112248_RenameVoucherNumberToCode")]
+    partial class RenameVoucherNumberToCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -232,7 +235,6 @@ namespace Dima.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Expenses")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UserId")
@@ -250,11 +252,9 @@ namespace Dima.Api.Migrations
             modelBuilder.Entity("Dima.Core.Models.Reports.IncomesAndExpenses", b =>
                 {
                     b.Property<decimal>("Expenses")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("Incomes")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Month")
@@ -279,7 +279,6 @@ namespace Dima.Api.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("Incomes")
-                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UserId")
@@ -358,7 +357,9 @@ namespace Dima.Api.Migrations
                         .HasColumnType("NVARCHAR");
 
                     b.Property<short>("DiscountType")
-                        .HasColumnType("SMALLINT");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("SMALLINT")
+                        .HasDefaultValue((short)1);
 
                     b.Property<DateTime?>("EndsAt")
                         .HasColumnType("DATETIME2");

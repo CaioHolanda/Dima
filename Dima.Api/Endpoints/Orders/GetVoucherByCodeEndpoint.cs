@@ -27,8 +27,13 @@ public class GetVoucherByCodeEndpoint : IEndpoint
 
         var result = await handler.GetByCodeAsync(request);
 
-        return result.IsSuccess
-            ? TypedResults.Ok(result)
-            : TypedResults.NotFound(result);
+        return result.Code switch
+        {
+            200 => TypedResults.Ok(result),
+            404 => TypedResults.NotFound(result),
+            _ => TypedResults.Json(
+                result,
+                statusCode: result.Code)
+        };
     }
 }

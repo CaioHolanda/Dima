@@ -33,8 +33,7 @@ namespace Dima.Api.Data.Mappings
 
             builder.Property(x => x.DiscountType)
                 .IsRequired()
-                .HasColumnType("SMALLINT")
-                .HasDefaultValue(EVoucherDiscountType.FixedAmount); 
+                .HasColumnType("SMALLINT");
 
             builder.Property(x => x.Value)
                 .IsRequired()
