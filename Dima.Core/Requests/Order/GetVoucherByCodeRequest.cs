@@ -4,8 +4,8 @@ using System.Text;
 
 namespace Dima.Core.Requests.Order
 {
-    public class GetVoucherByNumberRequest:Request
+    public class GetVoucherByCodeRequest:Request
     {
-        public string Number { get; set; } = string.Empty;
+        public string Code { get; set; } = string.Empty;
     }
 }

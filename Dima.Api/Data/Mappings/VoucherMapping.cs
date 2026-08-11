@@ -13,12 +13,12 @@ namespace Dima.Api.Data.Mappings
 
             builder.HasKey(x => x.Id);
 
-            builder.Property(x => x.Number)
+            builder.Property(x => x.Code)
                 .IsRequired()
-                .HasColumnType("CHAR")
-                .HasMaxLength(8);
+                .HasColumnType("VARCHAR")
+                .HasMaxLength(20);
 
-            builder.HasIndex(x => x.Number)
+            builder.HasIndex(x => x.Code)
                 .IsUnique();
 
             builder.Property(x => x.Title)
@@ -106,8 +106,8 @@ namespace Dima.Api.Data.Mappings
                     "[DiscountType] IN (1, 2)");
 
                 table.HasCheckConstraint(
-                    "CK_Voucher_Number_Length",
-                    "LEN([Number]) = 8");
+                    "CK_Voucher_Code_Length",
+                    "LEN([Code]) BETWEEN 4 AND 20");
             });
         }
     }

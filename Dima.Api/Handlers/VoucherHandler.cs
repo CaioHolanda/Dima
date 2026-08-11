@@ -5,29 +5,36 @@ using Dima.Core.Requests.Order;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 
-namespace Dima.Api.Handlers
+namespace Dima.Api.Handlers;
+
+public class VoucherHandler(AppDbContext context) : IVoucherHandler
 {
-    public class VoucherHandler(AppDbContext context) : IVoucherHandler
+    public async Task<Response<Voucher?>> GetByCodeAsync(
+        GetVoucherByCodeRequest request)
     {
-        public async Task<Response<Voucher?>> GetByNumberAsync(GetVoucherByNumberRequest request)
+        try
         {
-            try
-            {
-                var voucher = await context.Vouchers
-                                        .AsNoTracking()
-                                        .FirstOrDefaultAsync(x => x.Number == request.Number && x.IsActive == true);
-                return voucher is null
-                    ? new Response<Voucher?>(null, 404, "Voucher nao encontrado.")
-                    : new Response<Voucher?>(voucher);
-            }
-            catch 
-            {
+            var code = request.Code.Trim().ToUpperInvariant();
 
-                return new Response<Voucher?>(null, 500, "Nao foi possivel recuperar seu voucher");
-            }
+            var voucher = await context.Vouchers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x =>
+                    x.Code == code &&
+                    x.IsActive);
 
-
-
+            return voucher is null
+                ? new Response<Voucher?>(
+                    null,
+                    404,
+                    "Voucher não encontrado.")
+                : new Response<Voucher?>(voucher);
+        }
+        catch
+        {
+            return new Response<Voucher?>(
+                null,
+                500,
+                "Não foi possível recuperar o voucher.");
         }
     }
 }
