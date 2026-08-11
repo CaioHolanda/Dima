@@ -9,6 +9,7 @@ using Dima.Api.Models;
 using Dima.Core.Requests.Categories;
 using Dima.Api.Endpoints.Admin;
 using Dima.Api.Endpoints.Products;
+using Dima.Api.Endpoints.Vouchers;
 
 namespace Dima.Api.Endpoints;
 
@@ -56,6 +57,16 @@ public static class Endpoint
             .MapEndpoint<UpdateProductEndpoint>()
             .MapEndpoint<DeactivateProductEndpoint>()
             .MapEndpoint<ActivateProductEndpoint>();
+
+        endpoint.MapGroup("v1/admin/vouchers")
+            .WithTags("Admin - Vouchers")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<CreateVoucherEndpoint>()
+            .MapEndpoint<GetAllAdminVouchersEndpoint>()
+            .MapEndpoint<GetAdminVoucherByIdEndpoint>()
+            .MapEndpoint<UpdateVoucherEndpoint>()
+            .MapEndpoint<DeactivateVoucherEndpoint>()
+            .MapEndpoint<ActivateVoucherEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")

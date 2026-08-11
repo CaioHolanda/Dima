@@ -1,5 +1,5 @@
 ﻿namespace Dima.Core.Requests.Vouchers;
 
-public class GetAllAdminVouchersRequest : PagedRequest
+public class GetAllAdminVouchersRequest : AdminPagedRequest
 {
 }

@@ -1,10 +1,12 @@
 ﻿using Dima.Core.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Dima.Core.Requests.Vouchers;
 
 public class UpdateVoucherRequest
 {
+    [JsonIgnore]
     public long Id { get; set; }
 
     [Required(ErrorMessage = "O código  do voucher é obrigatório")]
