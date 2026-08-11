@@ -35,6 +35,7 @@ builder.Services.AddTransient<IVoucherHandler,      VoucherHandler    >();
 builder.Services.AddTransient<ICategoryHandler,     CategoryHandler   >();
 builder.Services.AddTransient<IReportHandler,       ReportHandler     >();
 builder.Services.AddTransient<IAdminProductHandler, AdminProductHandler>();
+builder.Services.AddTransient<IAdminVoucherHandler, AdminVoucherHandler>();
 
 
 builder.Services.AddAuthorizationCore();

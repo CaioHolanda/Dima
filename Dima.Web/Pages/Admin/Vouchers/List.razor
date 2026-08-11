@@ -1,0 +1,101 @@
+﻿@page "/admin/vouchers"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits ListAdminVouchersPage
+
+<MudText Typo="Typo.h3">
+    Vouchers
+</MudText>
+
+<MudStack Row="true"
+          Justify="Justify.FlexEnd">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.TwoTone.Add"
+               Href="/admin/vouchers/adicionar">
+        NOVO VOUCHER
+    </MudButton>
+</MudStack>
+
+<MudDataGrid Class="mt-4"
+             Items="@Vouchers"
+             Filterable="true"
+             QuickFilter="Filter"
+             Hideable="true"
+             Loading="@IsBusy"
+             FilterMode="DataGridFilterMode.Simple">
+
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchTerm"
+                      Placeholder="Filtrar..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      IconSize="Size.Medium" />
+    </ToolBarContent>
+
+    <Columns>
+        <PropertyColumn Property="x => x.Id"
+                        Title="#" />
+
+        <PropertyColumn Property="x => x.Code"
+                        Title="Código" />
+
+        <PropertyColumn Property="x => x.Title"
+                        Title="Voucher" />
+
+        <TemplateColumn Title="Desconto">
+            <CellTemplate>
+                @if (context.Item.DiscountType ==
+                     EVoucherDiscountType.Percentage)
+                {
+                    <MudText>
+                        @($"{context.Item.Value:N2}%")
+                    </MudText>
+                }
+                else
+                {
+                    <MudText>
+                        @($"{context.Item.Value:C2}")
+                    </MudText>
+                }
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x.StartsAt"
+                        Title="Início"
+                        Format="dd/MM/yyyy" />
+
+        <PropertyColumn Property="x => x.EndsAt"
+                        Title="Fim"
+                        Format="dd/MM/yyyy" />
+
+        <TemplateColumn Title="Estado">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.Item.IsActive
+                                                 ? Color.Success
+                                                 : Color.Default)">
+                    @(context.Item.IsActive
+                        ? "Ativo"
+                        : "Inativo")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title=""
+                        Sortable="false"
+                        Filterable="false">
+            <CellTemplate>
+                <MudStack Row="true"
+                          Justify="Justify.FlexEnd"
+                          Spacing="1">
+
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/admin/vouchers/editar/{context.Item.Id}")"
+                                   Color="Color.Primary" />
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
