@@ -18,11 +18,15 @@ namespace Dima.Web.Handlers
             throw new NotImplementedException();
         }
 
-        public Task<Response<Voucher?>> CreateAsync(CreateVoucherRequest request)
+        public async Task<Response<Voucher?>>
+            CreateAsync(CreateVoucherRequest request)
         {
-            throw new NotImplementedException();
-        }
+            var response = await _client.PostAsJsonAsync(
+                "v1/admin/vouchers",
+                request);
 
+            return await ReadResponseAsync(response);
+        }
         public Task<Response<Voucher?>> DeactivateAsync(DeactivateVoucherRequest request)
         {
             throw new NotImplementedException();
@@ -54,6 +58,19 @@ namespace Dima.Web.Handlers
         public Task<Response<Voucher?>> UpdateAsync(UpdateVoucherRequest request)
         {
             throw new NotImplementedException();
+        }
+
+        private static async Task<Response<Voucher?>>
+        ReadResponseAsync(HttpResponseMessage response)
+        {
+            var result = await response.Content
+                .ReadFromJsonAsync<Response<Voucher?>>();
+
+            return result ??
+                new Response<Voucher?>(
+                    null,
+                    (int)response.StatusCode,
+                    "[E156] Não foi possível processar o voucher");
         }
     }
 }

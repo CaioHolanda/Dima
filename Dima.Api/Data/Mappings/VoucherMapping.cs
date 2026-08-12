@@ -57,8 +57,7 @@ namespace Dima.Api.Data.Mappings
 
             builder.Property(x => x.AssignedUserId)
                 .IsRequired(false)
-                .HasColumnType("VARCHAR")
-                .HasMaxLength(160);
+                .HasColumnType("BIGINT");
 
             builder.Property(x => x.ProductId)
                 .IsRequired(false);
@@ -76,6 +75,11 @@ namespace Dima.Api.Data.Mappings
             builder.HasMany(x => x.Redemptions)
                 .WithOne(x => x.Voucher)
                 .HasForeignKey(x => x.VoucherId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasOne<Dima.Api.Models.User>()
+                .WithMany()
+                .HasForeignKey(x => x.AssignedUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.ToTable(table =>

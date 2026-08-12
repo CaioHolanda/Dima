@@ -36,10 +36,10 @@ public partial class ListAdminVouchersPage
                || voucher.Description.Contains(
                    SearchTerm,
                    StringComparison.OrdinalIgnoreCase)
-               || (voucher.AssignedUserId?.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   ?? false);
+               || (voucher.AssignedUserId?.ToString().Contains(
+                   SearchTerm,
+                   StringComparison.OrdinalIgnoreCase)
+               ?? false);
     };
 
     protected override async Task OnInitializedAsync()

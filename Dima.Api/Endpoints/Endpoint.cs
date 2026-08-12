@@ -1,15 +1,17 @@
 ﻿using Dima.Api.Common.Api;
+using Dima.Api.Endpoints.Admin;
 using Dima.Api.Endpoints.Categories;
 using Dima.Api.Endpoints.Identity;
 using Dima.Api.Endpoints.Orders;
+using Dima.Api.Endpoints.Products;
 using Dima.Api.Endpoints.Reports;
 using Dima.Api.Endpoints.Stripe;
 using Dima.Api.Endpoints.Transactions;
+using Dima.Api.Endpoints.Users;
+using Dima.Api.Endpoints.Vouchers;
 using Dima.Api.Models;
 using Dima.Core.Requests.Categories;
-using Dima.Api.Endpoints.Admin;
-using Dima.Api.Endpoints.Products;
-using Dima.Api.Endpoints.Vouchers;
+using Dima.Core.Security;
 
 namespace Dima.Api.Endpoints;
 
@@ -67,6 +69,11 @@ public static class Endpoint
             .MapEndpoint<UpdateVoucherEndpoint>()
             .MapEndpoint<DeactivateVoucherEndpoint>()
             .MapEndpoint<ActivateVoucherEndpoint>();
+
+        endpoint.MapGroup("v1/admin/users")
+            .WithTags("Admin - Users")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<SearchUsersEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")

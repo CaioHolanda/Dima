@@ -54,10 +54,7 @@ public class CreateVoucherRequest
         ErrorMessage = "O limite por usuário deve ser maior que zero")]
     public int? MaxUsesPerUser { get; set; }
 
-    [MaxLength(
-        160,
-        ErrorMessage = "O identificador do usuário deve ter no máximo 160 caracteres")]
-    public string? AssignedUserId { get; set; }
+    public long? AssignedUserId { get; set; }
 
     public long? ProductId { get; set; }
 

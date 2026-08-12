@@ -51,8 +51,7 @@ public class UpdateVoucherRequest
     [Range(1, int.MaxValue)]
     public int? MaxUsesPerUser { get; set; }
 
-    [MaxLength(160)]
-    public string? AssignedUserId { get; set; }
+    public long? AssignedUserId { get; set; }
 
     public long? ProductId { get; set; }
 

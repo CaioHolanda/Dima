@@ -21,7 +21,7 @@ public class Voucher
     public int? MaxTotalUses { get; set; }
     public int? MaxUsesPerUser { get; set; }
 
-    public string? AssignedUserId { get; set; }
+    public long? AssignedUserId { get; set; }
 
     public long? ProductId { get; set; }
     public Product? Product { get; set; }
