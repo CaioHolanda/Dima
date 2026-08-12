@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Dima.Core.Responses.Stripe
 {
-    public class StripeTransactionResponse
+    public class PaymentTransactionResponse
     {
         public string Id { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;

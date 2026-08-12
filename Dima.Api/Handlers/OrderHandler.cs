@@ -10,7 +10,9 @@ using System.Collections.Immutable;
 
 namespace Dima.Api.Handlers
 {
-    public class OrderHandler(AppDbContext context, IStripeHandler stripeHandler) : IOrderHandler
+    public class OrderHandler(
+        AppDbContext context,
+        IPaymentHandler paymentHandler) : IOrderHandler
     {
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
@@ -223,7 +225,9 @@ namespace Dima.Api.Handlers
                 {
                     Number = order.Number
                 };
-                var result = await stripeHandler.GetTransactionsByOrderNumberAsync(getTransactionsRequest);
+                var result =
+                    await paymentHandler.GetTransactionsByOrderNumberAsync(
+                        getTransactionsRequest);
 
                 Console.WriteLine($"[STRIPE] Success: {result.IsSuccess}");
                 Console.WriteLine($"[STRIPE] Message: {result.Message}");

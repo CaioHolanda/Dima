@@ -1,18 +1,17 @@
-﻿using Dima.Core;
-using Dima.Core.Handlers;
-using Dima.Core.Requests.Stripe;
+﻿using Dima.Core.Handlers;
+using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
-using Dima.Core.Responses.Stripe;
+using Dima.Core.Responses.Payment;
 using Stripe;
 using Stripe.Checkout;
 using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Handlers
 {
-    public class StripeHanlder : IStripeHandler
+    public class StripePaymentHandler : IPaymentHandler
     {
         public async Task<Response<string?>> CreateSessionAsync(
-            CreateSessionRequest request)
+            CreatePaymentSessionRequest request)
         {
             try
             {
@@ -98,14 +97,16 @@ namespace Dima.Api.Handlers
                     "[E091] Falha interna ao criar sessão de pagamento");
             }
         }
-        public async Task<Response<List<StripeTransactionResponse>>> GetTransactionsByOrderNumberAsync(GetTransactionsByOrderNumberRequest request)
+        public async Task<Response<List<PaymentTransactionResponse>>>
+            GetTransactionsByOrderNumberAsync(
+                GetTransactionsByOrderNumberRequest request)
         {
             var options = new PaymentIntentSearchOptions
             {
                 Query=$"metadata['order']:'{request.Number}'"
             };
             var service = new PaymentIntentService();
-            var data = new List<StripeTransactionResponse>();
+            var data = new List<PaymentTransactionResponse>();
             var list = await service.ListAsync(new PaymentIntentListOptions
             {
                 Limit = 20
@@ -119,11 +120,11 @@ namespace Dima.Api.Handlers
                 .ToList();
 
             if (transactions.Count == 0)
-                return new Response<List<StripeTransactionResponse>>(null, 404, "[E082] Nenhuma transacao encontrada");
+                return new Response<List<PaymentTransactionResponse>>(null, 404, "[E082] Nenhuma transacao encontrada");
 
             foreach (var item in transactions)
             {
-                data.Add(new StripeTransactionResponse
+                data.Add(new PaymentTransactionResponse
                 {
                     Id = item.Id,
                     Email = item.ReceiptEmail,
@@ -134,7 +135,7 @@ namespace Dima.Api.Handlers
                     Refunded = false
                 });
             }
-            return new Response<List<StripeTransactionResponse>>(data);
+            return new Response<List<PaymentTransactionResponse>>(data);
         }
     }
 }

@@ -117,7 +117,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<ITransactionHandler, TransactionHandler>();
             builder.Services.AddTransient<IVoucherHandler, VoucherHandler>();
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
-            builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
+            builder.Services.AddTransient<IPaymentHandler, StripePaymentHandler>(); 
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
             builder.Services.AddTransient<IProductHandler, ProductHandler>();
             builder.Services.AddTransient<IAdminProductHandler, ProductHandler>();
