@@ -1,5 +1,4 @@
 ﻿using Dima.Core.Requests.Payment;
-using Dima.Core.Requests.Stripe;
 using Dima.Core.Responses;
 using Dima.Core.Responses.Payment;
 

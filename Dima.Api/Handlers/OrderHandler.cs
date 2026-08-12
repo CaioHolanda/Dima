@@ -3,7 +3,7 @@ using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
-using Dima.Core.Requests.Stripe;
+using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Immutable;

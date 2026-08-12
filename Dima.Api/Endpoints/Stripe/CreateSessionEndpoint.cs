@@ -1,6 +1,6 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
-using Dima.Core.Requests.Stripe;
+using Dima.Core.Requests.Payment;
 using System.Security.Claims;
 
 namespace Dima.Api.Endpoints.Stripe
@@ -12,8 +12,8 @@ namespace Dima.Api.Endpoints.Stripe
             .Produces<string?>();
         private static async Task<IResult> HandleAsync(
             ClaimsPrincipal user,
-            IStripeHandler handler,
-            CreateSessionRequest request)
+            IPaymentHandler handler,
+            CreatePaymentSessionRequest request)
         {
             request.UserId = user.Identity!.Name ?? string.Empty;
             var result = await handler.CreateSessionAsync(request);

@@ -1,7 +1,7 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
-using Dima.Core.Requests.Stripe;
+using Dima.Core.Requests.Payment;
 using Dima.Web.Pages.Orders;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -24,7 +24,7 @@ namespace Dima.Web.Components.Orders
         [Inject] public IDialogService DialogService { get; set; } = null!;
         [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
         [Inject] public IOrderHandler OrderHandler { get; set; } = null!;
-        [Inject] public IStripeHandler StripeHandler { get; set; } = null!;
+        [Inject] public IPaymentHandler PaymentHandler { get; set; } = null!;
         [Inject] public ISnackbar Snackbar { get; set; } = null!;
 
         #endregion
@@ -76,7 +76,8 @@ namespace Dima.Web.Components.Orders
 
         private async Task PayOrderAsync()
         {
-            var request = new CreateSessionRequest{
+            var request = new CreatePaymentSessionRequest
+            {
                 OrderNumber        = Order.Number,
                 OrderTotal         = (int)(Math.Round(Order.Total * 100,2)),
                 ProductTitle       = Order.Product.Title,
@@ -84,7 +85,7 @@ namespace Dima.Web.Components.Orders
             };
             try
             {
-                var result = await StripeHandler.CreateSessionAsync(request);
+                var result = await PaymentHandler.CreateSessionAsync(request);
                 if (result.IsSuccess == false)
                 {
                     Snackbar.Add(result.Message, Severity.Error);
