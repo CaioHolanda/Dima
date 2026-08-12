@@ -1,6 +1,8 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
+using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 using Microsoft.Extensions.Http;
 using System.Net.Http.Json;
@@ -36,5 +38,6 @@ namespace Dima.Web.Handlers
                     400,
                     "[E079] Resposta vazia da API");
         }
+  
     }
 }

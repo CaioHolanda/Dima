@@ -1,5 +1,6 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -10,21 +11,29 @@ public partial class ListAdminVouchersPage
     : ComponentBase
 {
     public bool IsBusy { get; set; }
-    public List<Voucher> Vouchers { get; set; } = [];
+    public List<AdminVoucherListItem> Vouchers { get; set; } = [];
     public string SearchTerm { get; set; } = string.Empty;
+    public HashSet<long> VouchersBeingUpdated { get; set; } = [];
 
     [Inject]
     public IAdminVoucherHandler Handler { get; set; } = null!;
 
     [Inject]
+    public IDialogService DialogService { get; set; } = null!;
+
+    [Inject]
     public ISnackbar Snackbar { get; set; } = null!;
 
-    public Func<Voucher, bool> Filter => voucher =>
-    {
-        if (string.IsNullOrWhiteSpace(SearchTerm))
-            return true;
+    public Func<AdminVoucherListItem, bool> Filter =>
+        voucher =>
+        {
+            if (string.IsNullOrWhiteSpace(SearchTerm))
+                return true;
 
-        return voucher.Id.ToString().Contains(
+            var assignedUser =
+            voucher.AssignedUserEmail ?? "Todos";
+
+            return voucher.Id.ToString().Contains(
                    SearchTerm,
                    StringComparison.OrdinalIgnoreCase)
                || voucher.Code.Contains(
@@ -36,11 +45,10 @@ public partial class ListAdminVouchersPage
                || voucher.Description.Contains(
                    SearchTerm,
                    StringComparison.OrdinalIgnoreCase)
-               || (voucher.AssignedUserId?.ToString().Contains(
+               || assignedUser.Contains(
                    SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               ?? false);
-    };
+                   StringComparison.OrdinalIgnoreCase);
+        };
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,6 +84,79 @@ public partial class ListAdminVouchersPage
         finally
         {
             IsBusy = false;
+        }
+    }
+    public async Task OnStatusButtonClickedAsync(AdminVoucherListItem voucher)
+    {
+        var action = voucher.IsActive
+            ? "desativado"
+            : "reativado";
+
+        var consequence = voucher.IsActive
+            ? "e deixará de poder ser utilizado"
+            : "e voltará a poder ser utilizado";
+
+        var confirmed =
+            await DialogService.ShowMessageBoxAsync(
+                "ATENÇÃO",
+                $"O voucher \"{voucher.Title}\" será " +
+                $"{action} {consequence}. Deseja continuar?",
+                yesText: voucher.IsActive
+                    ? "DESATIVAR"
+                    : "REATIVAR",
+                cancelText: "Cancelar");
+
+        if (confirmed is not true)
+            return;
+
+        await OnStatusChangeAsync(voucher);
+    }
+    private async Task OnStatusChangeAsync(AdminVoucherListItem voucher)
+    {
+        var wasActive = voucher.IsActive;
+
+        VouchersBeingUpdated.Add(voucher.Id);
+
+        try
+        {
+            var result = wasActive
+                ? await Handler.DeactivateAsync(
+                    new DeactivateVoucherRequest
+                    {
+                        Id = voucher.Id
+                    })
+                : await Handler.ActivateAsync(
+                    new ActivateVoucherRequest
+                    {
+                        Id = voucher.Id
+                    });
+
+            if (!result.IsSuccess)
+            {
+                Snackbar.Add(
+                    result.Message ??
+                    "Não foi possível alterar o estado do voucher",
+                    Severity.Error);
+
+                return;
+            }
+
+            voucher.IsActive = !wasActive;
+
+            Snackbar.Add(
+                result.Message ??
+                (wasActive
+                    ? $"Voucher {voucher.Title} desativado"
+                    : $"Voucher {voucher.Title} reativado"),
+                Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            VouchersBeingUpdated.Remove(voucher.Id);
         }
     }
 }

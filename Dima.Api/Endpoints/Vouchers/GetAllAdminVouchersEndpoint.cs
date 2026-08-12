@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 
@@ -14,8 +15,7 @@ public class GetAllAdminVouchersEndpoint : IEndpoint
             .WithSummary("Get all vouchers")
             .WithDescription("Gets all vouchers for administration")
             .WithOrder(2)
-            .Produces<PagedResponse<List<Voucher>?>>();
-
+            .Produces<PagedResponse<List<AdminVoucherListItem>?>>();
     private static async Task<IResult> HandleAsync(
         IAdminVoucherHandler handler,
         [AsParameters] GetAllAdminVouchersRequest request)

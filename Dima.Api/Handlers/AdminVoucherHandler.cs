@@ -5,6 +5,7 @@ using Dima.Core.Models;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
+using Dima.Core.Models.Vouchers;
 
 namespace Dima.Api.Handlers
 {
@@ -179,63 +180,127 @@ namespace Dima.Api.Handlers
             }
         }
 
-        public async Task<PagedResponse<List<Voucher>?>> GetAllForAdminAsync(
-            GetAllAdminVouchersRequest request)
+        public async Task<
+            PagedResponse<List<AdminVoucherListItem>?>>
+            GetAllForAdminAsync(
+                GetAllAdminVouchersRequest request)
         {
             try
             {
-                var query = context.Vouchers
-                    .AsNoTracking()
-                    .OrderByDescending(x => x.IsActive)
-                    .ThenBy(x => x.Code);
+                var query =
+                    from voucher in context.Vouchers
+                        .AsNoTracking()
+
+                    join user in context.Users
+                        .AsNoTracking()
+                        on voucher.AssignedUserId
+                        equals (long?)user.Id
+                        into users
+
+                    from user in users.DefaultIfEmpty()
+
+                    orderby voucher.IsActive descending,
+                            voucher.Code
+
+                    select new AdminVoucherListItem
+                    {
+                        Id = voucher.Id,
+                        Code = voucher.Code,
+                        Title = voucher.Title,
+                        Description = voucher.Description,
+                        DiscountType = voucher.DiscountType,
+                        Value = voucher.Value,
+                        StartsAt = voucher.StartsAt,
+                        EndsAt = voucher.EndsAt,
+                        AssignedUserId = voucher.AssignedUserId,
+                        AssignedUserEmail = user == null
+                            ? null
+                            : user.Email,
+                        IsActive = voucher.IsActive
+                    };
 
                 var vouchers = await query
-                    .Skip((request.PageNumber - 1) * request.PageSize)
+                    .Skip(
+                        (request.PageNumber - 1) *
+                        request.PageSize)
                     .Take(request.PageSize)
                     .ToListAsync();
 
-                var count = await query.CountAsync();
+                var count = await context.Vouchers
+                    .CountAsync();
 
-                return new PagedResponse<List<Voucher>?>(
-                    vouchers,
-                    count,
-                    request.PageNumber,
-                    request.PageSize);
+                return new PagedResponse<
+                    List<AdminVoucherListItem>?>(
+                        vouchers,
+                        count,
+                        request.PageNumber,
+                        request.PageSize);
             }
             catch
             {
-                return new PagedResponse<List<Voucher>?>(
-                    null,
-                    StatusCodes.Status500InternalServerError,
-                    "[E140] Não foi possível consultar os vouchers");
+                return new PagedResponse<
+                    List<AdminVoucherListItem>?>(
+                        null,
+                        StatusCodes.Status500InternalServerError,
+                        "[E140] Não foi possível consultar os vouchers");
             }
         }
 
-        public async Task<Response<Voucher?>> GetByIdForAdminAsync(
-            GetVoucherByIdRequest request)
+        public async Task<Response<AdminVoucherDetails?>>GetByIdForAdminAsync(GetVoucherByIdRequest request)
         {
             try
             {
-                var voucher = await context.Vouchers
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(x => x.Id == request.Id);
+                var voucher = await (
+                    from currentVoucher in context.Vouchers
+                        .AsNoTracking()
+
+                    join user in context.Users
+                        .AsNoTracking()
+                        on currentVoucher.AssignedUserId
+                        equals (long?)user.Id
+                        into users
+
+                    from user in users.DefaultIfEmpty()
+
+                    where currentVoucher.Id == request.Id
+
+                    select new AdminVoucherDetails
+                    {
+                        Id = currentVoucher.Id,
+                        Code = currentVoucher.Code,
+                        Title = currentVoucher.Title,
+                        Description = currentVoucher.Description,
+                        DiscountType = currentVoucher.DiscountType,
+                        Value = currentVoucher.Value,
+                        StartsAt = currentVoucher.StartsAt,
+                        EndsAt = currentVoucher.EndsAt,
+                        MaxTotalUses = currentVoucher.MaxTotalUses,
+                        MaxUsesPerUser = currentVoucher.MaxUsesPerUser,
+                        AssignedUserId = currentVoucher.AssignedUserId,
+                        AssignedUserEmail = user == null
+                            ? null
+                            : user.Email,
+                        ProductId = currentVoucher.ProductId,
+                        IsActive = currentVoucher.IsActive
+                    })
+                    .FirstOrDefaultAsync();
 
                 return voucher is null
-                    ? new Response<Voucher?>(
+                    ? new Response<AdminVoucherDetails?>(
                         null,
                         StatusCodes.Status404NotFound,
                         "[E141] Voucher não encontrado")
-                    : new Response<Voucher?>(voucher);
+                    : new Response<AdminVoucherDetails?>(
+                        voucher);
             }
             catch
             {
-                return new Response<Voucher?>(
+                return new Response<AdminVoucherDetails?>(
                     null,
                     StatusCodes.Status500InternalServerError,
                     "[E142] Não foi possível consultar o voucher");
             }
         }
-
         public async Task<Response<Voucher?>> UpdateAsync(
             UpdateVoucherRequest request)
         {

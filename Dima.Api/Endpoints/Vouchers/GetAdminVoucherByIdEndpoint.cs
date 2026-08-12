@@ -1,6 +1,6 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
-using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 
@@ -14,8 +14,8 @@ public class GetAdminVoucherByIdEndpoint : IEndpoint
             .WithSummary("Get voucher by id")
             .WithDescription("Gets a voucher by id for administration")
             .WithOrder(3)
-            .Produces<Response<Voucher?>>(StatusCodes.Status200OK)
-            .Produces<Response<Voucher?>>(StatusCodes.Status404NotFound);
+            .Produces<Response<AdminVoucherDetails?>>(StatusCodes.Status200OK)
+            .Produces<Response<AdminVoucherDetails?>>(StatusCodes.Status404NotFound);
 
     private static async Task<IResult> HandleAsync(
         IAdminVoucherHandler handler,
