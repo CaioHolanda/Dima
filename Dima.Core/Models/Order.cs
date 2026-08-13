@@ -21,7 +21,6 @@ namespace Dima.Core.Models
         public string? ExternalReference { get; set; }
         public EPaymentGateway Gateway { get; set; } = EPaymentGateway.Stripe;
         public EOrderStatus Status { get; set; } = EOrderStatus.WaintingPayment;
-        public string UserId { get; set; } = string.Empty;
-
+        public long UserId { get; set; }
     }
 }

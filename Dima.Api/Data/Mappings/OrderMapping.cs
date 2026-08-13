@@ -43,8 +43,7 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
 
         builder.Property(x => x.UserId)
             .IsRequired()
-            .HasColumnType("VARCHAR")
-            .HasMaxLength(160);
+            .HasColumnType("BIGINT");
 
         builder.Property(x => x.OriginalPrice)
             .IsRequired()
@@ -66,6 +65,11 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
         builder.HasOne(x => x.Voucher)
             .WithMany()
             .HasForeignKey(x => x.VoucherId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Dima.Api.Models.User>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.ToTable(table =>
