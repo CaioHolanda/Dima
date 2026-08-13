@@ -73,18 +73,68 @@ namespace Dima.Api.Handlers
 
         public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
         {
-            // Produto existe?
-            Product? product;
             var userId = await GetUserIdAsync(request.UserId);
             if (userId is null)
                 return new Response<Order?>(
                     null,
                     404,
                     "[E167] Usuario nao encontrado");
+
+            var now = DateTime.Now;
+
+            // Já existe um pedido aguardando pagamento?
+            var hasPendingOrder = await context.Orders
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.UserId == userId.Value &&
+                    x.Status == EOrderStatus.WaintingPayment);
+
+            if (hasPendingOrder)
+            {
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E175] Já existe um pedido aguardando pagamento");
+            }
+
+            // Já existe um plano futuro pago/agendado?
+            var hasScheduledPlan = await context.Orders
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.UserId == userId.Value &&
+                    x.Status == EOrderStatus.Paid &&
+                    x.AccessStartsAt != null &&
+                    x.AccessStartsAt > now);
+
+            if (hasScheduledPlan)
+            {
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E176] Já existe um próximo plano agendado");
+            }
+
+            // Existe acesso vitalício já adquirido?
+            var hasLifetimeAccess = await context.Orders
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.UserId == userId.Value &&
+                    x.Status == EOrderStatus.Paid &&
+                    x.AccessStartsAt != null &&
+                    x.AccessEndsAt == null);
+
+            if (hasLifetimeAccess)
+            {
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E177] O usuário já possui acesso vitalício");
+            }           
+            
+            // Produto existe?
+            Product? product;
             try
             {
-
-
                 product = await context
                     .Products
                     .AsNoTracking()
@@ -231,6 +281,7 @@ namespace Dima.Api.Handlers
         public async Task<Response<Order?>> PayAsync(PayOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
+            Order? order;
 
             if (userId is null)
                 return new Response<Order?>(
@@ -238,7 +289,7 @@ namespace Dima.Api.Handlers
                     404,
                     "[E170] Usuario nao encontrado");
 
-            Order? order;
+
             try
             {
                 order = await context
@@ -299,6 +350,27 @@ namespace Dima.Api.Handlers
             order.Status = EOrderStatus.Paid;
             order.ExternalReference=request.ExternalReference;
             order.UpdatedAt=DateTime.Now;
+
+            var now = DateTime.Now;
+
+            var currentAccessEndsAt = await context.Orders
+                .AsNoTracking()
+                .Where(x =>
+                    x.UserId == userId.Value &&
+                    x.Status == EOrderStatus.Paid &&
+                    x.AccessEndsAt != null &&
+                    x.AccessEndsAt > now)
+                .MaxAsync(x => (DateTime?)x.AccessEndsAt);
+
+            var accessStartsAt = currentAccessEndsAt ?? now;
+
+            order.AccessStartsAt = accessStartsAt;
+
+            order.AccessEndsAt =
+                order.Product.AccessDurationMonths.HasValue
+                    ? accessStartsAt.AddMonths(
+                        order.Product.AccessDurationMonths.Value)
+                    : null;
 
             // Persistencia em banco
             try

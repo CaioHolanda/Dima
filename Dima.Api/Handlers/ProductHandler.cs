@@ -16,6 +16,13 @@ namespace Dima.Api.Handlers
         {
             try
             {
+                if (request.AccessDurationMonths is <= 0)
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E172] A duração do acesso deve ser maior que zero");
+                }
                 if (string.IsNullOrWhiteSpace(request.Slug))
                 {
                     return new Response<Product?>(
@@ -51,7 +58,8 @@ namespace Dima.Api.Handlers
                     Description = request.Description ?? string.Empty,
                     Price = request.Price,
                     Slug = slug,
-                    IsActive = request.IsActive
+                    IsActive = request.IsActive,
+                    AccessDurationMonths = request.AccessDurationMonths
                 };
 
                 await context.Products.AddAsync(product);
@@ -75,6 +83,14 @@ namespace Dima.Api.Handlers
         {
             try
             {
+                if (request.AccessDurationMonths is <= 0)
+                {
+                    return new Response<Product?>(
+                        null,
+                        StatusCodes.Status400BadRequest,
+                        "[E173] A duração do acesso deve ser maior que zero");
+                }
+
                 var product = await context.Products
                     .FirstOrDefaultAsync(x => x.Id == request.Id);
 
@@ -118,11 +134,11 @@ namespace Dima.Api.Handlers
                 }
 
                 product.Title = request.Title;
-                product.Description =
-                    request.Description ?? string.Empty;
+                product.Description = request.Description ?? string.Empty;
                 product.Price = request.Price;
                 product.Slug = slug;
                 product.IsActive = request.IsActive;
+                product.AccessDurationMonths = request.AccessDurationMonths;
 
                 await context.SaveChangesAsync();
 

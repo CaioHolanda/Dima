@@ -12,5 +12,7 @@ namespace Dima.Core.Models
         public bool IsActive { get; set; }
         public decimal Price { get; set; }
         public string Slug { get; set; } = string.Empty;
+
+        public int? AccessDurationMonths { get; set; }
     }
 }

@@ -18,6 +18,8 @@ namespace Dima.Core.Models
         public decimal Total { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime? AccessStartsAt { get; set; }
+        public DateTime? AccessEndsAt { get; set; }
         public string? ExternalReference { get; set; }
         public EPaymentGateway Gateway { get; set; } = EPaymentGateway.Stripe;
         public EOrderStatus Status { get; set; } = EOrderStatus.WaintingPayment;

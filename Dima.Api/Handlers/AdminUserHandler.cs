@@ -1,4 +1,5 @@
 ﻿using Dima.Api.Data;
+using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
 using Dima.Core.Requests.Users;
@@ -10,6 +11,100 @@ namespace Dima.Api.Handlers;
 public class AdminUserHandler(AppDbContext context)
     : IAdminUserHandler
 {
+    public async Task<PagedResponse<List<AdminUserListItem>?>>
+        GetAllAsync(GetAllAdminUsersRequest request)
+    {
+        try
+        {
+            var now = DateTime.Now;
+
+            var query = context.Users
+                .AsNoTracking()
+                .OrderBy(x => x.Email);
+
+            var users = await query
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .Select(user => new AdminUserListItem
+                {
+                    Id = user.Id,
+                    Email = user.Email ?? string.Empty,
+
+                    ProductName = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt <= now &&
+                            (
+                                order.AccessEndsAt == null ||
+                                order.AccessEndsAt > now
+                            ))
+                        .OrderByDescending(order => order.AccessStartsAt)
+                        .Select(order => order.Product.Title)
+                        .FirstOrDefault(),
+
+                    AccessStartsAt = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt <= now &&
+                            (
+                                order.AccessEndsAt == null ||
+                                order.AccessEndsAt > now
+                            ))
+                        .OrderByDescending(order => order.AccessStartsAt)
+                        .Select(order => order.AccessStartsAt)
+                        .FirstOrDefault(),
+
+                    AccessEndsAt = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt <= now &&
+                            (
+                                order.AccessEndsAt == null ||
+                                order.AccessEndsAt > now
+                            ))
+                        .OrderByDescending(order => order.AccessStartsAt)
+                        .Select(order => order.AccessEndsAt)
+                        .FirstOrDefault(),
+
+                    IsPremium = context.Orders
+                        .Any(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt <= now &&
+                            (
+                                order.AccessEndsAt == null ||
+                                order.AccessEndsAt > now
+                            )),
+
+                    IsActive =
+                        user.LockoutEnd != DateTimeOffset.MaxValue
+                })
+                .ToListAsync();
+
+            var count = await query.CountAsync();
+
+            return new PagedResponse<List<AdminUserListItem>?>(
+                users,
+                count,
+                request.PageNumber,
+                request.PageSize);
+        }
+        catch
+        {
+            return new PagedResponse<List<AdminUserListItem>?>(
+                null,
+                500,
+                "[E174] Não foi possível consultar os usuários");
+        }
+    }
+
     public async Task<Response<List<UserLookup>?>>
         SearchAsync(SearchUsersRequest request)
     {

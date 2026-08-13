@@ -37,6 +37,14 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("DATETIME2");
 
+        builder.Property(x => x.AccessStartsAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
+        builder.Property(x => x.AccessEndsAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
         builder.Property(x => x.Status)
             .IsRequired()
             .HasColumnType("SMALLINT");
@@ -93,6 +101,10 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             table.HasCheckConstraint(
                 "CK_Order_Total_Calculation",
                 "[Total] = [OriginalPrice] - [DiscountAmount]");
+
+            table.HasCheckConstraint(
+                "CK_Order_AccessPeriod",
+                "[AccessStartsAt] IS NULL OR [AccessEndsAt] IS NULL OR [AccessEndsAt] > [AccessStartsAt]");
         });
     }
 }

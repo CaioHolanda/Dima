@@ -8,4 +8,7 @@ public interface IAdminUserHandler
 {
     Task<Response<List<UserLookup>?>>
         SearchAsync(SearchUsersRequest request);
+
+    Task<PagedResponse<List<AdminUserListItem>?>>
+        GetAllAsync(GetAllAdminUsersRequest request);
 }

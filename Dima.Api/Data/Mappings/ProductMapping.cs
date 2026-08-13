@@ -9,6 +9,7 @@ namespace Dima.Api.Data.Mappings
         public void Configure(EntityTypeBuilder<Product> builder)
         {
             builder.ToTable("Product");
+
             builder.HasKey(x => x.Id);
 
             builder.Property(x => x.Title)
@@ -29,6 +30,15 @@ namespace Dima.Api.Data.Mappings
             builder.Property(x => x.IsActive)
                     .IsRequired(true)
                     .HasColumnType("BIT");
+            builder.Property(x => x.AccessDurationMonths)
+                    .IsRequired(false)
+                    .HasColumnType("INT");
+            builder.ToTable(table =>
+            {
+                table.HasCheckConstraint(
+                    "CK_Product_AccessDurationMonths_Positive",
+                    "[AccessDurationMonths] IS NULL OR [AccessDurationMonths] > 0");
+            });
         }
     }
 }
