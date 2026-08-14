@@ -11,4 +11,10 @@ public interface IAdminUserHandler
 
     Task<PagedResponse<List<AdminUserListItem>?>>
         GetAllAsync(GetAllAdminUsersRequest request);
+
+    Task<Response<AdminUserListItem?>>
+        ActivateAsync(ActivateUserRequest request);
+
+    Task<Response<AdminUserListItem?>>
+        DeactivateAsync(DeactivateUserRequest request);
 }

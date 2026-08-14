@@ -52,4 +52,36 @@ public class AdminUserHandler(
                 (int)response.StatusCode,
                 "[E161] Não foi possível pesquisar os usuários");
     }
+    public async Task<Response<AdminUserListItem?>>
+    ActivateAsync(ActivateUserRequest request)
+    {
+        var response = await _client.PatchAsync(
+            $"v1/admin/users/{request.Id}/activate",
+            null);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<Response<AdminUserListItem?>>();
+
+        return result ??
+            new Response<AdminUserListItem?>(
+                null,
+                (int)response.StatusCode,
+                "[E188] Não foi possível ativar o usuário");
+    }
+    public async Task<Response<AdminUserListItem?>>
+    DeactivateAsync(DeactivateUserRequest request)
+    {
+        var response = await _client.PatchAsync(
+            $"v1/admin/users/{request.Id}/deactivate",
+            null);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<Response<AdminUserListItem?>>();
+
+        return result ??
+            new Response<AdminUserListItem?>(
+                null,
+                (int)response.StatusCode,
+                "[E189] Não foi possível desativar o usuário");
+    }
 }

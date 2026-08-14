@@ -74,7 +74,9 @@ public static class Endpoint
             .WithTags("Admin - Users")
             .RequireAuthorization("AdminOnly")
             .MapEndpoint<GetAllAdminUsersEndpoint>()
-            .MapEndpoint<SearchUsersEndpoint>();
+            .MapEndpoint<SearchUsersEndpoint>()
+            .MapEndpoint<ActivateUserEndpoint>()
+            .MapEndpoint<DeactivateUserEndpoint>(); 
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
