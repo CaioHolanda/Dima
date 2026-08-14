@@ -13,6 +13,10 @@ public class AdminUserListItem
     public DateTime? AccessStartsAt { get; set; }
 
     public DateTime? AccessEndsAt { get; set; }
-
+    // Plano já pago para o futuro
+    public string? NextProductName { get; set; }
+    public DateTime? NextAccessStartsAt { get; set; }
+    public DateTime? NextAccessEndsAt { get; set; }
     public bool IsActive { get; set; }
+
 }

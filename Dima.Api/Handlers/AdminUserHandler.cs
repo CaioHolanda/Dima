@@ -35,12 +35,11 @@ public class AdminUserHandler(AppDbContext context)
                             order.UserId == user.Id &&
                             order.Status == EOrderStatus.Paid &&
                             order.AccessStartsAt != null &&
-                            order.AccessStartsAt <= now &&
-                            (
-                                order.AccessEndsAt == null ||
-                                order.AccessEndsAt > now
-                            ))
-                        .OrderByDescending(order => order.AccessStartsAt)
+                            order.AccessStartsAt <= now)
+                        .OrderByDescending(order =>
+                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt > now)
+                        .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.Product.Title)
                         .FirstOrDefault(),
 
@@ -49,12 +48,11 @@ public class AdminUserHandler(AppDbContext context)
                             order.UserId == user.Id &&
                             order.Status == EOrderStatus.Paid &&
                             order.AccessStartsAt != null &&
-                            order.AccessStartsAt <= now &&
-                            (
-                                order.AccessEndsAt == null ||
-                                order.AccessEndsAt > now
-                            ))
-                        .OrderByDescending(order => order.AccessStartsAt)
+                            order.AccessStartsAt <= now)
+                        .OrderByDescending(order =>
+                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt > now)
+                        .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessStartsAt)
                         .FirstOrDefault(),
 
@@ -63,12 +61,11 @@ public class AdminUserHandler(AppDbContext context)
                             order.UserId == user.Id &&
                             order.Status == EOrderStatus.Paid &&
                             order.AccessStartsAt != null &&
-                            order.AccessStartsAt <= now &&
-                            (
-                                order.AccessEndsAt == null ||
-                                order.AccessEndsAt > now
-                            ))
-                        .OrderByDescending(order => order.AccessStartsAt)
+                            order.AccessStartsAt <= now)
+                        .OrderByDescending(order =>
+                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt > now)
+                        .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessEndsAt)
                         .FirstOrDefault(),
 
@@ -82,6 +79,36 @@ public class AdminUserHandler(AppDbContext context)
                                 order.AccessEndsAt == null ||
                                 order.AccessEndsAt > now
                             )),
+
+                    NextProductName = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt > now)
+                        .OrderBy(order => order.AccessStartsAt)
+                        .Select(order => order.Product.Title)
+                        .FirstOrDefault(),
+
+                    NextAccessStartsAt = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt > now)
+                        .OrderBy(order => order.AccessStartsAt)
+                        .Select(order => order.AccessStartsAt)
+                        .FirstOrDefault(),
+
+                    NextAccessEndsAt = context.Orders
+                        .Where(order =>
+                            order.UserId == user.Id &&
+                            order.Status == EOrderStatus.Paid &&
+                            order.AccessStartsAt != null &&
+                            order.AccessStartsAt > now)
+                        .OrderBy(order => order.AccessStartsAt)
+                        .Select(order => order.AccessEndsAt)
+                        .FirstOrDefault(),
 
                     IsActive =
                         user.LockoutEnd != DateTimeOffset.MaxValue

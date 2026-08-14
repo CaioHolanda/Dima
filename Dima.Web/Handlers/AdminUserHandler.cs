@@ -14,6 +14,24 @@ public class AdminUserHandler(
         httpClientFactory.CreateClient(
             Configuration.HttpClientName);
 
+    public async Task<PagedResponse<List<AdminUserListItem>?>>
+    GetAllAsync(GetAllAdminUsersRequest request)
+    {
+        var response = await _client.GetAsync(
+            $"v1/admin/users" +
+            $"?pageSize={request.PageSize}" +
+            $"&pageNumber={request.PageNumber}");
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedResponse<List<AdminUserListItem>?>>();
+
+        return result ??
+            new PagedResponse<List<AdminUserListItem>?>(
+                null,
+                (int)response.StatusCode,
+                "[E178] Não foi possível obter os usuários");
+    }
+
     public async Task<Response<List<UserLookup>?>>
         SearchAsync(SearchUsersRequest request)
     {
