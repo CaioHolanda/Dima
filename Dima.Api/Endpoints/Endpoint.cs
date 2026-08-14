@@ -76,7 +76,12 @@ public static class Endpoint
             .MapEndpoint<GetAllAdminUsersEndpoint>()
             .MapEndpoint<SearchUsersEndpoint>()
             .MapEndpoint<ActivateUserEndpoint>()
-            .MapEndpoint<DeactivateUserEndpoint>(); 
+            .MapEndpoint<DeactivateUserEndpoint>();
+
+        endpoint.MapGroup("v1/admin/orders")
+            .WithTags("Admin - Orders")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<GetAllAdminOrdersEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
