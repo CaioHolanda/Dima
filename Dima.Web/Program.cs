@@ -26,14 +26,18 @@ builder.Services
     })
     .AddHttpMessageHandler<CookieHandler>();
 
-builder.Services.AddTransient<IAccountHandler,      AccountHandler    >();
-builder.Services.AddTransient<ITransactionHandler,  TransactionHandler>();
-builder.Services.AddTransient<IOrderHandler,        OrderHandler      >();
-builder.Services.AddTransient<IStripeHandler,       StripeHandler     >();
-builder.Services.AddTransient<IProductHandler,      ProductHandler    >();
-builder.Services.AddTransient<IVoucherHandler,      VoucherHandler    >();
-builder.Services.AddTransient<ICategoryHandler,     CategoryHandler   >();
-builder.Services.AddTransient<IReportHandler,       ReportHandler     >();
+builder.Services.AddTransient<IAccountHandler,      AccountHandler      >();
+builder.Services.AddTransient<ITransactionHandler,  TransactionHandler  >();
+builder.Services.AddTransient<IOrderHandler,        OrderHandler        >();
+builder.Services.AddTransient<IPaymentHandler,      StripePaymentHandler>(); 
+builder.Services.AddTransient<IProductHandler,      ProductHandler      >();
+builder.Services.AddTransient<IVoucherHandler,      VoucherHandler      >();
+builder.Services.AddTransient<ICategoryHandler,     CategoryHandler     >();
+builder.Services.AddTransient<IReportHandler,       ReportHandler       >();
+builder.Services.AddTransient<IAdminProductHandler, AdminProductHandler >();
+builder.Services.AddTransient<IAdminVoucherHandler, AdminVoucherHandler >();
+builder.Services.AddTransient<IAdminUserHandler,    AdminUserHandler    >();
+builder.Services.AddTransient<IAdminOrderHandler,   AdminOrderHandler   >();
 
 
 builder.Services.AddAuthorizationCore();

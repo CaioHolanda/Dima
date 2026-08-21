@@ -1,0 +1,80 @@
+﻿@page "/admin/produtos/adicionar"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits CreateAdminProductPage
+
+<MudText Typo="Typo.h3">
+    Novo Produto
+</MudText>
+
+<MudPaper Class="pa-8 mt-4">
+    <EditForm Model="@InputModel"
+              OnValidSubmit="OnValidSubmitAsync">
+
+        <DataAnnotationsValidator />
+
+        <MudTextField Label="Produto"
+                      HelperText="Campo obrigatório"
+                      @bind-Value="InputModel.Title"
+                      For="@(() => InputModel.Title)"
+                      Immediate="true" />
+
+        <MudTextField Label="Descrição"
+                      Lines="3"
+                      HelperText="Digite um benefício por linha"
+                      @bind-Value="InputModel.Description"
+                      For="@(() => InputModel.Description)"
+                      Immediate="true" />
+
+        <MudTextField T="decimal"
+                      Label="Preço"
+                      HelperText="Digite o valor usando vírgula. Exemplo: 30,99"
+                      @bind-Value="InputModel.Price"
+                      For="@(() => InputModel.Price)"
+                      InputType="InputType.Text"
+                      Format="0.00"
+                      Culture="@BrazilCulture"
+                      Immediate="false" />
+
+        <MudTextField T="string"
+                      Label="Slug"
+                      HelperText="Use letras minúsculas, números e hífens"
+                      @bind-Value="InputModel.Slug"
+                      For="@(() => InputModel.Slug)"
+                      Validation="@ValidateSlug"
+                      Immediate="true" />
+
+        <MudSwitch T="bool"
+                   @bind-Value="InputModel.IsActive"
+                   Color="Color.Success">
+            Produto ativo
+        </MudSwitch>
+
+        <MudStack Row="true"
+                  Spacing="2"
+                  Class="mt-4">
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Disabled="@IsBusy">
+
+                @if (IsBusy)
+                {
+                    <MudProgressCircular Size="Size.Small"
+                                         Indeterminate="true"
+                                         Class="mr-2" />
+                }
+
+                SALVAR
+            </MudButton>
+
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Default"
+                       Href="/admin/produtos"
+                       Disabled="@IsBusy">
+                CANCELAR
+            </MudButton>
+
+        </MudStack>
+    </EditForm>
+</MudPaper>

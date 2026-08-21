@@ -1,13 +1,20 @@
 ﻿using Dima.Api.Common.Api;
+using Dima.Api.Endpoints.Admin;
 using Dima.Api.Endpoints.Categories;
 using Dima.Api.Endpoints.Identity;
 using Dima.Api.Endpoints.Orders;
+using Dima.Api.Endpoints.Products;
 using Dima.Api.Endpoints.Reports;
 using Dima.Api.Endpoints.Stripe;
 using Dima.Api.Endpoints.Transactions;
+using Dima.Api.Endpoints.Users;
+using Dima.Api.Endpoints.Vouchers;
 using Dima.Api.Models;
 using Dima.Core.Requests.Categories;
+using Dima.Core.Security;
+
 namespace Dima.Api.Endpoints;
+
 public static class Endpoint
 {
     // Extension Method
@@ -43,10 +50,43 @@ public static class Endpoint
             .MapEndpoint<GetAllProductsEndpoint>()
             .MapEndpoint<GetProductBySlugEndpoint>();
 
+        endpoint.MapGroup("v1/admin/products")
+            .WithTags("Admin - Products")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<GetAllAdminProductsEndpoint>()
+            .MapEndpoint<GetAdminProductByIdEndpoint>()
+            .MapEndpoint<CreateProductEndpoint>()
+            .MapEndpoint<UpdateProductEndpoint>()
+            .MapEndpoint<DeactivateProductEndpoint>()
+            .MapEndpoint<ActivateProductEndpoint>();
+
+        endpoint.MapGroup("v1/admin/vouchers")
+            .WithTags("Admin - Vouchers")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<CreateVoucherEndpoint>()
+            .MapEndpoint<GetAllAdminVouchersEndpoint>()
+            .MapEndpoint<GetAdminVoucherByIdEndpoint>()
+            .MapEndpoint<UpdateVoucherEndpoint>()
+            .MapEndpoint<DeactivateVoucherEndpoint>()
+            .MapEndpoint<ActivateVoucherEndpoint>();
+
+        endpoint.MapGroup("v1/admin/users")
+            .WithTags("Admin - Users")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<GetAllAdminUsersEndpoint>()
+            .MapEndpoint<SearchUsersEndpoint>()
+            .MapEndpoint<ActivateUserEndpoint>()
+            .MapEndpoint<DeactivateUserEndpoint>();
+
+        endpoint.MapGroup("v1/admin/orders")
+            .WithTags("Admin - Orders")
+            .RequireAuthorization("AdminOnly")
+            .MapEndpoint<GetAllAdminOrdersEndpoint>();
+
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
             .RequireAuthorization()
-            .MapEndpoint<GetVoucherByNumberEndpoint>();
+            .MapEndpoint<GetVoucherByCodeEndpoint>();
 
         endpoint.MapGroup("v1/orders")
             .WithTags("Orders")
@@ -69,8 +109,13 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
+            .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
             .MapEndpoint<GetRolesEndpoint>();
+
+        endpoint.MapGroup("v1/admin")
+            .WithTags("Admin")
+            .MapEndpoint<ValidateAdminEndpoint>();
 
         endpoint.MapGroup("v1/reports")
             .WithTags("Reports")

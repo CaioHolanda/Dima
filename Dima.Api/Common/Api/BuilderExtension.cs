@@ -1,14 +1,16 @@
 ﻿using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
+using Dima.Api.Services.Email;
 using Dima.Core;
 using Dima.Core.Handlers;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Stripe;
+using Dima.Core.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
-using Dima.Api.Services.Email;
+using Microsoft.EntityFrameworkCore;
+using Dima.Api.Configuration;
+using CoreConfiguration = Dima.Core.Configuration;
+using Stripe;
 
 namespace Dima.Api.Common.Api
 {
@@ -16,11 +18,13 @@ namespace Dima.Api.Common.Api
     {
         public static void AddConfiguration(this WebApplicationBuilder builder)
         {
-            Configuration.ConnectionString=builder.Configuration
+            builder.Services.Configure<InitialAdminOptions>
+                (builder.Configuration.GetSection(InitialAdminOptions.SectionName));
+            CoreConfiguration.ConnectionString=builder.Configuration
                 .GetConnectionString("DefaultConnection") ?? string.Empty;
-            Configuration.BackendUrl=builder.Configuration
+            CoreConfiguration.BackendUrl=builder.Configuration
                 .GetValue<string>("BackendUrl")?? string.Empty;
-            Configuration.FrontendUrl=builder.Configuration
+            CoreConfiguration.FrontendUrl=builder.Configuration
                 .GetValue<string>("FrontendUrl")?? string.Empty;
             ApiConfiguration.StripeApiKey = builder.Configuration
                 .GetValue<string>("StripeApiKey") ?? string.Empty;
@@ -43,19 +47,42 @@ namespace Dima.Api.Common.Api
                 {
                     options.Cookie.HttpOnly = true;
 
+                    options.Events.OnRedirectToLogin = context =>
+                    {
+                        context.Response.StatusCode =
+                            StatusCodes.Status401Unauthorized;
+
+                        return Task.CompletedTask;
+                    };
+
+                    options.Events.OnRedirectToAccessDenied = context =>
+                    {
+                        context.Response.StatusCode =
+                            StatusCodes.Status403Forbidden;
+
+                        return Task.CompletedTask;
+                    };
+
                     if (builder.Environment.IsDevelopment())
                     {
                         options.Cookie.SameSite = SameSiteMode.Lax;
-                        options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+                        options.Cookie.SecurePolicy =
+                            CookieSecurePolicy.SameAsRequest;
                     }
                     else
                     {
                         options.Cookie.SameSite = SameSiteMode.None;
-                        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                        options.Cookie.SecurePolicy =
+                            CookieSecurePolicy.Always;
                     }
                 });
 
-            builder.Services.AddAuthorization();
+            builder.Services.AddAuthorization(options =>
+            {
+                options.AddPolicy(
+                    AppPolicies.AdminOnly,
+                    policy => policy.RequireRole(AppRoles.Admin));
+            });
         }
         public static void AddEmailServices(this WebApplicationBuilder builder)
         {
@@ -67,7 +94,7 @@ namespace Dima.Api.Common.Api
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<AppDbContext>
-                    (x => { x.UseSqlServer(Configuration.ConnectionString); });
+                    (x => { x.UseSqlServer(CoreConfiguration.ConnectionString); });
             builder.Services
                     .AddIdentityCore<User>(options =>
                     {
@@ -88,11 +115,15 @@ namespace Dima.Api.Common.Api
         {
             builder.Services.AddTransient<ICategoryHandler, CategoryHandler>();
             builder.Services.AddTransient<ITransactionHandler, TransactionHandler>();
-            builder.Services.AddTransient<IProductHandler, ProductHandler>();
             builder.Services.AddTransient<IVoucherHandler, VoucherHandler>();
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
-            builder.Services.AddTransient<IStripeHandler, StripeHanlder>();
+            builder.Services.AddTransient<IPaymentHandler, StripePaymentHandler>(); 
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
+            builder.Services.AddTransient<IProductHandler, ProductHandler>();
+            builder.Services.AddTransient<IAdminProductHandler, ProductHandler>();
+            builder.Services.AddTransient<IAdminVoucherHandler, AdminVoucherHandler>();
+            builder.Services.AddTransient<IAdminUserHandler, AdminUserHandler>();
+            builder.Services.AddTransient<IAdminOrderHandler, AdminOrderHandler>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {
@@ -101,8 +132,8 @@ namespace Dima.Api.Common.Api
                     ApiConfiguration.CorsPolicyName,
                     policy => policy
                     .WithOrigins([
-                        Configuration.BackendUrl,
-                        Configuration.FrontendUrl
+                        CoreConfiguration.BackendUrl,
+                        CoreConfiguration.FrontendUrl
                         ])
                     .AllowAnyMethod()
                     .AllowAnyHeader()

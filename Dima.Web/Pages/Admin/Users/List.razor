@@ -1,0 +1,180 @@
+﻿@page "/admin/users"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits ListAdminUsersPage
+
+<MudText Typo="Typo.h3">
+    Usuários
+</MudText>
+
+<MudDataGrid Class="mt-4"
+             Items="@Users"
+             QuickFilter="Filter"
+             Hideable="true"
+             Loading="@IsBusy"
+             Dense="true">
+
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchTerm"
+                      Placeholder="Filtrar..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      IconSize="Size.Medium" />
+    </ToolBarContent>
+
+    <Columns>
+
+        <TemplateColumn Title="E-mail"
+                        HeaderStyle="width: 240px;
+            min-width: 240px;"
+                        CellStyle="width: 240px;
+            min-width: 240px;">
+            <CellTemplate>
+                <MudText Style="white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;">
+                    @context.Item.Email
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Plano"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.Item.IsPremium
+                                                              ? Color.Primary
+                                                              : Color.Default)">
+                    @(context.Item.IsPremium
+                        ? "Premium"
+                        : "Free")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Produto atual"
+                        HeaderStyle="width: 150px;
+            min-width: 150px;"
+                        CellStyle="width: 150px;
+            min-width: 150px;">
+            <CellTemplate>
+                <MudText Style="white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;">
+                    @(context.Item.ProductName ?? "-")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Próximo produto"
+                        HeaderStyle="width: 150px;
+            min-width: 150px;"
+                        CellStyle="width: 150px;
+            min-width: 150px;">
+            <CellTemplate>
+                <MudText Style="white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;">
+                    @(context.Item.NextProductName ?? "-")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Início atual"
+                        HeaderStyle="width: 110px;
+            min-width: 110px;
+            max-width: 110px;"
+                        CellStyle="width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @FormatDate(context.Item.AccessStartsAt)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Acesso até"
+                        HeaderStyle="width: 110px;
+            min-width: 110px;
+            max-width: 110px;"
+                        CellStyle="width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @GetAccessUntil(context.Item)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Estado"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.Item.IsActive
+                                                              ? Color.Success
+                                                              : Color.Default)">
+                    @(context.Item.IsActive
+                        ? "Ativo"
+                        : "Inativo")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title=""
+                        Sortable="false"
+                        Filterable="false"
+                        Hideable="false"
+                        HeaderStyle="width: 96px;
+            min-width: 96px;
+            max-width: 96px;
+            padding-left: 4px;
+            padding-right: 4px;"
+                        CellStyle="width: 96px;
+            min-width: 96px;
+            max-width: 96px;
+            padding-left: 4px;
+            padding-right: 4px;">
+            <CellTemplate>
+                <MudStack Row="true"
+                          Justify="Justify.FlexEnd"
+                          Spacing="1">
+                    <MudTooltip Text="@(context.Item.IsActive ? "Desativar usuário" : "Ativar usuário")">
+                        <MudIconButton Icon="@(context.Item.IsActive
+                                                                  ? Icons.Material.Filled.CheckCircle
+                                                              : Icons.Material.Filled.Block)"
+                                       Color="@(context.Item.IsActive
+                                                                  ? Color.Success
+                                                                  : Color.Error)"
+                                       Disabled="@UsersBeingUpdated.Contains(context.Item.Id)"
+                                       OnClick="@(() => ToggleUserStatusAsync(context.Item))" />
+                    </MudTooltip>
+                    <MudTooltip Text="@(context.Item.IsActive
+                                    ? "Enviar link para redefinição de senha"
+                                    : "Disponível apenas para usuários ativos")">
+                        <MudIconButton Icon="@Icons.Material.Filled.LockReset"
+                                       Color="Color.Primary"
+                                       Disabled="@(!context.Item.IsActive ||
+                                                                      UsersBeingReset.Contains(context.Item.Id))"
+                                       OnClick="@(() => SendPasswordResetAsync(context.Item))" />
+                    </MudTooltip>
+
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+
+    </Columns>
+</MudDataGrid>

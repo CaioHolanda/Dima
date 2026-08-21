@@ -27,10 +27,17 @@
                                 @product.Price.ToString("C")
                             </MudText>
                         </div>
-                        <MudList T="string" Class="mx-auto mt-4" Style="width: 300px">
-                            <MudListItem Icon="@Icons.Material.Filled.Check">Transacoes Ilimitadas</MudListItem>
-                            <MudListItem Icon="@Icons.Material.Filled.Check">Categorias Ilimitadas</MudListItem>
-                            <MudListItem Icon="@Icons.Material.Filled.Check">Acesso Completo</MudListItem>
+                        <MudList T="string"
+                                 Class="mx-auto mt-4"
+                                 Style="width: 300px; min-height: 144px;">
+
+                            @foreach (var item in GetDescriptionItems(product.Description))
+                            {
+                                <MudListItem Icon="@Icons.Material.Filled.Check">
+                                    @item
+                                </MudListItem>
+                            }
+
                         </MudList>
                     </MudCardContent>
                     <MudCardActions Style="display:flex; justify-content:center; width:100%;">

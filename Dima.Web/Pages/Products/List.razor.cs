@@ -48,6 +48,17 @@ namespace Dima.Web.Pages.Products
                 IsBusy = false;
             }
         }
+        public static IEnumerable<string> GetDescriptionItems(
+                                            string? description)
+        {
+            if (string.IsNullOrWhiteSpace(description))
+                return [];
+
+            return description.Split(
+                ["\r\n", "\n", "\r"],
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
+        }
         #endregion
     }
 }

@@ -1,0 +1,179 @@
+﻿@page "/admin/vouchers"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits ListAdminVouchersPage
+
+<MudText Typo="Typo.h3">
+    Vouchers
+</MudText>
+
+<MudStack Row="true"
+          Justify="Justify.FlexEnd">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.TwoTone.Add"
+               Href="/admin/vouchers/adicionar">
+        NOVO VOUCHER
+    </MudButton>
+</MudStack>
+
+<MudDataGrid Class="mt-4"
+             Items="@Vouchers"
+             QuickFilter="Filter"
+             Hideable="true"
+             Loading="@IsBusy"
+             Dense="true">
+
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchTerm"
+                      Placeholder="Filtrar..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      IconSize="Size.Medium" />
+    </ToolBarContent>
+
+    <Columns>
+        <PropertyColumn Property="x => x.Id"
+                        Title="#"
+                        Filterable="false"
+                        Hideable="false"
+                        HeaderStyle="width: 48px; min-width: 48px; max-width: 48px;"
+                        CellStyle="width: 48px; min-width: 48px; max-width: 48px;" />
+
+        <PropertyColumn Property="x => x.Code"
+                        Title="Código"
+                        HeaderStyle="width: 120px; min-width: 120px;"
+                        CellStyle="width: 120px; min-width: 120px; white-space: nowrap;" />
+
+        <TemplateColumn Title="Associado a"
+                        HeaderStyle="width: 260px;
+                                min-width: 260px;
+                                max-width: 260px;"
+                        CellStyle="width: 260px;
+                                min-width: 260px;
+                                max-width: 260px;">
+            <CellTemplate>
+                <MudText Style="white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;">
+                    @(context.Item.AssignedUserEmail ?? "Todos")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x.Title"
+                        Title="Título"
+                        HeaderStyle="width: 160px; min-width: 160px; max-width: 160px;"
+                        CellStyle="width: 160px;
+                        min-width: 160px;
+                        max-width: 160px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;" />
+
+
+        <TemplateColumn Title="Desconto"
+                        HeaderStyle="width: 95px; min-width: 95px;"
+                        CellStyle="width: 95px;
+            min-width: 95px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudText Style="white-space: nowrap;">
+                    @if (context.Item.DiscountType ==
+                         EVoucherDiscountType.Percentage)
+                    {
+                        @($"{context.Item.Value:N2}%")
+                    }
+                    else
+                    {
+                        @($"{context.Item.Value:C2}")
+                    }
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <PropertyColumn Property="x => x.StartsAt"
+                        Title="Início"
+                        Format="dd/MM/yyyy"
+                        HeaderStyle="width: 105px; min-width: 105px;"
+                        CellStyle="width: 105px;
+        min-width: 105px;
+        white-space: nowrap;" />
+
+        <PropertyColumn Property="x => x.EndsAt"
+                        Title="Fim"
+                        Format="dd/MM/yyyy"
+                        HeaderStyle="width: 105px; min-width: 105px;"
+                        CellStyle="width: 105px;
+        min-width: 105px;
+        white-space: nowrap;" />
+
+        <TemplateColumn Title="Estado"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            max-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.Item.IsActive
+                                                 ? Color.Success
+                                                 : Color.Default)"
+                         HeaderStyle="width: 90px; min-width: 90px;"
+                         CellStyle="width: 90px; min-width: 90px; white-space: nowrap;">
+                    @(context.Item.IsActive
+                        ? "Ativo"
+                        : "Inativo")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title=""
+                        Sortable="false"
+                        Filterable="false"
+                        Hideable="false"
+                        HeaderStyle="width: 96px;
+            min-width: 96px;
+            max-width: 96px;
+            padding-left: 4px;
+            padding-right: 4px;"
+                        CellStyle="width: 96px;
+            min-width: 96px;
+            max-width: 96px;
+            padding-left: 4px;
+            padding-right: 4px;">
+            <CellTemplate>
+                <MudStack Row="true"
+                          Justify="Justify.FlexEnd"
+                          Spacing="1">
+
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/admin/vouchers/editar/{context.Item.Id}")"
+                                   Color="Color.Primary"
+                                   Size="Size.Small" />
+
+                    <MudTooltip Text="@(context.Item.IsActive
+                                                        ? "Desativar voucher"
+                                                        : "Reativar voucher")">
+
+                        <MudIconButton Icon="@(context.Item.IsActive
+                                                               ? Icons.Material.Filled.CheckCircle
+                                                           : Icons.Material.Filled.Block)"
+                                       Color="@(context.Item.IsActive
+                                                                ? Color.Success
+                                                                : Color.Error)"
+                                       Size="Size.Small"
+                                       Disabled="@VouchersBeingUpdated.Contains(
+                                                           context.Item.Id)"
+                                       OnClick="@(() =>
+                                                           OnStatusButtonClickedAsync(
+                                                               context.Item))" />
+                    </MudTooltip>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>

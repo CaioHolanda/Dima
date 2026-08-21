@@ -6,6 +6,7 @@ using Dima.Core.Requests.Order;
 using Dima.Core.Responses;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Endpoints.Orders
 {
@@ -21,8 +22,8 @@ namespace Dima.Api.Endpoints.Orders
         private static async Task<IResult> HandleAsync(
             ClaimsPrincipal user,
             IOrderHandler handler,
-            [FromQuery] int pageSize = Configuration.DefaultPageSize,          
-            [FromQuery] int pageNumber = Configuration.DefaultPageNumber)
+            [FromQuery] int pageSize = CoreConfiguration.DefaultPageSize,          
+            [FromQuery] int pageNumber = CoreConfiguration.DefaultPageNumber)
         {
             var request = new GetAllOrdersRequest
             {

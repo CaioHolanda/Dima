@@ -1,5 +1,6 @@
 ﻿using Dima.Core.Models;
 using Dima.Core.Requests.Order;
+using Dima.Core.Requests.Products;
 using Dima.Core.Responses;
 using System;
 using System.Collections.Generic;

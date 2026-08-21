@@ -1,5 +1,5 @@
 ﻿@inherits LayoutComponentBase
-
+@inject NavigationManager NavigationManager
 <MudThemeProvider 
     @ref="_mudThemeProvider"
     @bind-IsDarkMode="_isDarkMode" 
@@ -40,7 +40,10 @@
                 <NavMenu/>
             </MudDrawer>
             <MudMainContent>
-                <MudContainer Class="mt-4">
+                <MudContainer Class="mt-4"
+                              MaxWidth="@(IsAdminPage
+                                                    ? MaxWidth.False
+                                                    : MaxWidth.Large)">
                     @Body
                 </MudContainer>
             </MudMainContent>
@@ -70,4 +73,10 @@
         return Task.CompletedTask;
     }
     private void ToggleDrawer() => _isDrawerOpened = !_isDrawerOpened;
+    private bool IsAdminPage =>
+    new Uri(NavigationManager.Uri)
+        .AbsolutePath
+        .StartsWith(
+            "/admin/",
+            StringComparison.OrdinalIgnoreCase);
 }

@@ -1,0 +1,160 @@
+﻿@page "/admin/orders"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits ListAdminOrdersPage
+
+<MudText Typo="Typo.h3">
+    Pedidos
+</MudText>
+
+<MudDataGrid Class="mt-4"
+             Items="@Orders"
+             QuickFilter="@Filter"
+             Hideable="true"
+             Loading="@IsBusy"
+             Dense="true">
+
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchTerm"
+                      Placeholder="Filtrar..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      IconSize="Size.Medium" />
+    </ToolBarContent>
+
+    <Columns>
+
+        <TemplateColumn Title="Pedido"
+                        HeaderStyle="width: 85px;
+            min-width: 85px;"
+                        CellStyle="width: 85px;
+            min-width: 85px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @context.Item.Number
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Data"
+                        HeaderStyle="width: 105px;
+            min-width: 105px;"
+                        CellStyle="width: 105px;
+            min-width: 105px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudText Typo="Typo.body2">
+                    @context.Item.CreatedAt.ToString("dd/MM/yyyy")
+                </MudText>
+
+                <MudText Typo="Typo.caption">
+                    @context.Item.CreatedAt.ToString("HH:mm")
+                </MudText>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Usuário"
+                        HeaderStyle="width: 180px;
+            min-width: 180px;"
+                        CellStyle="width: 180px;
+            min-width: 180px;">
+            <CellTemplate>
+                <MudTooltip Text="@context.Item.UserEmail">
+                    <MudText Style="white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;">
+                        @context.Item.UserEmail
+                    </MudText>
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Produto"
+                        HeaderStyle="width: 110px;
+            min-width: 110px;"
+                        CellStyle="width: 110px;
+            min-width: 110px;">
+            <CellTemplate>
+                <MudTooltip Text="@context.Item.ProductName">
+                    <MudText Style="white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;">
+                        @context.Item.ProductName
+                    </MudText>
+                </MudTooltip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Original"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @FormatCurrency(context.Item.OriginalPrice)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Desconto"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @FormatCurrency(context.Item.DiscountAmount)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Total"
+                        HeaderStyle="width: 90px;
+            min-width: 90px;"
+                        CellStyle="width: 90px;
+            min-width: 90px;
+            white-space: nowrap;">
+            <CellTemplate>
+                @FormatCurrency(context.Item.Total)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Estado"
+                        HeaderStyle="width: 150px;
+            min-width: 150px;"
+                        CellStyle="width: 150px;
+            min-width: 150px;
+            white-space: nowrap;">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@GetStatusColor(context.Item.Status)">
+                    @GetStatusText(context.Item.Status)
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Início"
+                        HeaderStyle="width: 105px;
+            min-width: 105px;"
+                        CellStyle="width: 105px;
+            min-width: 105px;
+            white-space: normal;
+            line-height: 1.2;">
+            <CellTemplate>
+                @FormatAccessStart(context.Item)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Fim"
+                        HeaderStyle="width: 105px;
+            min-width: 105px;"
+                        CellStyle="width: 105px;
+            min-width: 105px;
+            white-space: normal;
+            line-height: 1.2;">
+            <CellTemplate>
+                @FormatAccessEnd(context.Item)
+            </CellTemplate>
+        </TemplateColumn>
+
+    </Columns>
+</MudDataGrid>

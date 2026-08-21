@@ -1,0 +1,96 @@
+﻿@page "/admin/produtos"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits ListAdminProductsPage
+
+<MudText Typo="Typo.h3">
+    Produtos
+</MudText>
+
+<MudStack Row="true"
+          Justify="Justify.FlexEnd">
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.TwoTone.Add"
+               Href="/admin/produtos/adicionar">
+        NOVO PRODUTO
+    </MudButton>
+</MudStack>
+
+<MudDataGrid Class="mt-4"
+             Items="@Products"
+             Filterable="true"
+             QuickFilter="Filter"
+             Hideable="true"
+             Loading="@IsBusy"
+             FilterMode="DataGridFilterMode.Simple">
+
+    <ToolBarContent>
+        <MudTextField @bind-Value="SearchTerm"
+                      Placeholder="Filtrar..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true"
+                      IconSize="Size.Medium" />
+    </ToolBarContent>
+
+    <Columns>
+        <PropertyColumn Property="x => x.Id"
+                        Title="#" />
+
+        <PropertyColumn Property="x => x.Title"
+                        Title="Produto" />
+
+        <PropertyColumn Property="x => x.Price"
+                        Title="Preço"
+                        Format="C2" />
+
+        <PropertyColumn Property="x => x.Slug"
+                        Title="Slug" />
+
+        <TemplateColumn Title="Estado">
+            <CellTemplate>
+                <MudChip T="string"
+                         Size="Size.Small"
+                         Color="@(context.Item.IsActive
+                                                      ? Color.Success
+                                                      : Color.Default)">
+                    @(context.Item.IsActive
+                        ? "Ativo"
+                        : "Inativo")
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title=""
+                        Sortable="false"
+                        Filterable="false">
+            <CellTemplate>
+                <MudStack Row="true"
+                          Justify="Justify.FlexEnd"
+                          Spacing="1">
+
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Href="@($"/admin/produtos/editar/{context.Item.Id}")"
+                                   Color="Color.Primary" />
+
+                    <MudTooltip Text="@(context.Item.IsActive
+                                ? "Desativar produto"
+                                : "Reativar produto")">
+
+                        <MudIconButton Icon="@(context.Item.IsActive
+                                               ? Icons.Material.Filled.CheckCircle
+                                           : Icons.Material.Filled.Block)"
+                                       Color="@(context.Item.IsActive
+                                                ? Color.Success
+                                                : Color.Error)"
+                                       Disabled="@ProductsBeingUpdated.Contains(
+                                               context.Item.Id)"
+                                       OnClick="@(() =>
+                                               OnStatusButtonClickedAsync(
+                                                   context.Item))" />
+                    </MudTooltip>
+                </MudStack>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>

@@ -21,7 +21,11 @@
     <p>@Order.Product.Price.ToString("C")</p>
     <br />
     <h4>Desconto</h4>
-    <p>@(Order.Voucher is null ? "Nao Aplicado" : Order.Voucher?.Amount.ToString("C"))</p>
+    <p>
+        @(Order.Voucher is null
+        ? "Não aplicado"
+        : Order.DiscountAmount.ToString("C"))
+    </p>
     <br />
     <h4>Valor Total</h4>
     <p>@Order.Total.ToString("C")</p>

@@ -1,0 +1,195 @@
+﻿@page "/admin/vouchers/editar/{Id:long}"
+@using Dima.Core.Enums
+@using Dima.Core.Models.Account
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits EditAdminVoucherPage
+
+<MudText Typo="Typo.h3">
+    Editar Voucher
+</MudText>
+
+@if (IsBusy)
+{
+    <MudPaper Class="pa-8 mt-4">
+        <MudSkeleton Height="55px" Class="mb-4" />
+        <MudSkeleton Height="55px" Class="mb-4" />
+        <MudSkeleton Height="110px" Class="mb-4" />
+        <MudSkeleton Height="55px" Class="mb-4" />
+        <MudSkeleton Height="55px" />
+    </MudPaper>
+}
+else
+{
+    <MudPaper Class="pa-8 mt-4">
+        <EditForm Model="@InputModel"
+                  OnValidSubmit="@OnValidSubmitAsync">
+
+            <DataAnnotationsValidator />
+
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudTextField Label="Código"
+                                  HelperText="Entre 4 e 20 letras ou números"
+                                  @bind-Value="InputModel.Code"
+                                  For="@(() => InputModel.Code)"
+                                  Immediate="true" />
+                </MudItem>
+
+                <MudItem xs="12" md="8">
+                    <MudTextField Label="Título"
+                                  HelperText="Campo obrigatório"
+                                  @bind-Value="InputModel.Title"
+                                  For="@(() => InputModel.Title)"
+                                  Immediate="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField Label="Descrição"
+                                  Lines="3"
+                                  HelperText="Descreva a finalidade e as condições do voucher"
+                                  @bind-Value="InputModel.Description"
+                                  For="@(() => InputModel.Description)"
+                                  Immediate="true" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSelect T="EVoucherDiscountType"
+                               Label="Tipo de desconto"
+                               @bind-Value="InputModel.DiscountType"
+                               For="@(() => InputModel.DiscountType)">
+
+                        <MudSelectItem Value="@EVoucherDiscountType.FixedAmount">
+                            Valor fixo
+                        </MudSelectItem>
+
+                        <MudSelectItem Value="@EVoucherDiscountType.Percentage">
+                            Percentual
+                        </MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="decimal"
+                                     Label="Valor"
+                                     HelperText="Informe o valor monetário ou percentual"
+                                     @bind-Value="InputModel.Value"
+                                     For="@(() => InputModel.Value)"
+                                     Format="N2"
+                                     Min="0.01M"
+                                     Immediate="false" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudDatePicker Label="Data de início"
+                                   HelperText="Opcional"
+                                   @bind-Date="InputModel.StartsAt"
+                                   DateFormat="dd/MM/yyyy"
+                                   Clearable="true" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudDatePicker Label="Data de término"
+                                   HelperText="Opcional"
+                                   @bind-Date="InputModel.EndsAt"
+                                   DateFormat="dd/MM/yyyy"
+                                   Clearable="true" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="int?"
+                                     Label="Limite total de usos"
+                                     HelperText="Deixe vazio para não limitar"
+                                     @bind-Value="InputModel.MaxTotalUses"
+                                     For="@(() => InputModel.MaxTotalUses)"
+                                     Min="1" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="int?"
+                                     Label="Limite por usuário"
+                                     HelperText="Deixe vazio para não limitar"
+                                     @bind-Value="InputModel.MaxUsesPerUser"
+                                     For="@(() => InputModel.MaxUsesPerUser)"
+                                     Min="1" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudAutocomplete T="UserLookup"
+                                     Label="Usuário atribuído"
+                                     HelperText="Opcional — pesquise pelo e-mail"
+                                     @bind-Value="SelectedUser"
+                                     SearchFunc="SearchUsersAsync"
+                                     ToStringFunc="@(user =>
+                                                             user?.Email ?? string.Empty)"
+                                     MinCharacters="2"
+                                     DebounceInterval="300"
+                                     Clearable="true"
+                                     ResetValueOnEmptyText="true"
+                                     CoerceText="false"
+                                     CoerceValue="false"
+                                     MaxItems="10"
+                                     For="@(() => SelectedUser)" />
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudSelect T="long?"
+                               Label="Produto"
+                               HelperText="Opcional — deixe vazio para aplicar a qualquer produto"
+                               @bind-Value="InputModel.ProductId"
+                               For="@(() => InputModel.ProductId)"
+                               Clearable="true">
+
+                        @foreach (var product in Products)
+                        {
+                            <MudSelectItem T="long?"
+                                           Value="@((long?)product.Id)">
+                                @product.Title
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudSwitch T="bool"
+                               @bind-Value="InputModel.IsActive"
+                               Color="Color.Success"
+                               Disabled="@IsSaving">
+                        Voucher ativo
+                    </MudSwitch>
+                </MudItem>
+            </MudGrid>
+
+            <MudStack Row="true"
+                      Spacing="2"
+                      Class="mt-4">
+
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Disabled="@IsSaving">
+
+                    @if (IsSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small"
+                                             Indeterminate="true"
+                                             Class="mr-2" />
+
+                        <MudText>Salvando...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>SALVAR</MudText>
+                    }
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Default"
+                           Href="/admin/vouchers"
+                           Disabled="@IsSaving">
+                    CANCELAR
+                </MudButton>
+
+            </MudStack>
+        </EditForm>
+    </MudPaper>
+}

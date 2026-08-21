@@ -2,9 +2,8 @@
 
 namespace Dima.Api.Models
 {
-    // Definicao da classe de usuario que contera uma lista dos Roles
+    // Representa o usuario da aplicacao
     public class User:IdentityUser<long>
     {
-        public List<IdentityRole<long>>? Roles { get; set; }
     }
 }
