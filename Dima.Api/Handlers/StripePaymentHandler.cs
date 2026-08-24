@@ -4,11 +4,14 @@ using Dima.Core.Responses;
 using Dima.Core.Responses.Payment;
 using Stripe;
 using Stripe.Checkout;
+using Dima.Api.Data;
+using Dima.Core.Enums;
+using Microsoft.EntityFrameworkCore;
 using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Handlers
 {
-    public class StripePaymentHandler : IPaymentHandler
+    public class StripePaymentHandler(AppDbContext context) : IPaymentHandler
     {
         public async Task<Response<string?>> CreateSessionAsync(
             CreatePaymentSessionRequest request)
@@ -22,17 +25,52 @@ namespace Dima.Api.Handlers
                         500,
                         "[E089] StripeApiKey não configurada");
                 }
+                var user = await context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(x =>
+                        x.Email == request.UserId ||
+                        x.UserName == request.UserId);
 
+                if (user is null)
+                {
+                    return new Response<string?>(
+                        null,
+                        404,
+                        "[E193] Usuario nao encontrado");
+                }
+
+                var order = await context.Orders
+                    .AsNoTracking()
+                    .Include(x => x.Product)
+                    .FirstOrDefaultAsync(x =>
+                        x.Number == request.OrderNumber &&
+                        x.UserId == user.Id);
+
+                if (order is null)
+                {
+                    return new Response<string?>(
+                        null,
+                        404,
+                        "[E194] Pedido nao encontrado");
+                }
+
+                if (order.Status != EOrderStatus.WaintingPayment)
+                {
+                    return new Response<string?>(
+                        null,
+                        400,
+                        "[E195] Pedido nao esta aguardando pagamento");
+                }
                 var options = new SessionCreateOptions
                 {
-                    CustomerEmail = request.UserId,
+                    CustomerEmail = user.Email,
 
                     PaymentIntentData =
                         new SessionPaymentIntentDataOptions
                         {
                             Metadata = new Dictionary<string, string>
                             {
-                                ["order"] = request.OrderNumber
+                                ["order"] = order.Number
                             }
                         },
 
@@ -49,11 +87,10 @@ namespace Dima.Api.Handlers
                             ProductData =
                                 new SessionLineItemPriceDataProductDataOptions
                                 {
-                                    Name = request.ProductTitle,
-                                    Description =
-                                        request.ProductDescription
+                                    Name = order.Product.Title,
+                                    Description = order.Product.Description
                                 },
-                            UnitAmount = request.OrderTotal
+                            UnitAmount = (long)Math.Round(order.Total * 100, 0)
                         },
 
                     Quantity = 1
@@ -64,11 +101,11 @@ namespace Dima.Api.Handlers
 
                     SuccessUrl =
                         $"{CoreConfiguration.FrontendUrl}/pedidos/" +
-                        $"{request.OrderNumber}/confirmar",
+                        $"{order.Number}/confirmar",
 
                     CancelUrl =
                         $"{CoreConfiguration.FrontendUrl}/pedidos/" +
-                        $"{request.OrderNumber}/cancelar"
+                        $"{order.Number}/cancelar"
                 };
 
                 var service = new SessionService();

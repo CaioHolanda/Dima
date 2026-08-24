@@ -78,10 +78,7 @@ namespace Dima.Web.Components.Orders
         {
             var request = new CreatePaymentSessionRequest
             {
-                OrderNumber        = Order.Number,
-                OrderTotal         = (int)(Math.Round(Order.Total * 100,2)),
-                ProductTitle       = Order.Product.Title,
-                ProductDescription = Order.Product.Description
+                OrderNumber = Order.Number
             };
             try
             {
