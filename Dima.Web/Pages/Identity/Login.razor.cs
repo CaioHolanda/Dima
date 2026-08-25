@@ -44,7 +44,7 @@ namespace Dima.Web.Pages.Identity
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             if (user.Identity is not null && user.Identity.IsAuthenticated)
-                NavigationManager.NavigateTo("/");
+                NavigationManager.NavigateTo("/", forceLoad: true);
         }
         #endregion
 
