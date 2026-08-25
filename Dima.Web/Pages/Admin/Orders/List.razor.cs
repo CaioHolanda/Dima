@@ -65,7 +65,7 @@ public partial class ListAdminOrdersPage : ComponentBase
 
             Snackbar.Add(
                 result.Message ??
-                "[E191] Não foi possível carregar os pedidos",
+                "[E192] Não foi possível carregar os pedidos",
                 Severity.Error);
         }
         catch (Exception ex)
