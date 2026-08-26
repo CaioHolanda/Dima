@@ -18,11 +18,14 @@ builder.Services.AddScoped<CookieHandler>();
 
 builder.Services.AddMudServices();
 
+var backendUrl = builder.HostEnvironment.IsDevelopment()
+    ? Configuration.BackendUrl
+    : $"{builder.HostEnvironment.BaseAddress}api/";
+
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>
     {
-        opt.BaseAddress =
-        new Uri(Configuration.BackendUrl);
+        opt.BaseAddress = new Uri(backendUrl);
     })
     .AddHttpMessageHandler<CookieHandler>();
 
