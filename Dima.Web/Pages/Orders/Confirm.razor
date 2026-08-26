@@ -1,23 +1,55 @@
 ﻿@page "/pedidos/{number}/confirmar"
 @inherits ConfirmOrderPaymentPage
 
-@if(Order is not null)
+@if (IsConfirming)
 {
-    @if(Order.Status == EOrderStatus.Paid)
-    {
-        <h1>Pedido confirmado com sucesso</h1>
-        <p>Parabens! Seu pedido foi confirmado e agora voce tem acesso completo ao sistema </p>
-    }
-    else
-    {
-        <h1>Ops, algo deu errado!</h1>
-        <p>Seu pagamento nao pode ser completado e voce recebera um Email em breve.</p>
-    }
+    <MudProgressCircular Indeterminate="true"
+                         Class="mb-4" />
+
+    <MudText Typo="Typo.h5">
+        Confirmando pagamento...
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="mt-2">
+        Aguarde enquanto confirmamos seu pagamento.
+    </MudText>
+}
+else if (Order?.Status == EOrderStatus.Paid)
+{
+    <MudText Typo="Typo.h4">
+        Parabens! Pedido confirmado com sucesso
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="mt-2">
+        Seu pagamento foi confirmado e seu acesso está disponível.
+    </MudText>
+}
+else if (IsTimedOut)
+{
+    <MudText Typo="Typo.h5">
+        A confirmação está demorando mais que o esperado
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="mt-2 mb-4">
+        Lamentamos, ainda não foi possível confirmar o pagamento.
+        Você pode verificar novamente sem realizar uma nova compra.
+        Se o problema persistir, contate o administrador.
+    </MudText>
+
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               OnClick="RetryAsync">
+        Verificar novamente
+    </MudButton>
 }
 else
 {
-    <MudSkeleton Animation="Animation.Wave"/>
-    <MudSkeleton Animation="Animation.Wave"/>
-    <MudSkeleton Animation="Animation.Wave"/>
-    <MudSkeleton Animation="Animation.Wave"/>
+    <MudText Typo="Typo.h5">
+        Não foi possível concluir a confirmação
+    </MudText>
+
+    <MudText Typo="Typo.body1" Class="mt-2">
+        O pedido não está mais aguardando confirmação de pagamento.
+        Contate o administrador para obter suporte.
+    </MudText>
 }

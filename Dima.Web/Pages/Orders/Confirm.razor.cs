@@ -1,4 +1,5 @@
-﻿using Dima.Core.Handlers;
+﻿using Dima.Core.Enums;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Microsoft.AspNetCore.Components;
@@ -15,7 +16,8 @@ namespace Dima.Web.Pages.Orders
 
         #region Properties
         public Order? Order { get; set; }
-
+        public bool IsConfirming { get; set; } = true;
+        public bool IsTimedOut { get; set; }
         #endregion
 
         #region Services
@@ -28,21 +30,55 @@ namespace Dima.Web.Pages.Orders
 
         protected override async Task OnInitializedAsync()
         {
-            var request = new PayOrderRequest
-            {
-                Number = Number
-            };
-            var result = await OrderHandler.PayAsync(request);
-            if(result.IsSuccess == false)
-            {
-                Snackbar.Add(result.Message, Severity.Error);
-                return;
-            }
-            Order = result.Data;
-            Snackbar.Add(result.Message, Severity.Success);
+            await CheckPaymentStatusAsync();
+        }
+        private async Task CheckPaymentStatusAsync()
+        {
+            IsConfirming = true;
+            IsTimedOut = false;
 
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                var request = new GetOrderByNumberRequest
+                {
+                    Number = Number
+                };
+
+                var result = await OrderHandler.GetByNumberAsync(request);
+
+                if (!result.IsSuccess)
+                {
+                    Snackbar.Add(result.Message, Severity.Error);
+                    IsConfirming = false;
+                    return;
+                }
+
+                Order = result.Data;
+
+                if (Order?.Status == EOrderStatus.Paid)
+                {
+                    IsConfirming = false;
+                    return;
+                }
+
+                if (Order?.Status != EOrderStatus.WaintingPayment)
+                {
+                    IsConfirming = false;
+                    return;
+                }
+
+                if (attempt < 5)
+                    await Task.Delay(1000);
+            }
+
+            IsConfirming = false;
+            IsTimedOut = true;
         }
 
+        public async Task RetryAsync()
+        {
+            await CheckPaymentStatusAsync();
+        }
         #endregion
     }
 }

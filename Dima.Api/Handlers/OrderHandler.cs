@@ -1,4 +1,5 @@
-﻿using Dima.Api.Data;
+﻿using Dima.Api.Common.Api;
+using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
@@ -12,7 +13,7 @@ namespace Dima.Api.Handlers
 {
     public class OrderHandler(
         AppDbContext context,
-        IPaymentHandler paymentHandler) : IOrderHandler
+        IPaymentHandler paymentHandler) : IOrderHandler,IOrderPaymentConfirmationHandler
     {
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
@@ -69,6 +70,112 @@ namespace Dima.Api.Handlers
                 return new Response<Order?>(order, 500, "[E041] Nao foi possivel cancelar seu pedido");
             }
             return new Response<Order?>(order, 200, $"Pedido {order.Number} cancelado com sucesso");
+        }
+
+        public async Task<Response<Order?>> ConfirmPaymentAsync(
+            string orderNumber,
+            string externalReference)
+        {
+            Order? order;
+
+            try
+            {
+                order = await context.Orders
+                    .Include(x => x.Product)
+                    .FirstOrDefaultAsync(x => x.Number == orderNumber);
+
+                if (order is null)
+                {
+                    return new Response<Order?>(
+                        null,
+                        404,
+                        "[E201] Pedido nao encontrado");
+                }
+            }
+            catch
+            {
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E202] Falha ao buscar pedido");
+            }
+
+            if (string.IsNullOrWhiteSpace(externalReference))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E205] Referencia externa do pagamento nao informada");
+            }
+
+            if (order.Status == EOrderStatus.Paid)
+            {
+                if (order.ExternalReference == externalReference)
+                {
+                    return new Response<Order?>(
+                        order,
+                        200,
+                        $"Pedido {order.Number} ja confirmado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E206] Pedido ja pago com outra referencia externa");
+            }
+
+            if (order.Status != EOrderStatus.WaintingPayment)
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E203] Pedido nao esta aguardando pagamento");
+            }
+
+
+
+            order.Status = EOrderStatus.Paid;
+            order.ExternalReference = externalReference;
+            order.UpdatedAt = DateTime.Now;
+
+            var now = DateTime.Now;
+
+            var currentAccessEndsAt = await context.Orders
+                .AsNoTracking()
+                .Where(x =>
+                    x.UserId == order.UserId &&
+                    x.Status == EOrderStatus.Paid &&
+                    x.AccessEndsAt != null &&
+                    x.AccessEndsAt > now)
+                .MaxAsync(x => (DateTime?)x.AccessEndsAt);
+
+            var accessStartsAt = currentAccessEndsAt ?? now;
+
+            order.AccessStartsAt = accessStartsAt;
+
+            order.AccessEndsAt =
+                order.Product.AccessDurationMonths.HasValue
+                    ? accessStartsAt.AddMonths(
+                        order.Product.AccessDurationMonths.Value)
+                    : null;
+
+            try
+            {
+                context.Orders.Update(order);
+                await context.SaveChangesAsync();
+            }
+            catch
+            {
+                return new Response<Order?>(
+                    order,
+                    500,
+                    "[E204] Falha ao confirmar pagamento");
+            }
+
+            return new Response<Order?>(
+                order,
+                200,
+                $"Pedido {order.Number} pago com sucesso");
         }
 
         public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
