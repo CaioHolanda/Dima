@@ -74,6 +74,9 @@ namespace Dima.Api.Common.Api
                         options.Cookie.SameSite = SameSiteMode.None;
                         options.Cookie.SecurePolicy =
                             CookieSecurePolicy.Always;
+
+                        options.CookieManager =
+                            new StaticWebAppsCookieManager();
                     }
                 });
 
