@@ -21,7 +21,7 @@ public static class Endpoint
     public static void MapEndpoints(this WebApplication app)
     {
         var endpoint = app
-            .MapGroup("");
+            .MapGroup("/api");
 
         endpoint.MapGroup("/")
             .WithTags("Health Check")
