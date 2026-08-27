@@ -121,7 +121,7 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> ConfirmEmailAsync(string userId, string code)
         {
             var url =
-                    $"v1/identity/confirmEmail" +
+                    $"v1/identity/confirm-email" +
                     $"?userId={Uri.EscapeDataString(userId)}" +
                     $"&code={Uri.EscapeDataString(code)}";
 

@@ -8,8 +8,11 @@ using Dima.Core.Handlers;
 using Dima.Web.Handlers;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
-Configuration.BackendUrl=builder.Configuration.GetValue<string>("BackendUrl")??string.Empty;
-Configuration.StripePublickey=builder.Configuration.GetValue<string>("StripePublicKey")??string.Empty;
+var configuredBackendUrl =
+    builder.Configuration.GetValue<string>("BackendUrl");
+
+if (!string.IsNullOrWhiteSpace(configuredBackendUrl))
+    Configuration.BackendUrl = configuredBackendUrl; Configuration.StripePublickey=builder.Configuration.GetValue<string>("StripePublicKey")??string.Empty;
 
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -19,8 +22,8 @@ builder.Services.AddScoped<CookieHandler>();
 builder.Services.AddMudServices();
 
 var backendUrl = builder.HostEnvironment.IsDevelopment()
-    ? Configuration.BackendUrl
-    : $"{builder.HostEnvironment.BaseAddress}api/";
+    ? $"{Configuration.BackendUrl.TrimEnd('/')}/api/"
+    : $"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/api/";
 
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>

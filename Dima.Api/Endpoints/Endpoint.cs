@@ -123,7 +123,8 @@ public static class Endpoint
             .MapEndpoint<LogoutEndpoint>()
             .MapEndpoint<GetRolesEndpoint>()
             .MapEndpoint<ForgotPasswordEndpoint>()
-            .MapEndpoint<ResetPasswordEndpoint>();
+            .MapEndpoint<ResetPasswordEndpoint>()
+            .MapEndpoint<ConfirmEmailEndpoint>();
 
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
