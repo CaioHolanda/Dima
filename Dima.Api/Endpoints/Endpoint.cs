@@ -121,7 +121,8 @@ public static class Endpoint
             .MapEndpoint<ForgotPasswordEndpoint>()
             .MapEndpoint<ResetPasswordEndpoint>()
             .MapEndpoint<ConfirmEmailEndpoint>()
-            .MapEndpoint<ResendConfirmationEmailEndpoint>();
+            .MapEndpoint<ResendConfirmationEmailEndpoint>()
+            .MapEndpoint<GetCurrentUserEndpoint>();
 
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
