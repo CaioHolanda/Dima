@@ -25,7 +25,7 @@ app.MapGet("/ping", () => Results.Ok(new
 {
     status = "Dima API is running",
     environment = app.Environment.EnvironmentName
-}));
+})).AllowAnonymous();
 
 app.Run();
 

@@ -8,6 +8,7 @@ namespace Dima.Api.Endpoints.Stripe
     {
         public static void Map(IEndpointRouteBuilder app)
             => app.MapPost("/webhook", HandleAsync)
+                .AllowAnonymous()
                 .WithName("Stripe Webhook")
                 .WithSummary("Receive Stripe webhook events")
                 .WithDescription("Receives events sent by Stripe")

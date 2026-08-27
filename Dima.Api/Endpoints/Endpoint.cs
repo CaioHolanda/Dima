@@ -25,6 +25,7 @@ public static class Endpoint
 
         endpoint.MapGroup("/")
             .WithTags("Health Check")
+            .AllowAnonymous()
             .MapGet("/", () => new { message = "OK" });
 
         endpoint.MapGroup("v1/categories")
@@ -47,6 +48,7 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/products")
             .WithTags("Products")
+            .AllowAnonymous()
             .MapEndpoint<GetAllProductsEndpoint>()
             .MapEndpoint<GetProductBySlugEndpoint>();
 
