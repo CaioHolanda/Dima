@@ -77,7 +77,7 @@ namespace Dima.Web.Security
         {
             try
             {
-                return await _client.GetFromJsonAsync<User?>("v1/identity/manage/info");
+                return await _client.GetFromJsonAsync<User?>("v1/identity/me");
             }
             catch
             {
