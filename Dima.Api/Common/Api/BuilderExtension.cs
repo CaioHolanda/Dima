@@ -28,6 +28,8 @@ namespace Dima.Api.Common.Api
                 .GetValue<string>("FrontendUrl")?? string.Empty;
             ApiConfiguration.StripeApiKey = builder.Configuration
                 .GetValue<string>("StripeApiKey") ?? string.Empty;
+            ApiConfiguration.StripeWebhookSecret = builder.Configuration
+                .GetValue<string>("StripeWebhookSecret") ?? string.Empty;
             StripeConfiguration.ApiKey = ApiConfiguration.StripeApiKey;
         }
         public static void AddDocumentation(this WebApplicationBuilder builder)
@@ -120,6 +122,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<ITransactionHandler, TransactionHandler>();
             builder.Services.AddTransient<IVoucherHandler, VoucherHandler>();
             builder.Services.AddTransient<IOrderHandler, OrderHandler>();
+            builder.Services.AddTransient<IOrderPaymentConfirmationHandler,OrderHandler>();
             builder.Services.AddTransient<IPaymentHandler, StripePaymentHandler>(); 
             builder.Services.AddTransient<IReportHandler, ReportHandler>();
             builder.Services.AddTransient<IProductHandler, ProductHandler>();

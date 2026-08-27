@@ -98,10 +98,17 @@ public static class Endpoint
             .MapEndpoint<PayOrderEndpoint>()
             .MapEndpoint<RefundOrderEndpoint>();
 
-        endpoint.MapGroup("v1/payments/stripe")
-            .WithTags("Payments - Stripe")
+        var stripe = endpoint
+            .MapGroup("v1/payments/stripe")
+            .WithTags("Payments - Stripe");
+
+        stripe
+            .MapGroup("/")
             .RequireAuthorization()
             .MapEndpoint<CreateSessionEndpoint>();
+
+        stripe
+            .MapEndpoint<WebhookEndpoint>();
 
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
