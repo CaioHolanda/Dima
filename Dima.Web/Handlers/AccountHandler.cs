@@ -13,7 +13,7 @@ namespace Dima.Web.Handlers
             LoginRequest request)
         {
             var result = await _client.PostAsJsonAsync(
-                "v1/identity/login?useCookies=true",
+                "v1/identity/login-user",
                 request);
 
             if (result.IsSuccessStatusCode)
@@ -74,7 +74,7 @@ namespace Dima.Web.Handlers
                                             ForgotPasswordRequest request)
         {
             var result = await _client.PostAsJsonAsync(
-                "v1/identity/forgotPassword",
+                "v1/identity/forgot-password",
                 request);
 
             if (result.IsSuccessStatusCode)
@@ -101,7 +101,7 @@ namespace Dima.Web.Handlers
             };
 
             var result = await _client.PostAsJsonAsync(
-                "v1/identity/resetPassword",
+                "v1/identity/reset-password",
                 payload);
 
             if (result.IsSuccessStatusCode)

@@ -118,9 +118,12 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
+            .MapEndpoint<LoginEndpoint>()
             .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
-            .MapEndpoint<GetRolesEndpoint>();
+            .MapEndpoint<GetRolesEndpoint>()
+            .MapEndpoint<ForgotPasswordEndpoint>()
+            .MapEndpoint<ResetPasswordEndpoint>();
 
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
