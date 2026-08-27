@@ -114,17 +114,14 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
-            .MapIdentityApi<User>();
-
-        endpoint.MapGroup("v1/identity")
-            .WithTags("Identity")
             .MapEndpoint<LoginEndpoint>()
             .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
             .MapEndpoint<GetRolesEndpoint>()
             .MapEndpoint<ForgotPasswordEndpoint>()
             .MapEndpoint<ResetPasswordEndpoint>()
-            .MapEndpoint<ConfirmEmailEndpoint>();
+            .MapEndpoint<ConfirmEmailEndpoint>()
+            .MapEndpoint<ResendConfirmationEmailEndpoint>();
 
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")

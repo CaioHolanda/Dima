@@ -148,7 +148,7 @@ namespace Dima.Web.Handlers
             };
 
             using var result = await _client.PostAsJsonAsync(
-                "v1/identity/resendConfirmationEmail",
+                "v1/identity/resend-confirmation-email",
                 payload);
 
             if (result.IsSuccessStatusCode)
