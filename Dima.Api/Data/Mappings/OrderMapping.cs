@@ -37,6 +37,10 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("DATETIME2");
 
+        builder.Property(x => x.PaidAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
         builder.Property(x => x.AccessStartsAt)
             .IsRequired(false)
             .HasColumnType("DATETIME2");

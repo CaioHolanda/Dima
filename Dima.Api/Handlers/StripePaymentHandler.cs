@@ -134,5 +134,61 @@ namespace Dima.Api.Handlers
                     "[E091] Falha interna ao criar sessão de pagamento");
             }
         }
+        public async Task<Response<string?>> RefundAsync(
+            string externalReference)
+        {
+            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
+            {
+                return new Response<string?>(
+                    null,
+                    500,
+                    "[E215] StripeApiKey não configurada");
+            }
+
+            if (string.IsNullOrWhiteSpace(externalReference))
+            {
+                return new Response<string?>(
+                    null,
+                    400,
+                    "[E216] Referencia externa do pagamento nao informada");
+            }
+
+            try
+            {
+                var options = new RefundCreateOptions
+                {
+                    PaymentIntent = externalReference,
+                    Reason = "requested_by_customer"
+                };
+
+                var service = new RefundService();
+                var refund = await service.CreateAsync(options);
+
+                return new Response<string?>(
+                    refund.Id,
+                    200,
+                    "Reembolso solicitado ao Stripe com sucesso");
+            }
+            catch (StripeException ex)
+            {
+                Console.WriteLine(
+                    $"[STRIPE REFUND] {ex.Message}");
+
+                return new Response<string?>(
+                    null,
+                    502,
+                    $"[E217] Falha no Stripe: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[STRIPE REFUND] {ex}");
+
+                return new Response<string?>(
+                    null,
+                    500,
+                    "[E218] Falha interna ao solicitar reembolso");
+            }
+        }
     }
 }

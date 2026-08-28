@@ -18,6 +18,7 @@ namespace Dima.Core.Models
         public decimal Total { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime? PaidAt { get; set; }
         public DateTime? AccessStartsAt { get; set; }
         public DateTime? AccessEndsAt { get; set; }
         public string? ExternalReference { get; set; }

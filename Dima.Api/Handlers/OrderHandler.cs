@@ -171,12 +171,12 @@ namespace Dima.Api.Handlers
             }
 
 
+            var now = DateTime.Now;
 
             order.Status = EOrderStatus.Paid;
             order.ExternalReference = externalReference;
-            order.UpdatedAt = DateTime.Now;
-
-            var now = DateTime.Now;
+            order.PaidAt = now;
+            order.UpdatedAt = now;
 
             var currentAccessEndsAt = await context.Orders
                 .AsNoTracking()
@@ -462,7 +462,42 @@ namespace Dima.Api.Handlers
                 default:
                     return new Response<Order?>(order, 400, "[E058] Falha ao processar pagamento");
             }
-            //Neste ponto se insere o codigo do Stripe (PCI)
+            if (order.PaidAt is null)
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E213] Data de confirmacao do pagamento nao encontrada");
+            }
+
+            var refundDeadline = order.PaidAt.Value.AddDays(14);
+
+            if (DateTime.Now > refundDeadline)
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E214] Prazo de 14 dias para reembolso expirado");
+            }
+            if (string.IsNullOrWhiteSpace(order.ExternalReference))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E219] Referencia externa do pagamento nao encontrada");
+            }
+
+            var refundResult = await paymentHandler.RefundAsync(
+                order.ExternalReference);
+
+            if (!refundResult.IsSuccess)
+            {
+                return new Response<Order?>(
+                    order,
+                    refundResult.Code,
+                    refundResult.Message);
+            }
+
             order.Status = EOrderStatus.Refunded;
             order.UpdatedAt = DateTime.Now;
 
