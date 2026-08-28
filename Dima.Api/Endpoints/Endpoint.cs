@@ -97,7 +97,6 @@ public static class Endpoint
             .MapEndpoint<GetOrderByNumberEndpoint>()
             .MapEndpoint<CreateOrderEndpoint>()
             .MapEndpoint<CancelOrderEndpoint>()
-            .MapEndpoint<PayOrderEndpoint>()
             .MapEndpoint<RefundOrderEndpoint>();
 
         var stripe = endpoint

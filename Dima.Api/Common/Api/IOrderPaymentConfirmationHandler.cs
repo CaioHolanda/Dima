@@ -8,6 +8,9 @@ namespace Dima.Api.Common.Api
     {
         Task<Response<Order?>> ConfirmPaymentAsync(
             string orderNumber,
-            string externalReference);
+            string externalReference,
+            long amountReceived,
+            string currency,
+            string paymentUserId);
     }
 }

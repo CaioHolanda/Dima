@@ -1,7 +1,6 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
-using Dima.Core.Responses.Payment;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -43,20 +42,4 @@ public class StripePaymentHandler(
                    "[E080] Resposta inválida da API");
     }
 
-    public async Task<Response<List<PaymentTransactionResponse>>>
-        GetTransactionsByOrderNumberAsync(
-            GetTransactionsByOrderNumberRequest request)
-    {
-        var result = await _client.PostAsJsonAsync(
-            $"v1/payments/stripe/{request.Number}/transactions",
-            request);
-
-        return await result.Content
-                   .ReadFromJsonAsync<
-                       Response<List<PaymentTransactionResponse>>>()
-               ?? new Response<List<PaymentTransactionResponse>>(
-                   null,
-                   400,
-                   "[E083] Falha ao consultar as transacoes do pedido");
-    }
 }

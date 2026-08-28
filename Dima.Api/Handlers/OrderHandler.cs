@@ -74,7 +74,10 @@ namespace Dima.Api.Handlers
 
         public async Task<Response<Order?>> ConfirmPaymentAsync(
             string orderNumber,
-            string externalReference)
+            string externalReference,
+            long amountReceived,
+            string currency,
+            string paymentUserId)
         {
             Order? order;
 
@@ -107,7 +110,42 @@ namespace Dima.Api.Handlers
                     400,
                     "[E205] Referencia externa do pagamento nao informada");
             }
+            if (!long.TryParse(paymentUserId, out var stripeUserId))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E208] Identificacao do usuario no pagamento invalida");
+            }
 
+            if (stripeUserId != order.UserId)
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E209] Pagamento nao pertence ao usuario do pedido");
+            }
+            var expectedAmount = (long)Math.Round(
+                                    order.Total * 100,
+                                    0);
+
+            if (amountReceived != expectedAmount)
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E210] Valor recebido nao corresponde ao valor do pedido");
+            }
+            if (!string.Equals(
+                    currency,
+                    "brl",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E211] Moeda do pagamento nao corresponde a moeda do pedido");
+            }
             if (order.Status == EOrderStatus.Paid)
             {
                 if (order.ExternalReference == externalReference)
@@ -385,114 +423,6 @@ namespace Dima.Api.Handlers
             }
         }
 
-        public async Task<Response<Order?>> PayAsync(PayOrderRequest request)
-        {
-            var userId = await GetUserIdAsync(request.UserId);
-            Order? order;
-
-            if (userId is null)
-                return new Response<Order?>(
-                    null,
-                    404,
-                    "[E170] Usuario nao encontrado");
-
-
-            try
-            {
-                order = await context
-                    .Orders
-                    .Include(x => x.Product)
-                    .Include(x => x.Voucher)
-                    .FirstOrDefaultAsync(x=>x.Number == request.Number && x.UserId==userId.Value);
-                if (order is null)
-                    return new Response<Order?>(null, 404, "[E047] Pedido nao encontrado");
-            }
-            catch 
-            {
-                return new Response<Order?>(null, 500, "[E048] Falha ao buscar pedido");
-            }
-            switch (order.Status)
-            {
-                case EOrderStatus.Canceled:
-                    return new Response<Order?>(order, 400, "[E049] Pedido cancelado, repagamento nao possivel");
-                case EOrderStatus.Refunded:
-                    return new Response<Order?>(order, 400, "[E050] Pedido reembolsado, repagamento nao possivel");
-                case EOrderStatus.Paid:
-                    return new Response<Order?>(order, 400, "[E051] Pedido ja pago, repagamento nao possivel");
-                case EOrderStatus.WaintingPayment:
-                    break;
-                default:
-                    return new Response<Order?>(order, 400, "[E052] Falha ao processar pagamento");
-            }
-            try
-            {
-                Console.WriteLine($"[PAY] Order Number: {order.Number}");
-                var getTransactionsRequest = new GetTransactionsByOrderNumberRequest
-                {
-                    Number = order.Number
-                };
-                var result =
-                    await paymentHandler.GetTransactionsByOrderNumberAsync(
-                        getTransactionsRequest);
-
-                Console.WriteLine($"[STRIPE] Success: {result.IsSuccess}");
-                Console.WriteLine($"[STRIPE] Message: {result.Message}");
-                Console.WriteLine($"[STRIPE] Data null: {result.Data is null}");
-                Console.WriteLine($"[STRIPE] Count: {result.Data?.Count}");
-
-                if (result.IsSuccess == false)
-                    return new Response<Order?>(null, 500, "[E084] Nao foi possivel localizar o pagamento");
-                if(result.Data is null)
-                    return new Response<Order?>(null, 500, "[E085] Nao foi possivel localizar o pagamento");
-                if(result.Data.Any(x=>x.Refunded))
-                    return new Response<Order?>(null, 400, "[E086] Este pedido ja teve o pagamento informado");
-                if(!result.Data.Any(x=>x.Paid))
-                    return new Response<Order?>(null, 400, "[E087] Este pedido nao foi pago");
-                request.ExternalReference = result.Data[0].Id;
-            }
-            catch 
-            {
-                return new Response<Order?>(null, 400, "[E088] Nao foi possivel dar baixa no seu pedido");
-            }
-            order.Status = EOrderStatus.Paid;
-            order.ExternalReference=request.ExternalReference;
-            order.UpdatedAt=DateTime.Now;
-
-            var now = DateTime.Now;
-
-            var currentAccessEndsAt = await context.Orders
-                .AsNoTracking()
-                .Where(x =>
-                    x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
-                    x.AccessEndsAt != null &&
-                    x.AccessEndsAt > now)
-                .MaxAsync(x => (DateTime?)x.AccessEndsAt);
-
-            var accessStartsAt = currentAccessEndsAt ?? now;
-
-            order.AccessStartsAt = accessStartsAt;
-
-            order.AccessEndsAt =
-                order.Product.AccessDurationMonths.HasValue
-                    ? accessStartsAt.AddMonths(
-                        order.Product.AccessDurationMonths.Value)
-                    : null;
-
-            // Persistencia em banco
-            try
-            {
-                context.Orders.Update(order);
-                await context.SaveChangesAsync();
-            }
-            catch 
-            {
-                return new Response<Order?>(order, 500, "[E053] Falha ao processar pagamento");
-            }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} pago com sucesso");
-
-        }
-
         public async Task<Response<Order?>> RefundAsync(RefundOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
@@ -548,6 +478,7 @@ namespace Dima.Api.Handlers
             }
             return new Response<Order?>(order, 200, $"Pedido {order.Number} reembolsado com sucesso");
         }
+
         private async Task<long?> GetUserIdAsync(string userIdentifier)
         {
             return await context.Users

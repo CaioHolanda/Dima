@@ -66,12 +66,53 @@ namespace Dima.Api.Endpoints.Stripe
                         return Results.BadRequest(
                             "[E200] Numero do pedido nao encontrado no evento");
                     }
+                    if (!paymentIntent.Metadata.TryGetValue(
+                            "userId",
+                            out var paymentUserId))
+                    {
+                        logger.LogWarning(
+                            "Stripe PaymentIntent {PaymentIntentId} recebido sem metadata de usuario",
+                            paymentIntent.Id);
+
+                        return Results.BadRequest(
+                            "[E207] Usuario do pagamento nao encontrado no evento");
+                    }
+                    if (!string.Equals(
+                            paymentIntent.Status,
+                            "succeeded",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.LogWarning(
+                            "Stripe PaymentIntent {PaymentIntentId} recebido com status {Status}",
+                            paymentIntent.Id,
+                            paymentIntent.Status);
+
+                        return Results.BadRequest(
+                            "[E212] Pagamento ainda nao foi concluido");
+                    }
+                    logger.LogInformation(
+                        "Stripe PaymentIntent recebido - Id: {PaymentIntentId}, Pedido: {OrderNumber}, Usuario: {PaymentUserId}, ValorRecebido: {AmountReceived}, Moeda: {Currency}, Status: {Status}",
+                        paymentIntent.Id,
+                        orderNumber,
+                        paymentUserId,
+                        paymentIntent.AmountReceived,
+                        paymentIntent.Currency,
+                        paymentIntent.Status);
                     var result = await orderHandler.ConfirmPaymentAsync(
-                                                    orderNumber,
-                                                    paymentIntent.Id);
+                        orderNumber,
+                        paymentIntent.Id,
+                        paymentIntent.AmountReceived,
+                        paymentIntent.Currency,
+                        paymentUserId);
 
                     if (!result.IsSuccess)
                     {
+                        logger.LogWarning(
+                        "Falha ao confirmar pagamento Stripe - Pedido: {OrderNumber}, PaymentIntent: {PaymentIntentId}, Codigo: {Code}, Mensagem: {Message}",
+                        orderNumber,
+                        paymentIntent.Id,
+                        result.Code,
+                        result.Message);
                         return Results.Problem(
                             result.Message,
                             statusCode: result.Code);

@@ -1,7 +1,6 @@
 ﻿using Dima.Core.Handlers;
 using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
-using Dima.Core.Responses.Payment;
 using Stripe;
 using Stripe.Checkout;
 using Dima.Api.Data;
@@ -70,7 +69,8 @@ namespace Dima.Api.Handlers
                         {
                             Metadata = new Dictionary<string, string>
                             {
-                                ["order"] = order.Number
+                                ["order"] = order.Number,
+                                ["userId"] = user.Id.ToString()
                             }
                         },
 
@@ -133,46 +133,6 @@ namespace Dima.Api.Handlers
                     500,
                     "[E091] Falha interna ao criar sessão de pagamento");
             }
-        }
-        public async Task<Response<List<PaymentTransactionResponse>>>
-            GetTransactionsByOrderNumberAsync(
-                GetTransactionsByOrderNumberRequest request)
-        {
-            var options = new PaymentIntentSearchOptions
-            {
-                Query=$"metadata['order']:'{request.Number}'"
-            };
-            var service = new PaymentIntentService();
-            var data = new List<PaymentTransactionResponse>();
-            var list = await service.ListAsync(new PaymentIntentListOptions
-            {
-                Limit = 20
-            });
-
-            var transactions = list.Data
-                .Where(x =>
-                    x.Metadata is not null &&
-                    x.Metadata.TryGetValue("order", out var order) &&
-                    order == request.Number)
-                .ToList();
-
-            if (transactions.Count == 0)
-                return new Response<List<PaymentTransactionResponse>>(null, 404, "[E082] Nenhuma transacao encontrada");
-
-            foreach (var item in transactions)
-            {
-                data.Add(new PaymentTransactionResponse
-                {
-                    Id = item.Id,
-                    Email = item.ReceiptEmail,
-                    Amount = item.Amount,
-                    AmountCaptures = item.AmountReceived,
-                    Status = item.Status,
-                    Paid = item.Status == "succeeded",
-                    Refunded = false
-                });
-            }
-            return new Response<List<PaymentTransactionResponse>>(data);
         }
     }
 }
