@@ -215,7 +215,107 @@ namespace Dima.Api.Handlers
                 200,
                 $"Pedido {order.Number} pago com sucesso");
         }
+        public async Task<Response<Order?>> ConfirmRefundAsync(
+            string paymentIntentId,
+            string refundId,
+            string refundStatus,
+            string? failureReason)
+        {
+            Order? order;
 
+            try
+            {
+                order = await context
+                    .Orders
+                    .FirstOrDefaultAsync(x =>
+                        x.ExternalReference == paymentIntentId);
+            }
+            catch
+            {
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E221] Falha ao buscar pedido para confirmacao do reembolso");
+            }
+
+            if (order is null)
+            {
+                return new Response<Order?>(
+                    null,
+                    404,
+                    "[E222] Pedido associado ao pagamento nao encontrado");
+            }
+
+            if (string.IsNullOrWhiteSpace(order.RefundReference))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E223] Referencia de reembolso nao encontrada no pedido");
+            }
+
+            if (!string.Equals(
+                    order.RefundReference,
+                    refundId,
+                    StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E224] Referencia de reembolso nao corresponde ao pedido");
+            }
+
+            var now = DateTime.Now;
+
+            switch (refundStatus)
+            {
+                case "succeeded":
+                    order.Status = EOrderStatus.Refunded;
+                    order.RefundedAt ??= now;
+                    order.RefundFailureReason = null;
+                    break;
+
+                case "pending":
+                case "requires_action":
+                    order.Status = EOrderStatus.RefundPending;
+                    break;
+
+                case "failed":
+                case "canceled":
+                    order.Status = EOrderStatus.Paid;
+                    order.RefundFailureReason =
+                        string.IsNullOrWhiteSpace(failureReason)
+                            ? refundStatus
+                            : failureReason;
+                    break;
+
+                default:
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        $"[E225] Status de reembolso desconhecido: {refundStatus}");
+            }
+
+            order.UpdatedAt = now;
+
+            try
+            {
+                context.Orders.Update(order);
+                await context.SaveChangesAsync();
+            }
+            catch
+            {
+                return new Response<Order?>(
+                    order,
+                    500,
+                    "[E226] Falha ao atualizar estado do reembolso");
+            }
+
+            return new Response<Order?>(
+                order,
+                200,
+                $"Reembolso do pedido {order.Number} atualizado para {refundStatus}");
+        }
         public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
@@ -462,23 +562,43 @@ namespace Dima.Api.Handlers
                 default:
                     return new Response<Order?>(order, 400, "[E058] Falha ao processar pagamento");
             }
-            if (order.PaidAt is null)
+
+            if (order.AccessStartsAt is null)
             {
                 return new Response<Order?>(
                     order,
                     400,
-                    "[E213] Data de confirmacao do pagamento nao encontrada");
+                    "[E220] Data de inicio do acesso nao encontrada");
             }
 
-            var refundDeadline = order.PaidAt.Value.AddDays(14);
+            var now = DateTime.Now;
 
-            if (DateTime.Now > refundDeadline)
+            var accessHasStarted =
+                order.AccessStartsAt.HasValue &&
+                order.AccessStartsAt.Value <= now;
+
+            if (accessHasStarted)
             {
-                return new Response<Order?>(
-                    order,
-                    400,
-                    "[E214] Prazo de 14 dias para reembolso expirado");
+                if (order.PaidAt is null)
+                {
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        "[E213] Data de confirmacao do pagamento nao encontrada");
+                }
+
+                var refundDeadline =
+                    order.PaidAt.Value.AddDays(14);
+
+                if (now > refundDeadline)
+                {
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        "[E214] Prazo de 14 dias para reembolso expirado");
+                }
             }
+
             if (string.IsNullOrWhiteSpace(order.ExternalReference))
             {
                 return new Response<Order?>(
@@ -498,6 +618,8 @@ namespace Dima.Api.Handlers
                     refundResult.Message);
             }
 
+            order.RefundReference = refundResult.Data;
+            order.RefundFailureReason = null;
             order.Status = EOrderStatus.RefundPending;
             order.UpdatedAt = DateTime.Now;
 

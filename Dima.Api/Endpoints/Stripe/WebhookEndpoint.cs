@@ -123,6 +123,59 @@ namespace Dima.Api.Endpoints.Stripe
                         paymentIntent.Id);
                 }
 
+                if (stripeEvent.Type == EventTypes.RefundUpdated)
+                {
+                    var refund = stripeEvent.Data.Object as Refund;
+
+                    if (refund is null)
+                    {
+                        return Results.BadRequest(
+                            "[E227] Refund invalido");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(refund.PaymentIntentId))
+                    {
+                        logger.LogWarning(
+                            "Stripe Refund {RefundId} recebido sem PaymentIntent",
+                            refund.Id);
+
+                        return Results.BadRequest(
+                            "[E228] PaymentIntent do reembolso nao encontrado");
+                    }
+
+                    logger.LogInformation(
+                        "Stripe Refund recebido - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Status: {Status}, FailureReason: {FailureReason}",
+                        refund.Id,
+                        refund.PaymentIntentId,
+                        refund.Status,
+                        refund.FailureReason);
+
+                    var result = await orderHandler.ConfirmRefundAsync(
+                        refund.PaymentIntentId,
+                        refund.Id,
+                        refund.Status,
+                        refund.FailureReason);
+
+                    if (!result.IsSuccess)
+                    {
+                        logger.LogWarning(
+                            "Falha ao atualizar reembolso Stripe - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Codigo: {Code}, Mensagem: {Message}",
+                            refund.Id,
+                            refund.PaymentIntentId,
+                            result.Code,
+                            result.Message);
+
+                        return Results.Problem(
+                            result.Message,
+                            statusCode: result.Code);
+                    }
+
+                    logger.LogInformation(
+                        "Reembolso Stripe atualizado - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Status: {Status}",
+                        refund.Id,
+                        refund.PaymentIntentId,
+                        refund.Status);
+                }
                 return Results.Ok();
             }
             catch (StripeException ex)

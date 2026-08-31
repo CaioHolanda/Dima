@@ -12,5 +12,11 @@ namespace Dima.Api.Common.Api
             long amountReceived,
             string currency,
             string paymentUserId);
+
+        Task<Response<Order?>> ConfirmRefundAsync(
+            string paymentIntentId,
+            string refundId,
+            string refundStatus,
+            string? failureReason);
     }
 }
