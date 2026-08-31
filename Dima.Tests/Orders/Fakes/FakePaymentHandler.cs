@@ -8,6 +8,10 @@ public class FakePaymentHandler : IPaymentHandler
 {
     public bool RefundWasCalled { get; private set; }
 
+    public string? LastExternalReference { get; private set; }
+
+    public string? LastIdempotencyKey { get; private set; }
+
     public Task<Response<string?>> CreateSessionAsync(
         CreatePaymentSessionRequest request)
     {
@@ -15,9 +19,12 @@ public class FakePaymentHandler : IPaymentHandler
     }
 
     public Task<Response<string?>> RefundAsync(
-        string externalReference)
+        string externalReference,
+        string idempotencyKey)
     {
         RefundWasCalled = true;
+        LastExternalReference = externalReference;
+        LastIdempotencyKey = idempotencyKey;
 
         return Task.FromResult(
             new Response<string?>(

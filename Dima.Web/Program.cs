@@ -22,7 +22,7 @@ builder.Services.AddScoped<CookieHandler>();
 builder.Services.AddMudServices();
 
 var backendUrl = builder.HostEnvironment.IsDevelopment()
-    ? $"{Configuration.BackendUrl.TrimEnd('/')}/"
+    ? $"{Configuration.BackendUrl.TrimEnd('/')}/api/"
     : $"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/api/";
 
 Console.WriteLine($"BACKEND URL: {backendUrl}");

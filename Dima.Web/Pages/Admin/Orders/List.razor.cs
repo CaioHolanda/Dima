@@ -168,4 +168,30 @@ public partial class ListAdminOrdersPage : ComponentBase
             _ => Color.Default
         };
     }
+    public static string GetRefundReasonText(
+        ERefundReason reason)
+    {
+        return reason switch
+        {
+            ERefundReason.NotUsingProduct =>
+                "Não está utilizando",
+
+            ERefundReason.NotAsExpected =>
+                "Não atendeu às expectativas",
+
+            ERefundReason.PurchasedByMistake =>
+                "Compra por engano",
+
+            ERefundReason.TechnicalIssue =>
+                "Problema técnico",
+
+            ERefundReason.Price =>
+                "Preço",
+
+            ERefundReason.Other =>
+                "Outro",
+
+            _ => "-"
+        };
+    }
 }

@@ -42,7 +42,9 @@ public class StripePaymentHandler(
                    "[E080] Resposta inválida da API");
     }
 
-    public Task<Response<string?>> RefundAsync(string externalReference)
+    public async Task<Response<string?>> RefundAsync(
+        string externalReference,
+        string idempotencyKey)
     {
         throw new NotSupportedException(
        "Refund deve ser executado pela API");

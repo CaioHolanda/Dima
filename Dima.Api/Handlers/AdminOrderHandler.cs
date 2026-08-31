@@ -43,7 +43,15 @@ public class AdminOrderHandler(AppDbContext context)
                     AccessStartsAt = order.AccessStartsAt,
                     AccessEndsAt = order.AccessEndsAt,
 
-                    Status = order.Status
+                    Status = order.Status,
+
+                    PaidAt = order.PaidAt,
+
+                    RefundReference = order.RefundReference,
+                    RefundFailureReason = order.RefundFailureReason,
+                    RefundedAt = order.RefundedAt,
+                    RefundReason = order.RefundReason,
+                    RefundReasonDetails = order.RefundReasonDetails,
                 };
 
             var count = await query.CountAsync();

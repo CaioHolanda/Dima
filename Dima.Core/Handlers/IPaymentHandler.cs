@@ -9,6 +9,7 @@ public interface IPaymentHandler
     Task<Response<string?>> CreateSessionAsync(
         CreatePaymentSessionRequest request);
     Task<Response<string?>> RefundAsync(
-    string externalReference);
+        string externalReference,
+        string idempotencyKey);
 
 }

@@ -2,10 +2,25 @@
 @switch (Order.Status)
 {
     case EOrderStatus.Paid:
-        <MudButton FullWidth="true" Color="Color.Warning" Variant="Variant.Outlined" OnClick="OnRefundButtonClicked">
-        SOLICITAR ESTORNO
-    </MudButton>
-    break;
+
+        @if (CanRequestRefund)
+        {
+            <MudButton FullWidth="true"
+                       Color="Color.Warning"
+                       Variant="Variant.Outlined"
+                       OnClick="OnRefundButtonClicked">
+                SOLICITAR ESTORNO
+            </MudButton>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info"
+                      Variant="Variant.Outlined">
+                Este pedido não está mais disponível para reembolso automático.
+            </MudAlert>
+        }
+
+        break;
 
     case EOrderStatus.WaintingPayment:
         <MudButton FullWidth="true" Color="Color.Success" Variant="Variant.Filled" Size="Size.Large" Class="mb-4" OnClick="OnPayButtonClickedAsync">

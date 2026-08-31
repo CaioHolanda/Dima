@@ -25,22 +25,16 @@
     <Columns>
 
         <TemplateColumn Title="Pedido"
-                        HeaderStyle="width: 85px;
-            min-width: 85px;"
-                        CellStyle="width: 85px;
-            min-width: 85px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 85px; min-width: 85px;"
+                        CellStyle="width: 85px; min-width: 85px; white-space: nowrap;">
             <CellTemplate>
                 @context.Item.Number
             </CellTemplate>
         </TemplateColumn>
 
         <TemplateColumn Title="Data"
-                        HeaderStyle="width: 105px;
-            min-width: 105px;"
-                        CellStyle="width: 105px;
-            min-width: 105px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 105px; min-width: 105px;"
+                        CellStyle="width: 105px; min-width: 105px; white-space: nowrap;">
             <CellTemplate>
                 <MudText Typo="Typo.body2">
                     @context.Item.CreatedAt.ToString("dd/MM/yyyy")
@@ -53,15 +47,11 @@
         </TemplateColumn>
 
         <TemplateColumn Title="Usuário"
-                        HeaderStyle="width: 180px;
-            min-width: 180px;"
-                        CellStyle="width: 180px;
-            min-width: 180px;">
+                        HeaderStyle="width: 180px; min-width: 180px;"
+                        CellStyle="width: 180px; min-width: 180px;">
             <CellTemplate>
                 <MudTooltip Text="@context.Item.UserEmail">
-                    <MudText Style="white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;">
+                    <MudText Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         @context.Item.UserEmail
                     </MudText>
                 </MudTooltip>
@@ -69,15 +59,11 @@
         </TemplateColumn>
 
         <TemplateColumn Title="Produto"
-                        HeaderStyle="width: 110px;
-            min-width: 110px;"
-                        CellStyle="width: 110px;
-            min-width: 110px;">
+                        HeaderStyle="width: 110px; min-width: 110px;"
+                        CellStyle="width: 110px; min-width: 110px;">
             <CellTemplate>
                 <MudTooltip Text="@context.Item.ProductName">
-                    <MudText Style="white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;">
+                    <MudText Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         @context.Item.ProductName
                     </MudText>
                 </MudTooltip>
@@ -85,44 +71,32 @@
         </TemplateColumn>
 
         <TemplateColumn Title="Original"
-                        HeaderStyle="width: 90px;
-            min-width: 90px;"
-                        CellStyle="width: 90px;
-            min-width: 90px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 90px; min-width: 90px;"
+                        CellStyle="width: 90px; min-width: 90px; white-space: nowrap;">
             <CellTemplate>
                 @FormatCurrency(context.Item.OriginalPrice)
             </CellTemplate>
         </TemplateColumn>
 
         <TemplateColumn Title="Desconto"
-                        HeaderStyle="width: 90px;
-            min-width: 90px;"
-                        CellStyle="width: 90px;
-            min-width: 90px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 90px; min-width: 90px;"
+                        CellStyle="width: 90px; min-width: 90px; white-space: nowrap;">
             <CellTemplate>
                 @FormatCurrency(context.Item.DiscountAmount)
             </CellTemplate>
         </TemplateColumn>
 
         <TemplateColumn Title="Total"
-                        HeaderStyle="width: 90px;
-            min-width: 90px;"
-                        CellStyle="width: 90px;
-            min-width: 90px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 90px; min-width: 90px;"
+                        CellStyle="width: 90px; min-width: 90px; white-space: nowrap;">
             <CellTemplate>
                 @FormatCurrency(context.Item.Total)
             </CellTemplate>
         </TemplateColumn>
 
         <TemplateColumn Title="Estado"
-                        HeaderStyle="width: 150px;
-            min-width: 150px;"
-                        CellStyle="width: 150px;
-            min-width: 150px;
-            white-space: nowrap;">
+                        HeaderStyle="width: 150px; min-width: 150px;"
+                        CellStyle="width: 150px; min-width: 150px; white-space: nowrap;">
             <CellTemplate>
                 <MudChip T="string"
                          Size="Size.Small"
@@ -132,29 +106,93 @@
             </CellTemplate>
         </TemplateColumn>
 
+        <TemplateColumn Title="Pagamento"
+                        HeaderStyle="width: 120px; min-width: 120px;"
+                        CellStyle="width: 120px; min-width: 120px; white-space: nowrap;">
+            <CellTemplate>
+                @FormatDate(context.Item.PaidAt)
+            </CellTemplate>
+        </TemplateColumn>
+
+        <TemplateColumn Title="Reembolso"
+                        HeaderStyle="width: 170px; min-width: 170px;"
+                        CellStyle="width: 170px; min-width: 170px;">
+            <CellTemplate>
+
+                @if (context.Item.RefundedAt is not null)
+                {
+                    <MudText Typo="Typo.body2">
+                        @context.Item.RefundedAt.Value.ToString("dd/MM/yyyy")
+                    </MudText>
+
+                    @if (!string.IsNullOrWhiteSpace(context.Item.RefundReference))
+                    {
+                        <MudTooltip Text="@context.Item.RefundReference">
+                            <MudIcon Icon="@Icons.Material.Filled.ReceiptLong"
+                                     Size="Size.Small" />
+                        </MudTooltip>
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(context.Item.RefundFailureReason))
+                {
+                    <MudTooltip Text="@context.Item.RefundFailureReason">
+                        <MudIcon Icon="@Icons.Material.Filled.ErrorOutline"
+                                 Color="Color.Error"
+                                 Size="Size.Small" />
+                    </MudTooltip>
+                }
+                else if (context.Item.Status == EOrderStatus.RefundPending)
+                {
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="Color.Warning">
+                        Processando
+                    </MudChip>
+                }
+                else
+                {
+                    <MudText>-</MudText>
+                }
+
+                @if (context.Item.RefundReason is not null)
+                {
+                    <MudStack Spacing="0" Class="mt-1">
+
+                        <MudText Typo="Typo.caption">
+                            @GetRefundReasonText(context.Item.RefundReason.Value)
+                        </MudText>
+
+                        @if (!string.IsNullOrWhiteSpace(context.Item.RefundReasonDetails))
+                        {
+                            <MudTooltip Text="@context.Item.RefundReasonDetails">
+                                <MudText Typo="Typo.caption">
+                                    Ver comentário
+                                </MudText>
+                            </MudTooltip>
+                        }
+
+                    </MudStack>
+                }
+
+            </CellTemplate>
+        </TemplateColumn>
+
         <TemplateColumn Title="Início"
-                        HeaderStyle="width: 105px;
-            min-width: 105px;"
-                        CellStyle="width: 105px;
-            min-width: 105px;
-            white-space: normal;
-            line-height: 1.2;">
+                        HeaderStyle="width: 105px; min-width: 105px;"
+                        CellStyle="width: 105px; min-width: 105px; white-space: normal; line-height: 1.2;">
             <CellTemplate>
                 @FormatAccessStart(context.Item)
             </CellTemplate>
         </TemplateColumn>
 
         <TemplateColumn Title="Fim"
-                        HeaderStyle="width: 105px;
-            min-width: 105px;"
-                        CellStyle="width: 105px;
-            min-width: 105px;
-            white-space: normal;
-            line-height: 1.2;">
+                        HeaderStyle="width: 105px; min-width: 105px;"
+                        CellStyle="width: 105px; min-width: 105px; white-space: normal; line-height: 1.2;">
             <CellTemplate>
                 @FormatAccessEnd(context.Item)
             </CellTemplate>
         </TemplateColumn>
 
     </Columns>
+
 </MudDataGrid>

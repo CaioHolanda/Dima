@@ -135,7 +135,8 @@ namespace Dima.Api.Handlers
             }
         }
         public async Task<Response<string?>> RefundAsync(
-            string externalReference)
+            string externalReference,
+            string idempotencyKey)
         {
             if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
             {
@@ -162,7 +163,15 @@ namespace Dima.Api.Handlers
                 };
 
                 var service = new RefundService();
-                var refund = await service.CreateAsync(options);
+
+                var requestOptions = new RequestOptions
+                {
+                    IdempotencyKey = idempotencyKey
+                };
+
+                var refund = await service.CreateAsync(
+                    options,
+                    requestOptions);
 
                 return new Response<string?>(
                     refund.Id,

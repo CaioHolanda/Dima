@@ -83,6 +83,14 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
+        builder.Property(x => x.RefundReason)
+            .HasColumnType("SMALLINT")
+            .IsRequired(false);
+
+        builder.Property(x => x.RefundReasonDetails)
+            .HasColumnType("NVARCHAR(500)")
+            .IsRequired(false);
+
         builder.HasOne(x => x.Product)
             .WithMany()
             .HasForeignKey(x => x.ProductId)

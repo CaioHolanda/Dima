@@ -215,6 +215,7 @@ namespace Dima.Api.Handlers
                 200,
                 $"Pedido {order.Number} pago com sucesso");
         }
+
         public async Task<Response<Order?>> ConfirmRefundAsync(
             string paymentIntentId,
             string refundId,
@@ -316,6 +317,7 @@ namespace Dima.Api.Handlers
                 200,
                 $"Reembolso do pedido {order.Number} atualizado para {refundStatus}");
         }
+
         public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
@@ -347,7 +349,8 @@ namespace Dima.Api.Handlers
                 .AsNoTracking()
                 .AnyAsync(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
+                    (x.Status == EOrderStatus.Paid ||
+                     x.Status == EOrderStatus.RefundPending) &&
                     x.AccessStartsAt != null &&
                     x.AccessStartsAt > now);
 
@@ -364,7 +367,8 @@ namespace Dima.Api.Handlers
                 .AsNoTracking()
                 .AnyAsync(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
+                    (x.Status == EOrderStatus.Paid ||
+                     x.Status == EOrderStatus.RefundPending) &&
                     x.AccessStartsAt != null &&
                     x.AccessEndsAt == null);
 
@@ -607,8 +611,29 @@ namespace Dima.Api.Handlers
                     "[E219] Referencia externa do pagamento nao encontrada");
             }
 
+            if (request.RefundReason is null)
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E226] Motivo do reembolso não informado");
+
+            if (request.RefundReason == ERefundReason.Other &&
+                string.IsNullOrWhiteSpace(request.RefundReasonDetails))
+            {
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E227] Informe o motivo do reembolso");
+            }
+            order.RefundReason = request.RefundReason;
+            order.RefundReasonDetails =
+                string.IsNullOrWhiteSpace(request.RefundReasonDetails)
+                    ? null
+                    : request.RefundReasonDetails.Trim();
+
             var refundResult = await paymentHandler.RefundAsync(
-                order.ExternalReference);
+                order.ExternalReference,
+                $"refund-order-{order.Id}");
 
             if (!refundResult.IsSuccess)
             {
@@ -617,6 +642,7 @@ namespace Dima.Api.Handlers
                     refundResult.Code,
                     refundResult.Message);
             }
+
 
             order.RefundReference = refundResult.Data;
             order.RefundFailureReason = null;

@@ -28,5 +28,7 @@ namespace Dima.Core.Models
         public string? RefundReference { get; set; }
         public string? RefundFailureReason { get; set; }
         public DateTime? RefundedAt { get; set; }
+        public ERefundReason? RefundReason { get; set; }
+        public string? RefundReasonDetails { get; set; }
     }
 }
