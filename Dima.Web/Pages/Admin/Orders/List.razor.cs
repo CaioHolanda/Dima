@@ -139,6 +139,9 @@ public partial class ListAdminOrdersPage : ComponentBase
             EOrderStatus.Refunded =>
                 "Reembolsado",
 
+            EOrderStatus.RefundPending =>
+                "Reembolso em processamento",
+
             _ => "Desconhecido"
         };
     }
@@ -158,6 +161,9 @@ public partial class ListAdminOrdersPage : ComponentBase
 
             EOrderStatus.Refunded =>
                 Color.Info,
+
+            EOrderStatus.RefundPending =>
+                Color.Warning,
 
             _ => Color.Default
         };

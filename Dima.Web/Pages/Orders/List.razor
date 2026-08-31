@@ -1,0 +1,64 @@
+﻿@page "/pedidos"
+@inherits ListOrdersPage
+
+<MudText Typo="Typo.h3">
+    Meus Pedidos
+</MudText>
+
+@if (IsBusy)
+{
+    <MudProgressLinear Indeterminate="true" Class="mt-4" />
+}
+else if (Orders.Count == 0)
+{
+    <MudAlert Severity="Severity.Info" Class="mt-4">
+        Você ainda não possui pedidos.
+    </MudAlert>
+}
+else
+{
+    <MudDataGrid Class="mt-4"
+                 Items="@Orders"
+                 Dense="true">
+
+        <Columns>
+
+            <PropertyColumn Property="x => x.Number"
+                            Title="Pedido" />
+
+            <TemplateColumn Title="Data">
+                <CellTemplate>
+                    @context.Item.CreatedAt.ToString("dd/MM/yyyy")
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Produto">
+                <CellTemplate>
+                    @context.Item.Product.Title
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Total">
+                <CellTemplate>
+                    @context.Item.Total.ToString("C")
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="Situação">
+                <CellTemplate>
+                    <OrderStatus Status="@context.Item.Status" />
+                </CellTemplate>
+            </TemplateColumn>
+
+            <TemplateColumn Title="">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                   Href="@($"/pedidos/{context.Item.Number}")"
+                                   Color="Color.Primary" />
+                </CellTemplate>
+            </TemplateColumn>
+
+        </Columns>
+
+    </MudDataGrid>
+}

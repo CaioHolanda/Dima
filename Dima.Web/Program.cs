@@ -22,8 +22,10 @@ builder.Services.AddScoped<CookieHandler>();
 builder.Services.AddMudServices();
 
 var backendUrl = builder.HostEnvironment.IsDevelopment()
-    ? $"{Configuration.BackendUrl.TrimEnd('/')}/api/"
+    ? $"{Configuration.BackendUrl.TrimEnd('/')}/"
     : $"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/api/";
+
+Console.WriteLine($"BACKEND URL: {backendUrl}");
 
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>

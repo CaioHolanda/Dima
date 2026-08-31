@@ -12,6 +12,7 @@ namespace Dima.Api.Endpoints.Orders
         public static void Map(IEndpointRouteBuilder app)
         =>
             app.MapPost("/{id}/refund", HandleAsync)
+                .RequireAuthorization()
                 .WithName("Refund order by Id")
                 .WithSummary("Refund by Id")
                 .WithDescription("Refund by Id")
@@ -25,6 +26,10 @@ namespace Dima.Api.Endpoints.Orders
             RefundOrderRequest request
             )
         {
+            if (user.Identity?.IsAuthenticated != true)
+            {
+                return TypedResults.Unauthorized();
+            }
             request.Id = id;
             request.UserId = user.Identity!.Name??string.Empty;
             var result = await handler.RefundAsync(request);

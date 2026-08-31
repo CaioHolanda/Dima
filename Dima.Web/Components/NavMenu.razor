@@ -7,20 +7,29 @@
 
 <MudNavMenu>
     <MudNavLink Href="/"
-                Match="NavLinkMatch.All">
+                Match="NavLinkMatch.All"
+                Icon="@Icons.Material.Filled.Dashboard">
         Dashboard
     </MudNavLink>
 
-    <MudNavLink Href="/lancamentos/historico">
+    <MudNavLink Href="/lancamentos/historico"
+                Icon="@Icons.Material.Filled.History">
         Histórico
     </MudNavLink>
 
-    <MudNavLink Href="/categorias">
+    <MudNavLink Href="/categorias"
+                Icon="@Icons.Material.Filled.Category">
         Categorias
     </MudNavLink>
 
-    <MudNavLink Href="/premium">
+    <MudNavLink Href="/premium"
+                Icon="@Icons.Material.Filled.WorkspacePremium">
         Premium
+    </MudNavLink>
+
+    <MudNavLink Href="/pedidos"
+                Icon="@Icons.Material.Filled.ReceiptLong">
+        Meus Pedidos
     </MudNavLink>
 
     <AuthorizeView Roles="@AppRoles.Admin">
