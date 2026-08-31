@@ -25,5 +25,8 @@ namespace Dima.Core.Models
         public EPaymentGateway Gateway { get; set; } = EPaymentGateway.Stripe;
         public EOrderStatus Status { get; set; } = EOrderStatus.WaintingPayment;
         public long UserId { get; set; }
+        public string? RefundReference { get; set; }
+        public string? RefundFailureReason { get; set; }
+        public DateTime? RefundedAt { get; set; }
     }
 }

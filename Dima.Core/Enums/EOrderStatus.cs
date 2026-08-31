@@ -9,6 +9,7 @@ namespace Dima.Core.Enums
         WaintingPayment =1,
         Paid=2,
         Canceled=3,
-        Refunded=4
+        Refunded=4,
+        RefundPending = 5
     }
 }

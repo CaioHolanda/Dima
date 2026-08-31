@@ -498,7 +498,7 @@ namespace Dima.Api.Handlers
                     refundResult.Message);
             }
 
-            order.Status = EOrderStatus.Refunded;
+            order.Status = EOrderStatus.RefundPending;
             order.UpdatedAt = DateTime.Now;
 
             // Persistencia em banco
@@ -511,7 +511,7 @@ namespace Dima.Api.Handlers
             {
                 return new Response<Order?>(order, 500, "[E059] Falha ao processar reembolso");
             }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} reembolsado com sucesso");
+            return new Response<Order?>(order, 200, $"Reembolso do pedido {order.Number} solicitado com sucesso");
         }
 
         private async Task<long?> GetUserIdAsync(string userIdentifier)

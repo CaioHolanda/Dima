@@ -69,6 +69,20 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("DECIMAL(18,2)");
 
+        builder.Property(x => x.RefundReference)
+            .IsRequired(false)
+            .HasMaxLength(60)
+            .HasColumnType("NVARCHAR");
+
+        builder.Property(x => x.RefundFailureReason)
+            .IsRequired(false)
+            .HasMaxLength(100)
+            .HasColumnType("NVARCHAR");
+
+        builder.Property(x => x.RefundedAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
         builder.HasOne(x => x.Product)
             .WithMany()
             .HasForeignKey(x => x.ProductId)
