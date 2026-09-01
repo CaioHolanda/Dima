@@ -1,8 +1,10 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Api.Data;
+using Dima.Core.Common;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
@@ -399,40 +401,65 @@ namespace Dima.Api.Handlers
                 return new Response<Order?>(null, 500, "[E042] Nao foi possivel buscar produto");
             }
 
-            // Ha Voucher?
-            Voucher? voucher=null;
+            // Há voucher?
+            Voucher? voucher = null;
+
             try
             {
                 if (request.VoucherId is not null)
                 {
                     var voucherId = request.VoucherId.Value;
 
-                    // 1. Existe algum voucher com este ID?
                     voucher = await context.Vouchers
                         .AsNoTracking()
                         .FirstOrDefaultAsync(x => x.Id == voucherId);
 
                     if (voucher is null)
-                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} nao encontrado");
+                    {
+                        return new Response<Order?>(
+                            null,
+                            400,
+                            $"[E043] Voucher {voucherId} não encontrado");
+                    }
 
-                    // 2. O voucher está ativo?
                     if (!voucher.IsActive)
-                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} existe, mas esta inativo");
+                    {
+                        return new Response<Order?>(
+                            null,
+                            400,
+                            $"[E043] Voucher {voucherId} existe, mas está inativo");
+                    }
 
-                    // 3. Agora sim, atualiza
-                    voucher.IsActive = false;
-                    context.Vouchers.Update(voucher);
+                    if (voucher.DiscountType ==
+                            EVoucherDiscountType.FixedAmount &&
+                        voucher.Value > product.Price)
+                    {
+                        return new Response<Order?>(
+                            null,
+                            400,
+                            "[E229] O valor do voucher é superior ao valor do produto");
+                    }
+
+                    context.Attach(voucher);
                 }
             }
-            catch 
+            catch
             {
-                return new Response<Order?>(null, 500, "[E045] Falha ao obter o Voucher informado");
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E045] Falha ao obter o voucher informado");
             }
 
             // Se existe produto e ha ou nao voucher cria-se o pedido
             var originalPrice = product.Price;
-            var discountAmount = 0m;
-            var total = originalPrice;
+
+            var discountAmount =
+                VoucherDiscountCalculator.Calculate(
+                    originalPrice,
+                    voucher);
+
+            var total = originalPrice - discountAmount;
 
             var order = new Order
             {
@@ -442,7 +469,7 @@ namespace Dima.Api.Handlers
                 ProductId = request.ProductId,
 
                 Voucher = voucher,
-                VoucherId = request.VoucherId,
+                VoucherId = voucher?.Id,
 
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,

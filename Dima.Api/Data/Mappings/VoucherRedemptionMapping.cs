@@ -1,4 +1,4 @@
-﻿using Dima.Core.Models;
+﻿using Dima.Core.Models.Vouchers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

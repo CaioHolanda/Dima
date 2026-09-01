@@ -1,4 +1,5 @@
 ﻿using Dima.Core.Enums;
+using Dima.Core.Models.Vouchers;
 using System;
 using System.Collections.Generic;
 using System.Text;

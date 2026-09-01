@@ -1,5 +1,4 @@
-﻿using Dima.Core.Models;
-using Dima.Core.Requests.Vouchers;
+﻿using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 using Dima.Core.Models.Vouchers;
 

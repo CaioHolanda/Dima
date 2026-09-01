@@ -1,7 +1,6 @@
 ﻿using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
-using Dima.Core.Models;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;

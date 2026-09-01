@@ -1,5 +1,4 @@
 ﻿using Dima.Core.Handlers;
-using Dima.Core.Models;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Vouchers;
@@ -38,6 +37,24 @@ namespace Dima.Web.Handlers
                     400,
                     "[E079] Resposta vazia da API");
         }
-  
+        public async Task<Response<VoucherApplication?>> ApplyAsync(
+            ApplyVoucherRequest request)
+        {
+            var response = await _client.PostAsJsonAsync(
+                "v1/vouchers/apply",
+                request);
+
+            var result =
+                await response.Content
+                    .ReadFromJsonAsync<
+                        Response<VoucherApplication?>>();
+
+            return result ??
+                new Response<VoucherApplication?>(
+                    null,
+                    (int)response.StatusCode,
+                    "[E235] Resposta vazia ao aplicar o voucher");
+        }
+
     }
 }

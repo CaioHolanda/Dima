@@ -1,6 +1,7 @@
-﻿using Dima.Core.Enums;
+﻿using Dima.Core.Common;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -20,6 +21,10 @@ namespace Dima.Web.Pages.Orders
         public Product? Product { get; set; }
         public Voucher? Voucher { get; set; }
         public decimal Total { get; set; }
+        public decimal DiscountAmount =>
+                        VoucherDiscountCalculator.Calculate(
+                        Product?.Price ?? 0m,
+                        Voucher);
         #endregion
 
         #region Services
@@ -101,29 +106,9 @@ namespace Dima.Web.Pages.Orders
                 }
             }
 
-            var discount = CalculateDiscount(Product.Price, Voucher);
-            Total = Product.Price - discount;
+            Total = Product.Price - DiscountAmount;
 
             IsValid = true;
-        }
-        protected static decimal CalculateDiscount(
-            decimal price,
-            Voucher? voucher)
-        {
-            if (voucher is null)
-                return 0;
-
-            var discount = voucher.DiscountType switch
-            {
-                EVoucherDiscountType.FixedAmount => voucher.Value,
-
-                EVoucherDiscountType.Percentage =>
-                    price * voucher.Value / 100,
-
-                _ => 0
-            };
-
-            return Math.Min(price, discount);
         }
         public async Task OnValidSubmitAsync()
         {

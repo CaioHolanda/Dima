@@ -1,6 +1,6 @@
 ﻿using Dima.Core.Enums;
 
-namespace Dima.Core.Models;
+namespace Dima.Core.Models.Vouchers;
 
 public class Voucher
 {

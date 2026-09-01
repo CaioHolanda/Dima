@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Models;
 using Dima.Core.Models;
 using Dima.Core.Models.Reports;
+using Dima.Core.Models.Vouchers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;

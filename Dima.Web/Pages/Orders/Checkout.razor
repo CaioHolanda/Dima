@@ -26,7 +26,7 @@
                         <div class="d-flex">
                             <MudText>Desconto</MudText>
                             <MudText Class="ml-auto">
-                                @CalculateDiscount(Product?.Price ?? 0, Voucher).ToString("C")
+                                @DiscountAmount.ToString("C")
                             </MudText>
                         </div>
                     </MudListItem>
