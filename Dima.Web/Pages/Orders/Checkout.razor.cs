@@ -15,7 +15,7 @@ namespace Dima.Web.Pages.Orders
 
         [Parameter] public string ProductSlug { get; set; } = string.Empty;
         [SupplyParameterFromQuery(Name ="voucher")] public string? VoucherCode { get; set; }
-        [Parameter] public bool IsComplimentary { get; set; }
+
 
         #endregion
 

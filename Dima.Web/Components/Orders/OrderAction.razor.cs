@@ -17,6 +17,15 @@ namespace Dima.Web.Components.Orders
         {
             get
             {
+                // Pedido gratuito não possui pagamento
+                // financeiro para ser reembolsado.
+                if (Order.Gateway ==
+                        EPaymentGateway.NotApplicable ||
+                    Order.Total <= 0m)
+                {
+                    return false;
+                }
+
                 if (Order.Status != EOrderStatus.Paid)
                     return false;
 
@@ -26,16 +35,18 @@ namespace Dima.Web.Components.Orders
                 var now = DateTime.Now;
 
                 // Plano futuro ainda não iniciado:
-                // refund integral permitido.
+                // reembolso integral permitido.
                 if (Order.AccessStartsAt.Value > now)
                     return true;
 
                 // Plano já iniciado:
-                // precisa ter data de pagamento e estar dentro dos 14 dias.
+                // precisa ter data de pagamento
+                // e estar dentro dos 14 dias.
                 if (Order.PaidAt is null)
                     return false;
 
-                return now <= Order.PaidAt.Value.AddDays(14);
+                return now <=
+                    Order.PaidAt.Value.AddDays(14);
             }
         }
         #endregion
