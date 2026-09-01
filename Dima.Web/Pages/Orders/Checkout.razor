@@ -56,7 +56,9 @@
                 Size="Size.Large"
                 Class="mt-6"
                 FullWidth="true">
-                FINALIZAR PEDIDO
+                @(Total == 0m
+                    ? "CONFIRMAR PEDIDO"
+                    : "FINALIZAR PEDIDO")
             </MudButton>
         </MudItem>
     </MudGrid>

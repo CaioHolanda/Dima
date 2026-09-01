@@ -59,6 +59,13 @@ public class CreateOrderVoucherTests
             await context.Vouchers.SingleAsync();
 
         Assert.True(storedVoucher.IsActive);
+        Assert.Equal(
+            EOrderStatus.WaintingPayment,
+            result.Data.Status);
+
+        Assert.Equal(
+            EPaymentGateway.Stripe,
+            result.Data.Gateway);
     }
 
     [Fact]
@@ -130,6 +137,88 @@ public class CreateOrderVoucherTests
         Assert.Contains("[E229]", result.Message);
 
         Assert.Empty(context.Orders);
+
+        var storedVoucher =
+            await context.Vouchers.SingleAsync();
+
+        Assert.True(storedVoucher.IsActive);
+    }
+    [Fact]
+    public async Task CreateOrder_completes_free_order_internally()
+    {
+        await using var context =
+            await CreateContextAsync(
+                productPrice: 100m,
+                voucherType:
+                    EVoucherDiscountType.Percentage,
+                voucherValue: 100m);
+
+        var user = await context.Users.SingleAsync();
+        var product =
+            await context.Products.SingleAsync();
+        var voucher =
+            await context.Vouchers.SingleAsync();
+
+        context.ChangeTracker.Clear();
+
+        var handler = new OrderHandler(
+            context,
+            new FakePaymentHandler());
+
+        var beforeCreation = DateTime.Now;
+
+        var request = new CreateOrderRequest
+        {
+            UserId = user.Email!,
+            ProductId = product.Id,
+            VoucherId = voucher.Id
+        };
+
+        var result =
+            await handler.CreateAsync(request);
+
+        var afterCreation = DateTime.Now;
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(201, result.Code);
+        Assert.NotNull(result.Data);
+
+        Assert.Equal(100m, result.Data.OriginalPrice);
+        Assert.Equal(100m, result.Data.DiscountAmount);
+        Assert.Equal(0m, result.Data.Total);
+
+        Assert.Equal(
+            EOrderStatus.Paid,
+            result.Data.Status);
+
+        Assert.Equal(
+            EPaymentGateway.NotApplicable,
+            result.Data.Gateway);
+
+        Assert.Null(result.Data.ExternalReference);
+        Assert.NotNull(result.Data.PaidAt);
+        Assert.NotNull(result.Data.AccessStartsAt);
+        Assert.NotNull(result.Data.AccessEndsAt);
+
+        Assert.InRange(
+            result.Data.PaidAt.Value,
+            beforeCreation,
+            afterCreation);
+
+        Assert.Equal(
+            result.Data.AccessStartsAt.Value.AddMonths(1),
+            result.Data.AccessEndsAt.Value);
+
+        var storedOrder =
+            await context.Orders.SingleAsync();
+
+        Assert.Equal(EOrderStatus.Paid, storedOrder.Status);
+        Assert.Equal(
+            EPaymentGateway.NotApplicable,
+            storedOrder.Gateway);
+
+        Assert.Equal(0m, storedOrder.Total);
+        Assert.Null(storedOrder.ExternalReference);
 
         var storedVoucher =
             await context.Vouchers.SingleAsync();

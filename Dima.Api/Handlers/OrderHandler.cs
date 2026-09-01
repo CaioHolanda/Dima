@@ -475,6 +475,49 @@ namespace Dima.Api.Handlers
                 DiscountAmount = discountAmount,
                 Total = total
             };
+            if (total == 0m)
+            {
+                try
+                {
+                    var currentAccessEndsAt =
+                        await context.Orders
+                            .AsNoTracking()
+                            .Where(x =>
+                                x.UserId == userId.Value &&
+                                x.Status == EOrderStatus.Paid &&
+                                x.AccessEndsAt != null &&
+                                x.AccessEndsAt > now)
+                            .MaxAsync(x =>
+                                (DateTime?)x.AccessEndsAt);
+
+                    var accessStartsAt =
+                        currentAccessEndsAt ?? now;
+
+                    order.Status = EOrderStatus.Paid;
+                    order.Gateway =
+                        EPaymentGateway.NotApplicable;
+
+                    order.PaidAt = now;
+                    order.UpdatedAt = now;
+                    order.ExternalReference = null;
+
+                    order.AccessStartsAt =
+                        accessStartsAt;
+
+                    order.AccessEndsAt =
+                        product.AccessDurationMonths.HasValue
+                            ? accessStartsAt.AddMonths(
+                                product.AccessDurationMonths.Value)
+                            : null;
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E237] Não foi possível concluir o pedido gratuito");
+                }
+            }
             try
             {
                 await context.Orders.AddAsync(order);
@@ -485,7 +528,14 @@ namespace Dima.Api.Handlers
                 return new Response<Order?>(null, 500, "[E046] Nao foi possivel realizar seu pedido");
             }
 
-            return new Response<Order?>(order, 201, $"Pedido {order.Number} cadastrado com sucesso");
+            var message = total == 0m
+                ? $"Pedido {order.Number} confirmado com sucesso"
+                : $"Pedido {order.Number} cadastrado com sucesso";
+
+            return new Response<Order?>(
+                order,
+                201,
+                message);
         }
 
         public async Task<PagedResponse<List<Order>?>> GetAllAsync(GetAllOrdersRequest request)

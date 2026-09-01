@@ -21,16 +21,20 @@ builder.Services.AddScoped<CookieHandler>();
 
 builder.Services.AddMudServices();
 
-var backendUrl = builder.HostEnvironment.IsDevelopment()
-    ? $"{Configuration.BackendUrl.TrimEnd('/')}/api/"
-    : $"{builder.HostEnvironment.BaseAddress.TrimEnd('/')}/api/";
+var configuredAddress =
+    builder.HostEnvironment.IsDevelopment()
+        ? Configuration.BackendUrl
+        : builder.HostEnvironment.BaseAddress;
 
-Console.WriteLine($"BACKEND URL: {backendUrl}");
+var backendUrl =
+    NormalizeApiBaseAddress(configuredAddress);
+
+Console.WriteLine($"API BASE ADDRESS: {backendUrl}");
 
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>
     {
-        opt.BaseAddress = new Uri(backendUrl);
+        opt.BaseAddress = backendUrl;
     })
     .AddHttpMessageHandler<CookieHandler>();
 
@@ -60,3 +64,32 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = new System.Glob
 
 
 await builder.Build().RunAsync();
+static Uri NormalizeApiBaseAddress(string address)
+{
+    if (!Uri.TryCreate(
+            address.Trim(),
+            UriKind.Absolute,
+            out var uri))
+    {
+        throw new InvalidOperationException(
+            $"BackendUrl inválido: '{address}'");
+    }
+
+    var path = uri.AbsolutePath.TrimEnd('/');
+
+    while (path.EndsWith(
+        "/api",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        path = path[..^4].TrimEnd('/');
+    }
+
+    var normalizedUri = new UriBuilder(uri)
+    {
+        Path = $"{path}/api/",
+        Query = string.Empty,
+        Fragment = string.Empty
+    };
+
+    return normalizedUri.Uri;
+}

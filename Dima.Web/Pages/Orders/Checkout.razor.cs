@@ -12,8 +12,11 @@ namespace Dima.Web.Pages.Orders
     public partial class CheckoutoutPage :ComponentBase
     {
         #region Parameters
+
         [Parameter] public string ProductSlug { get; set; } = string.Empty;
         [SupplyParameterFromQuery(Name ="voucher")] public string? VoucherCode { get; set; }
+        [Parameter] public bool IsComplimentary { get; set; }
+
         #endregion
 
         #region Properties
@@ -29,6 +32,7 @@ namespace Dima.Web.Pages.Orders
             AppliedVoucher?.Total ??
             Product?.Price ??
             0m;
+
         #endregion
 
         #region Services

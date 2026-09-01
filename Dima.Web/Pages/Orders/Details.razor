@@ -31,7 +31,10 @@
     <p>@Order.Total.ToString("C")</p>
     <br />
     <h4>Situacao</h4>
-    <OrderStatus Status="Order.Status"/>
+    <OrderStatus Status="Order.Status"
+                 IsComplimentary="@(
+                 Order.Gateway ==
+                 EPaymentGateway.NotApplicable)" />
     <br />
     <br />
     <br />

@@ -6,7 +6,20 @@
         break;
 
     case EOrderStatus.Paid:
-    <MudChip T="string" Color="Color.Success">PAGO</MudChip>
+
+        @if (IsComplimentary)
+        {
+            <MudChip T="string" Color="Color.Success">
+                CONFIRMADO
+            </MudChip>
+        }
+        else
+        {
+            <MudChip T="string" Color="Color.Success">
+                PAGO
+            </MudChip>
+        }
+
         break;
 
     case EOrderStatus.RefundPending:

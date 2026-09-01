@@ -3,7 +3,15 @@
 {
     case EOrderStatus.Paid:
 
-        @if (CanRequestRefund)
+        @if (Order.Gateway ==
+             EPaymentGateway.NotApplicable)
+        {
+            <MudAlert Severity="Severity.Success"
+                      Variant="Variant.Outlined">
+                Pedido confirmado. Nenhum pagamento foi necessário.
+            </MudAlert>
+        }
+        else if (CanRequestRefund)
         {
             <MudButton FullWidth="true"
                        Color="Color.Warning"
