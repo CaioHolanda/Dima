@@ -58,8 +58,39 @@ namespace Dima.Api.Handlers
                 default:
                     return new Response<Order?>(order, 400, "[E040] Pedido nao pode ser cancelado");
             }
+            var now = DateTime.Now;
+
+            if (order.VoucherId is not null)
+            {
+                VoucherRedemption? redemption;
+
+                try
+                {
+                    redemption = await context
+                        .VoucherRedemptions
+                        .FirstOrDefaultAsync(x =>
+                            x.OrderId == order.Id);
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        order,
+                        500,
+                        "[E239] Falha ao buscar a reserva do voucher");
+                }
+
+                if (redemption?.Status ==
+                    EVoucherRedemptionStatus.Reserved)
+                {
+                    redemption.Status =
+                        EVoucherRedemptionStatus.Released;
+
+                    redemption.ReleasedAt = now;
+                }
+            }
+
             order.Status = EOrderStatus.Canceled;
-            order.UpdatedAt = DateTime.Now;
+            order.UpdatedAt = now;
 
             // Segunda analise: Podendo ser cancelado atualiza o banco
             try
@@ -175,7 +206,57 @@ namespace Dima.Api.Handlers
 
             var now = DateTime.Now;
 
+            VoucherRedemption? redemption = null;
+
+            if (order.VoucherId is not null)
+            {
+                try
+                {
+                    redemption = await context
+                        .VoucherRedemptions
+                        .FirstOrDefaultAsync(x =>
+                            x.OrderId == order.Id);
+
+                    if (redemption is null)
+                    {
+                        // Compatibilidade com pedidos pendentes
+                        // criados antes da implementação da DT-06.
+                        redemption = new VoucherRedemption
+                        {
+                            VoucherId = order.VoucherId.Value,
+                            OrderId = order.Id,
+                            UserId = order.UserId,
+
+                            Status =
+                                EVoucherRedemptionStatus.Redeemed,
+
+                            ReservedAt = order.CreatedAt,
+                            RedeemedAt = now
+                        };
+
+                        await context.VoucherRedemptions
+                            .AddAsync(redemption);
+                    }
+                    else
+                    {
+                        redemption.Status =
+                            EVoucherRedemptionStatus.Redeemed;
+
+                        redemption.RedeemedAt ??= now;
+                        redemption.ReleasedAt = null;
+                    }
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        order,
+                        500,
+                        "[E238] Falha ao atualizar o resgate do voucher");
+                }
+            }
+
             order.Status = EOrderStatus.Paid;
+
             order.ExternalReference = externalReference;
             order.PaidAt = now;
             order.UpdatedAt = now;
@@ -521,11 +602,41 @@ namespace Dima.Api.Handlers
             try
             {
                 await context.Orders.AddAsync(order);
+
+                if (voucher is not null)
+                {
+                    var isComplimentary = total == 0m;
+
+                    var redemption = new VoucherRedemption
+                    {
+                        VoucherId = voucher.Id,
+                        Voucher = voucher,
+
+                        Order = order,
+                        UserId = userId.Value,
+
+                        Status = isComplimentary
+                            ? EVoucherRedemptionStatus.Redeemed
+                            : EVoucherRedemptionStatus.Reserved,
+
+                        ReservedAt = now,
+                        RedeemedAt = isComplimentary
+                            ? now
+                            : null
+                    };
+
+                    await context.VoucherRedemptions
+                        .AddAsync(redemption);
+                }
+
                 await context.SaveChangesAsync();
             }
-            catch 
+            catch
             {
-                return new Response<Order?>(null, 500, "[E046] Nao foi possivel realizar seu pedido");
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E046] Nao foi possivel realizar seu pedido");
             }
 
             var message = total == 0m

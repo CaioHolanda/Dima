@@ -1,4 +1,5 @@
 ﻿using Dima.Core.Enums;
+using System.Text.Json.Serialization;
 
 namespace Dima.Core.Models.Vouchers;
 
@@ -27,6 +28,6 @@ public class Voucher
     public Product? Product { get; set; }
 
     public bool IsActive { get; set; } = true;
-
+    [JsonIgnore]
     public List<VoucherRedemption> Redemptions { get; set; } = [];
 }
