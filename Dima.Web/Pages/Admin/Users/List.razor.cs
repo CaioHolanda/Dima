@@ -110,20 +110,18 @@ public partial class ListAdminUsersPage
         // Existe um próximo produto já pago/agendado.
         if (user.NextAccessStartsAt is not null)
         {
-            return user.NextAccessEndsAt?.ToString("dd/MM/yyyy")
-                   ?? "Vitalício";
+            return user.NextAccessEndsAt?
+                       .ToString("dd/MM/yyyy")
+                   ?? "-";
         }
 
         // Nunca houve acesso pago.
         if (user.AccessStartsAt is null)
             return "-";
 
-        // Produto atual/último produto é vitalício.
-        if (user.AccessEndsAt is null)
-            return "Vitalício";
-
-        return user.AccessEndsAt.Value
-            .ToString("dd/MM/yyyy");
+        return user.AccessEndsAt?
+                   .ToString("dd/MM/yyyy")
+               ?? "-";
     }
     protected async Task ToggleUserStatusAsync(AdminUserListItem user)
     {

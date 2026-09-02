@@ -186,7 +186,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.Product.Title)
@@ -199,7 +199,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessStartsAt)
@@ -212,7 +212,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessEndsAt)
@@ -224,10 +224,8 @@ public class AdminUserHandler(AppDbContext context,
                             order.Status == EOrderStatus.Paid &&
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now &&
-                            (
-                                order.AccessEndsAt == null ||
-                                order.AccessEndsAt > now
-                            )),
+                            order.AccessEndsAt != null &&
+                            order.AccessEndsAt > now),
 
                     NextProductName = context.Orders
                         .Where(order =>

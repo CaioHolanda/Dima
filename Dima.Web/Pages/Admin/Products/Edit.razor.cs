@@ -101,14 +101,13 @@ public partial class EditAdminProductPage : ComponentBase
 
             InputModel = new UpdateProductRequest
             {
-                Id = result.Data.Id,
-                Title = result.Data.Title,
-                Description = result.Data.Description,
-                Price = result.Data.Price,
-                AccessDurationMonths =
-                    result.Data.AccessDurationMonths ?? 0,
-                Slug = result.Data.Slug,
-                IsActive = result.Data.IsActive
+                Id =                    result.Data.Id,
+                Title =                 result.Data.Title,
+                Description =           result.Data.Description,
+                Price =                 result.Data.Price,
+                AccessDurationMonths =  result.Data.AccessDurationMonths,
+                Slug =                  result.Data.Slug,
+                IsActive =              result.Data.IsActive
             };
         }
         catch (Exception ex)

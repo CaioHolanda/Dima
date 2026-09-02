@@ -44,6 +44,13 @@
                         Title="Preço"
                         Format="C2" />
 
+        <TemplateColumn Title="Vigência">
+            <CellTemplate>
+                @FormatAccessDuration(
+                    context.Item.AccessDurationMonths)
+            </CellTemplate>
+        </TemplateColumn>
+
         <PropertyColumn Property="x => x.Slug"
                         Title="Slug" />
 

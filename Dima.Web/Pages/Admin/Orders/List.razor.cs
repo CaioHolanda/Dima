@@ -111,9 +111,8 @@ public partial class ListAdminOrdersPage : ComponentBase
                 ? "Aguardando pagamento"
                 : "-";
         }
-
-        return order.AccessEndsAt?.ToString("dd/MM/yyyy")
-               ?? "Vitalício";
+            return order.AccessEndsAt?.ToString("dd/MM/yyyy")
+                   ?? "-";
     }
 
     public static string FormatCurrency(decimal value)

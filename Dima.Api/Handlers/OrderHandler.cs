@@ -275,10 +275,8 @@ namespace Dima.Api.Handlers
             order.AccessStartsAt = accessStartsAt;
 
             order.AccessEndsAt =
-                order.Product.AccessDurationMonths.HasValue
-                    ? accessStartsAt.AddMonths(
-                        order.Product.AccessDurationMonths.Value)
-                    : null;
+                accessStartsAt.AddMonths(
+                    order.Product.AccessDurationMonths);
 
             try
             {
@@ -445,24 +443,6 @@ namespace Dima.Api.Handlers
                     "[E176] Já existe um próximo plano agendado");
             }
 
-            // Existe acesso vitalício já adquirido?
-            var hasLifetimeAccess = await context.Orders
-                .AsNoTracking()
-                .AnyAsync(x =>
-                    x.UserId == userId.Value &&
-                    (x.Status == EOrderStatus.Paid ||
-                     x.Status == EOrderStatus.RefundPending) &&
-                    x.AccessStartsAt != null &&
-                    x.AccessEndsAt == null);
-
-            if (hasLifetimeAccess)
-            {
-                return new Response<Order?>(
-                    null,
-                    400,
-                    "[E177] O usuário já possui acesso vitalício");
-            }           
-            
             // Produto existe?
             Product? product;
             try
@@ -586,10 +566,8 @@ namespace Dima.Api.Handlers
                         accessStartsAt;
 
                     order.AccessEndsAt =
-                        product.AccessDurationMonths.HasValue
-                            ? accessStartsAt.AddMonths(
-                                product.AccessDurationMonths.Value)
-                            : null;
+                        accessStartsAt.AddMonths(
+                        product.AccessDurationMonths);
                 }
                 catch
                 {

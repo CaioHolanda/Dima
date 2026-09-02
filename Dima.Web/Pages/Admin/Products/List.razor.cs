@@ -39,7 +39,12 @@ public partial class ListAdminProductsPage
                    StringComparison.OrdinalIgnoreCase)
                || product.Description.Contains(
                    SearchTerm,
-                   StringComparison.OrdinalIgnoreCase);
+                   StringComparison.OrdinalIgnoreCase)
+               || product.AccessDurationMonths
+                   .ToString()
+                   .Contains(
+                      SearchTerm,
+                      StringComparison.OrdinalIgnoreCase); 
     };
 
     public async Task OnStatusButtonClickedAsync(
@@ -151,6 +156,12 @@ public partial class ListAdminProductsPage
         {
             IsBusy = false;
         }
+    }
+    public static string FormatAccessDuration(int months)
+    {
+        return months == 1
+            ? "1 mês"
+            : $"{months} meses";
     }
 
 }
