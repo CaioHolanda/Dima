@@ -11,7 +11,7 @@ namespace Dima.Tests.Orders;
 public class OrderAccessDurationTests
 {
     [Fact]
-    public async Task ConfirmPayment_sets_access_end_from_product_duration()
+    public async Task ConfirmPayment_uses_order_duration_snapshot_when_product_changes()
     {
         var options =
             new DbContextOptionsBuilder<AppDbContext>()
@@ -50,11 +50,15 @@ public class OrderAccessDurationTests
             OriginalPrice = 659.99m,
             DiscountAmount = 0m,
             Total = 659.99m,
+            AccessDurationMonths = 6,
             Gateway = EPaymentGateway.Stripe,
             Status = EOrderStatus.WaintingPayment
         };
 
         context.Orders.Add(order);
+        await context.SaveChangesAsync();
+
+        product.AccessDurationMonths = 12;
         await context.SaveChangesAsync();
 
         var orderNumber = order.Number;

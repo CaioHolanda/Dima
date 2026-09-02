@@ -17,6 +17,7 @@ namespace Dima.Core.Models
         public decimal OriginalPrice { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal Total { get; set; }
+        public int AccessDurationMonths { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
         public DateTime? PaidAt { get; set; }

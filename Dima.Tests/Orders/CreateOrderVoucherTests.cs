@@ -55,6 +55,8 @@ public class CreateOrderVoucherTests
         Assert.Equal(75m, storedOrder.Total);
         Assert.Equal(voucher.Id, storedOrder.VoucherId);
 
+        Assert.Equal(product.AccessDurationMonths,result.Data.AccessDurationMonths);
+
         var storedVoucher =
             await context.Vouchers.SingleAsync();
 
@@ -187,13 +189,9 @@ public class CreateOrderVoucherTests
         Assert.Equal(100m, result.Data.DiscountAmount);
         Assert.Equal(0m, result.Data.Total);
 
-        Assert.Equal(
-            EOrderStatus.Paid,
-            result.Data.Status);
+        Assert.Equal(EOrderStatus.Paid,result.Data.Status);
 
-        Assert.Equal(
-            EPaymentGateway.NotApplicable,
-            result.Data.Gateway);
+        Assert.Equal(EPaymentGateway.NotApplicable,result.Data.Gateway);
 
         Assert.Null(result.Data.ExternalReference);
         Assert.NotNull(result.Data.PaidAt);
@@ -206,11 +204,15 @@ public class CreateOrderVoucherTests
             afterCreation);
 
         Assert.Equal(
-            result.Data.AccessStartsAt.Value.AddMonths(1),
+            result.Data.AccessStartsAt.Value.AddMonths(
+            result.Data.AccessDurationMonths),
             result.Data.AccessEndsAt.Value);
 
         var storedOrder =
             await context.Orders.SingleAsync();
+        Assert.Equal(
+            product.AccessDurationMonths,
+            storedOrder.AccessDurationMonths);
 
         Assert.Equal(EOrderStatus.Paid, storedOrder.Status);
         Assert.Equal(
@@ -218,6 +220,7 @@ public class CreateOrderVoucherTests
             storedOrder.Gateway);
 
         Assert.Equal(0m, storedOrder.Total);
+        Assert.Equal(product.AccessDurationMonths,result.Data.AccessDurationMonths);
         Assert.Null(storedOrder.ExternalReference);
 
         var storedVoucher =

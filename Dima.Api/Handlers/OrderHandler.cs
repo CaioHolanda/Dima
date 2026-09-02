@@ -276,7 +276,7 @@ namespace Dima.Api.Handlers
 
             order.AccessEndsAt =
                 accessStartsAt.AddMonths(
-                    order.Product.AccessDurationMonths);
+                    order.AccessDurationMonths);
 
             try
             {
@@ -534,7 +534,10 @@ namespace Dima.Api.Handlers
 
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
-                Total = total
+                Total = total,
+
+                AccessDurationMonths =
+                    product.AccessDurationMonths
             };
             if (total == 0m)
             {
@@ -567,7 +570,7 @@ namespace Dima.Api.Handlers
 
                     order.AccessEndsAt =
                         accessStartsAt.AddMonths(
-                        product.AccessDurationMonths);
+                        order.AccessDurationMonths);
                 }
                 catch
                 {

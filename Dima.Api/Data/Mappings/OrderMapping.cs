@@ -69,6 +69,10 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("DECIMAL(18,2)");
 
+        builder.Property(x => x.AccessDurationMonths)
+            .IsRequired()
+            .HasColumnType("INT");
+
         builder.Property(x => x.RefundReference)
             .IsRequired(false)
             .HasMaxLength(60)
@@ -127,6 +131,10 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             table.HasCheckConstraint(
                 "CK_Order_Total_Calculation",
                 "[Total] = [OriginalPrice] - [DiscountAmount]");
+
+            table.HasCheckConstraint(    
+                "CK_Order_AccessDurationMonths_Positive",
+                "[AccessDurationMonths] > 0");
 
             table.HasCheckConstraint(
                 "CK_Order_AccessPeriod",
