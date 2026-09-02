@@ -105,6 +105,8 @@ public partial class EditAdminProductPage : ComponentBase
                 Title = result.Data.Title,
                 Description = result.Data.Description,
                 Price = result.Data.Price,
+                AccessDurationMonths =
+                    result.Data.AccessDurationMonths ?? 0,
                 Slug = result.Data.Slug,
                 IsActive = result.Data.IsActive
             };

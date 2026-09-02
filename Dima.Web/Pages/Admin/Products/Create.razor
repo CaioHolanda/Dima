@@ -35,6 +35,14 @@
                       Culture="@BrazilCulture"
                       Immediate="false" />
 
+        <MudNumericField T="int"
+                         Label="Duração do acesso (meses)"
+                         HelperText="Campo obrigatório. Informe um valor maior que zero"
+                         @bind-Value="InputModel.AccessDurationMonths"
+                         For="@(() => InputModel.AccessDurationMonths)"
+                         Min="1"
+                         Immediate="true" />
+
         <MudTextField T="string"
                       Label="Slug"
                       HelperText="Use letras minúsculas, números e hífens"

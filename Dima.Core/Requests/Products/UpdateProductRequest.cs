@@ -21,5 +21,6 @@ public class UpdateProductRequest
     public string Slug { get; set; } = string.Empty;
 
     public bool IsActive { get; set; }
-    public int? AccessDurationMonths { get; set; }
+    [Range(1, int.MaxValue, ErrorMessage = "A duração do acesso deve ser maior que zero")]
+    public int AccessDurationMonths { get; set; }
 }
