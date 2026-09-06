@@ -195,7 +195,11 @@ namespace Dima.Web.Pages.Orders
                 }
                 else
                 {
-                    Snackbar.Add(result.Message, Severity.Error);
+                    Snackbar.Add(
+                        result.Message,
+                        result.Code == 409
+                            ? Severity.Warning
+                            : Severity.Error);
                 }
             }
             catch (Exception ex)

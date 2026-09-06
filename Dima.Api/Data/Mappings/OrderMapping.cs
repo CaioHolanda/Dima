@@ -1,4 +1,5 @@
 ﻿using Dima.Core.Models;
+using Dima.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -56,6 +57,17 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(x => x.UserId)
             .IsRequired()
             .HasColumnType("BIGINT");
+
+        // Índice geral para consultar os pedidos do usuário.
+        builder.HasIndex(x => x.UserId);
+
+        // Cada usuário pode ter apenas um pedido aguardando pagamento.
+        builder.HasIndex(
+                x => x.UserId,
+                "UX_Order_UserId_WaitingPayment")
+            .IsUnique()
+            .HasFilter(
+                $"[Status] = {(int)EOrderStatus.WaintingPayment}");
 
         builder.Property(x => x.VoucherCodeSnapshot)
             .IsRequired(false)

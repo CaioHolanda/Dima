@@ -11,6 +11,7 @@ using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Immutable;
+using Microsoft.Data.SqlClient;
 
 namespace Dima.Api.Handlers
 {
@@ -21,6 +22,9 @@ namespace Dima.Api.Handlers
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
+        private const string PendingOrderMessage =
+            "[E175] Você já possui um pedido aguardando pagamento. " +
+            "Acesse Meus pedidos para concluir ou cancelar esse pedido.";
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
             Order? order;
@@ -425,8 +429,8 @@ namespace Dima.Api.Handlers
             {
                 return new Response<Order?>(
                     null,
-                    400,
-                    "[E175] Já existe um pedido aguardando pagamento");
+                    409,
+                    PendingOrderMessage);
             }
 
             // Já existe um plano futuro pago/agendado?
@@ -616,6 +620,18 @@ namespace Dima.Api.Handlers
                 }
 
                 await context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (
+                ex.InnerException is SqlException sqlException &&
+                (sqlException.Number is 2601 or 2627) &&
+                sqlException.Message.Contains(
+                    "UX_Order_UserId_WaitingPayment",
+                    StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    PendingOrderMessage);
             }
             catch
             {
