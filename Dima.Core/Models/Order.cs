@@ -14,6 +14,9 @@ namespace Dima.Core.Models
         public Product Product { get; set; } = null!;
         public long? VoucherId { get; set; }
         public Voucher? Voucher { get; set; }
+        public string? VoucherCodeSnapshot { get; set; }
+        public EVoucherDiscountType? VoucherDiscountTypeSnapshot { get; set; }
+        public decimal? VoucherValueSnapshot { get; set; }
         public decimal OriginalPrice { get; set; }
         public decimal DiscountAmount { get; set; }
         public decimal Total { get; set; }

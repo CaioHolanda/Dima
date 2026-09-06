@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
+using Dima.Api.Services;
 using Dima.Core.Enums;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -75,7 +76,8 @@ public class RefundTests
 
         var handler = new OrderHandler(
             context,
-            paymentHandler);
+            paymentHandler,
+            new VoucherEligibilityService(context));
 
         var request = new RefundOrderRequest
         {
@@ -154,7 +156,8 @@ public class RefundTests
 
         var handler = new OrderHandler(
             context,
-            paymentHandler);
+            paymentHandler,
+            new VoucherEligibilityService(context));
 
         var request = new RefundOrderRequest
         {
@@ -242,7 +245,8 @@ public class RefundTests
 
         var handler = new OrderHandler(
             context,
-            paymentHandler);
+            paymentHandler,
+            new VoucherEligibilityService(context));
 
         var firstResult = await handler.ConfirmRefundAsync(
             "pi_test_refund_001",
@@ -337,7 +341,8 @@ public class RefundTests
 
         var handler = new OrderHandler(
             context,
-            paymentHandler);
+            paymentHandler,
+            new VoucherEligibilityService(context));
 
         var request = new CreateOrderRequest
         {
@@ -415,7 +420,8 @@ public class RefundTests
 
         var handler = new OrderHandler(
             context,
-            paymentHandler);
+            paymentHandler,
+            new VoucherEligibilityService(context));
 
         var request = new RefundOrderRequest
         {

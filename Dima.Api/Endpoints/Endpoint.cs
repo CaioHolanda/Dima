@@ -88,7 +88,6 @@ public static class Endpoint
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
             .RequireAuthorization()
-            .MapEndpoint<GetVoucherByCodeEndpoint>()
             .MapEndpoint<ApplyVoucherEndpoint>();
 
         endpoint.MapGroup("v1/orders")

@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
+using Dima.Api.Services;
 using Dima.Core.Enums;
 using Dima.Core.Models;
 using Dima.Tests.Orders.Fakes;
@@ -68,7 +69,8 @@ public class OrderAccessDurationTests
 
         var handler = new OrderHandler(
             context,
-            new FakePaymentHandler());
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
 
         var beforeConfirmation = DateTime.Now;
 

@@ -1,45 +1,16 @@
 ﻿using Dima.Api.Data;
 using Dima.Core.Common;
-using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Vouchers;
-using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
+using Dima.Api.Services;
 
 namespace Dima.Api.Handlers;
 
-public class VoucherHandler(AppDbContext context) : IVoucherHandler
+public class VoucherHandler(AppDbContext context, VoucherEligibilityService eligibilityService) : IVoucherHandler
 {
-    public async Task<Response<Voucher?>> GetByCodeAsync(
-        GetVoucherByCodeRequest request)
-    {
-        try
-        {
-            var code = request.Code.Trim().ToUpperInvariant();
-
-            var voucher = await context.Vouchers
-                .AsNoTracking()
-                .FirstOrDefaultAsync(x =>
-                    x.Code == code &&
-                    x.IsActive);
-
-            return voucher is null
-                ? new Response<Voucher?>(
-                    null,
-                    404,
-                    "Voucher não encontrado.")
-                : new Response<Voucher?>(voucher);
-        }
-        catch
-        {
-            return new Response<Voucher?>(
-                null,
-                500,
-                "Não foi possível recuperar o voucher.");
-        }
-    }
     public async Task<Response<VoucherApplication?>> ApplyAsync(
     ApplyVoucherRequest request)
     {
@@ -56,6 +27,22 @@ public class VoucherHandler(AppDbContext context) : IVoucherHandler
             var code = request.Code
                 .Trim()
                 .ToUpperInvariant();
+
+            var currentUserId = await context.Users
+                .AsNoTracking()
+                .Where(x =>
+                    x.Email == request.UserId ||
+                    x.UserName == request.UserId)
+                .Select(x => (long?)x.Id)
+                .FirstOrDefaultAsync();
+
+            if (currentUserId is null)
+            {
+                return new Response<VoucherApplication?>(
+                    null,
+                    404,
+                    "[E246] Usuário não encontrado");
+            }
 
             var product = await context.Products
                 .AsNoTracking()
@@ -74,36 +61,30 @@ public class VoucherHandler(AppDbContext context) : IVoucherHandler
             var voucher = await context.Vouchers
                 .AsNoTracking()
                 .FirstOrDefaultAsync(x =>
-                    x.Code == code &&
-                    x.IsActive);
+                    x.Code == code);
 
             if (voucher is null)
             {
                 return new Response<VoucherApplication?>(
                     null,
                     404,
-                    "[E232] Voucher não encontrado ou inativo");
+                    "[E232] Voucher não encontrado");
             }
 
-            if (voucher.ProductId.HasValue &&
-                voucher.ProductId.Value != product.Id)
+            var eligibility =
+                await eligibilityService.EvaluateAsync(
+                    voucher,
+                    product,
+                    currentUserId.Value,
+                    DateTime.Now);
+
+            if (!eligibility.IsEligible)
             {
                 return new Response<VoucherApplication?>(
                     null,
                     400,
-                    "[E233] Voucher não aplicável a este produto");
+                    eligibility.Message);
             }
-
-            if (voucher.DiscountType ==
-                    EVoucherDiscountType.FixedAmount &&
-                voucher.Value > product.Price)
-            {
-                return new Response<VoucherApplication?>(
-                    null,
-                    400,
-                    "[E229] O valor do voucher é superior ao valor do produto");
-            }
-
             var discountAmount =
                 VoucherDiscountCalculator.Calculate(
                     product.Price,

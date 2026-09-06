@@ -4,6 +4,7 @@ using Dima.Core.Common;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Api.Services;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Payment;
@@ -15,7 +16,10 @@ namespace Dima.Api.Handlers
 {
     public class OrderHandler(
         AppDbContext context,
-        IPaymentHandler paymentHandler) : IOrderHandler,IOrderPaymentConfirmationHandler
+        IPaymentHandler paymentHandler,
+        VoucherEligibilityService eligibilityService)
+        : IOrderHandler,
+          IOrderPaymentConfirmationHandler
     {
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
@@ -483,22 +487,19 @@ namespace Dima.Api.Handlers
                             $"[E043] Voucher {voucherId} não encontrado");
                     }
 
-                    if (!voucher.IsActive)
-                    {
-                        return new Response<Order?>(
-                            null,
-                            400,
-                            $"[E043] Voucher {voucherId} existe, mas está inativo");
-                    }
+                    var eligibility =
+                        await eligibilityService.EvaluateAsync(
+                            voucher,
+                            product,
+                            userId.Value,
+                            now);
 
-                    if (voucher.DiscountType ==
-                            EVoucherDiscountType.FixedAmount &&
-                        voucher.Value > product.Price)
+                    if (!eligibility.IsEligible)
                     {
                         return new Response<Order?>(
                             null,
                             400,
-                            "[E229] O valor do voucher é superior ao valor do produto");
+                            eligibility.Message);
                     }
 
                     context.Attach(voucher);
@@ -531,6 +532,10 @@ namespace Dima.Api.Handlers
 
                 Voucher = voucher,
                 VoucherId = voucher?.Id,
+
+                VoucherCodeSnapshot = voucher?.Code,
+                VoucherDiscountTypeSnapshot = voucher?.DiscountType,
+                VoucherValueSnapshot =voucher?.Value,
 
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,

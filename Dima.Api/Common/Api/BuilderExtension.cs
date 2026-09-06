@@ -2,6 +2,7 @@
 using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
+using Dima.Api.Services;
 using Dima.Api.Services.Email;
 using Dima.Core;
 using Dima.Core.Handlers;
@@ -135,6 +136,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IAdminVoucherHandler, AdminVoucherHandler>();
             builder.Services.AddTransient<IAdminUserHandler, AdminUserHandler>();
             builder.Services.AddTransient<IAdminOrderHandler, AdminOrderHandler>();
+            builder.Services.AddTransient<VoucherEligibilityService>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

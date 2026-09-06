@@ -3,6 +3,7 @@ using Dima.Api.Handlers;
 using Dima.Api.Models;
 using Dima.Core.Enums;
 using Dima.Core.Models;
+using Dima.Api.Services;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Tests.Orders.Fakes;
@@ -29,7 +30,8 @@ public class CreateOrderVoucherTests
 
         var handler = new OrderHandler(
             context,
-            new FakePaymentHandler());
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
 
         var request = new CreateOrderRequest
         {
@@ -48,9 +50,24 @@ public class CreateOrderVoucherTests
         Assert.Equal(25m, result.Data.DiscountAmount);
         Assert.Equal(75m, result.Data.Total);
 
+        Assert.Equal(voucher.Code,result.Data.VoucherCodeSnapshot);
+        Assert.Equal((EVoucherDiscountType?)voucher.DiscountType,
+                        result.Data.VoucherDiscountTypeSnapshot);
+
+        Assert.Equal(
+            (decimal?)voucher.Value,
+            result.Data.VoucherValueSnapshot);
+
         var storedOrder =
             await context.Orders.SingleAsync();
 
+        Assert.Equal(voucher.Code,storedOrder.VoucherCodeSnapshot);
+        Assert.Equal((EVoucherDiscountType?)voucher.DiscountType,
+            storedOrder.VoucherDiscountTypeSnapshot);
+
+        Assert.Equal(
+            (decimal?)voucher.Value,
+            storedOrder.VoucherValueSnapshot);
         Assert.Equal(25m, storedOrder.DiscountAmount);
         Assert.Equal(75m, storedOrder.Total);
         Assert.Equal(voucher.Id, storedOrder.VoucherId);
@@ -68,6 +85,7 @@ public class CreateOrderVoucherTests
         Assert.Equal(
             EPaymentGateway.Stripe,
             result.Data.Gateway);
+
     }
 
     [Fact]
@@ -87,7 +105,8 @@ public class CreateOrderVoucherTests
 
         var handler = new OrderHandler(
             context,
-            new FakePaymentHandler());
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
 
         var request = new CreateOrderRequest
         {
@@ -123,7 +142,8 @@ public class CreateOrderVoucherTests
 
         var handler = new OrderHandler(
             context,
-            new FakePaymentHandler());
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
 
         var request = new CreateOrderRequest
         {
@@ -165,7 +185,8 @@ public class CreateOrderVoucherTests
 
         var handler = new OrderHandler(
             context,
-            new FakePaymentHandler());
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
 
         var beforeCreation = DateTime.Now;
 
@@ -229,6 +250,48 @@ public class CreateOrderVoucherTests
         Assert.True(storedVoucher.IsActive);
     }
 
+    [Fact]
+    public async Task
+    CreateOrder_rejects_expired_voucher_when_called_directly()
+    {
+        await using var context =
+            await CreateContextAsync(
+                productPrice: 100m,
+                voucherType:
+                    EVoucherDiscountType.FixedAmount,
+                voucherValue: 25m);
+
+        var user = await context.Users.SingleAsync();
+        var product = await context.Products.SingleAsync();
+        var voucher = await context.Vouchers.SingleAsync();
+
+        voucher.EndsAt = DateTime.Now.AddDays(-1);
+        await context.SaveChangesAsync();
+
+        context.ChangeTracker.Clear();
+
+        var handler = new OrderHandler(
+            context,
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
+
+        var request = new CreateOrderRequest
+        {
+            UserId = user.Email!,
+            ProductId = product.Id,
+            VoucherId = voucher.Id
+        };
+
+        var result =
+            await handler.CreateAsync(request);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(400, result.Code);
+        Assert.Contains("[E242]", result.Message);
+
+        Assert.Empty(context.Orders);
+        Assert.Empty(context.VoucherRedemptions);
+    }
     private static async Task<AppDbContext> CreateContextAsync(
         decimal productPrice,
         EVoucherDiscountType voucherType,

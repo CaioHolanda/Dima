@@ -57,6 +57,19 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("BIGINT");
 
+        builder.Property(x => x.VoucherCodeSnapshot)
+            .IsRequired(false)
+            .HasColumnType("VARCHAR")
+            .HasMaxLength(20);
+
+        builder.Property(x => x.VoucherDiscountTypeSnapshot)
+            .IsRequired(false)
+            .HasColumnType("SMALLINT");
+
+        builder.Property(x => x.VoucherValueSnapshot)
+            .IsRequired(false)
+            .HasColumnType("DECIMAL(18,2)");
+
         builder.Property(x => x.OriginalPrice)
             .IsRequired()
             .HasColumnType("DECIMAL(18,2)");
@@ -139,6 +152,38 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             table.HasCheckConstraint(
                 "CK_Order_AccessPeriod",
                 "[AccessStartsAt] IS NULL OR [AccessEndsAt] IS NULL OR [AccessEndsAt] > [AccessStartsAt]");
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_Consistency",
+                """
+                (
+                    [VoucherId] IS NULL
+                    AND [VoucherCodeSnapshot] IS NULL
+                    AND [VoucherDiscountTypeSnapshot] IS NULL
+                    AND [VoucherValueSnapshot] IS NULL
+                )
+                OR
+                (
+                    [VoucherId] IS NOT NULL
+                    AND [VoucherCodeSnapshot] IS NOT NULL
+                    AND [VoucherDiscountTypeSnapshot] IS NOT NULL
+                    AND [VoucherValueSnapshot] IS NOT NULL
+                )
+                """);
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_DiscountType",
+                """
+                [VoucherDiscountTypeSnapshot] IS NULL
+                OR [VoucherDiscountTypeSnapshot] IN (1, 2)
+                """);
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_Value",
+                """
+                [VoucherValueSnapshot] IS NULL
+                OR [VoucherValueSnapshot] > 0
+                """);
         });
     }
 }

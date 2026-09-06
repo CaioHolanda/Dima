@@ -1,5 +1,6 @@
 ﻿using Dima.Api.Data;
 using Dima.Api.Handlers;
+using Dima.Api.Services;
 using Dima.Core.Enums;
 using Dima.Core.Models;
 using Dima.Core.Models.Vouchers;
@@ -21,6 +22,14 @@ public class ApplyVoucherTests
 
         await using var context =
             new AppDbContext(options);
+
+        var user = new Dima.Api.Models.User
+        {
+            UserName = "voucher@test.com",
+            Email = "voucher@test.com"
+        };
+
+        context.Users.Add(user);
 
         var product = new Product
         {
@@ -51,12 +60,15 @@ public class ApplyVoucherTests
 
         context.ChangeTracker.Clear();
 
-        var handler = new VoucherHandler(context);
+        var handler = new VoucherHandler(
+            context,
+            new VoucherEligibilityService(context));
 
         var request = new ApplyVoucherRequest
         {
             Code = "  save25  ",
-            ProductId = product.Id
+            ProductId = product.Id,
+            UserId = user.Email!
         };
 
         var result =
