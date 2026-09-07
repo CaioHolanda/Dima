@@ -25,6 +25,9 @@ namespace Dima.Api.Handlers
         private const string PendingOrderMessage =
             "[E175] Você já possui um pedido aguardando pagamento. " +
             "Acesse Meus pedidos para concluir ou cancelar esse pedido.";
+        private const string ConcurrentOrderUpdateMessage =
+            "[E247] O pedido foi atualizado durante esta operação. " +
+            "Atualize a página para verificar a situação atual.";
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
             Order? order;
@@ -106,9 +109,19 @@ namespace Dima.Api.Handlers
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderUpdateMessage);
+            }
             catch 
             {
-                return new Response<Order?>(order, 500, "[E041] Nao foi possivel cancelar seu pedido");
+                return new Response<Order?>(
+                    order, 
+                    500, 
+                    "[E041] Nao foi possivel cancelar seu pedido");
             }
             return new Response<Order?>(order, 200, $"Pedido {order.Number} cancelado com sucesso");
         }
@@ -291,6 +304,47 @@ namespace Dima.Api.Handlers
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                // Descarta as entidades com valores anteriores ao conflito.
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.Number == orderNumber);
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E204] Falha ao confirmar pagamento");
+                }
+
+                // Outro processamento já confirmou exatamente
+                // o mesmo pagamento.
+                if (currentOrder?.Status == EOrderStatus.Paid &&
+                    string.Equals(
+                        currentOrder.ExternalReference,
+                        externalReference,
+                        StringComparison.Ordinal))
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Pedido {currentOrder.Number} já confirmado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
+            }
             catch
             {
                 return new Response<Order?>(
@@ -298,7 +352,6 @@ namespace Dima.Api.Handlers
                     500,
                     "[E204] Falha ao confirmar pagamento");
             }
-
             return new Response<Order?>(
                 order,
                 200,

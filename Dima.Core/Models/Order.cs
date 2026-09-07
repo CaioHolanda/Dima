@@ -3,12 +3,15 @@ using Dima.Core.Models.Vouchers;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Dima.Core.Models
 {
     public class Order
     {
         public long Id { get; set; }
+        [JsonIgnore]
+        public byte[] RowVersion { get; set; } = [];
         public string Number { get; set; } = Guid.NewGuid().ToString("N")[..8];
         public long ProductId { get; set; }
         public Product Product { get; set; } = null!;

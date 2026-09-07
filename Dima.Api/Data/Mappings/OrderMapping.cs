@@ -13,6 +13,9 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.RowVersion)
+           .IsRowVersion();
+
         builder.Property(x => x.Number)
             .IsRequired()
             .HasColumnType("CHAR")

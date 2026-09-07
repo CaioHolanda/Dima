@@ -126,7 +126,13 @@ namespace Dima.Web.Components.Orders
             if (result.IsSuccess)
                 Parent.RefreshState(result.Data!);
             else
-                Snackbar.Add(result.Message, Severity.Error);
+            {
+                Snackbar.Add(
+                    result.Message,
+                    result.Code == 409
+                        ? Severity.Warning
+                        : Severity.Error);
+            }
         }
 
         private async Task PayOrderAsync()
