@@ -46,6 +46,38 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .IsRequired()
             .HasColumnType("DATETIME2");
 
+        builder.Property(x => x.ExpiresAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        builder.Property(x => x.ExpiredAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        builder.Property(x => x.PaymentSessionId)
+            .IsRequired(false)
+            .HasColumnType("NVARCHAR")
+            .HasMaxLength(255);
+
+        builder.Property(x => x.PaymentSessionExpiresAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        // Uma sessão de pagamento pertence a um único pedido.
+        builder.HasIndex(
+                x => x.PaymentSessionId,
+                "UX_Order_PaymentSessionId")
+            .IsUnique()
+            .HasFilter("[PaymentSessionId] IS NOT NULL");
+
+        // Facilita a localização dos pedidos pendentes vencidos.
+        builder.HasIndex(
+                x => x.ExpiresAt,
+                "IX_Order_WaitingPayment_ExpiresAt")
+            .HasFilter(
+                $"[Status] = {(int)EOrderStatus.WaintingPayment} " +
+                "AND [ExpiresAt] IS NOT NULL");
+
         builder.Property(x => x.PaidAt)
             .IsRequired(false)
             .HasColumnType("DATETIME2");

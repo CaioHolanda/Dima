@@ -14,13 +14,17 @@ using System.Collections.Immutable;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using Microsoft.EntityFrameworkCore.Storage;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Api.Handlers
 {
     public class OrderHandler(
         AppDbContext context,
         IPaymentHandler paymentHandler,
-        VoucherEligibilityService eligibilityService)
+        VoucherEligibilityService eligibilityService,
+        IOptions<OrderExpirationOptions> expirationOptions,
+        TimeProvider timeProvider)
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
@@ -731,7 +735,7 @@ namespace Dima.Api.Handlers
                     voucher);
 
             var total = originalPrice - discountAmount;
-
+            var createdAtUtc = timeProvider.GetUtcNow();
             var order = new Order
             {
                 UserId = userId.Value,
@@ -751,7 +755,12 @@ namespace Dima.Api.Handlers
                 Total = total,
 
                 AccessDurationMonths =
-                    product.AccessDurationMonths
+                    product.AccessDurationMonths,
+
+                ExpiresAt = total > 0m
+                    ? createdAtUtc.AddMinutes(
+                        expirationOptions.Value.PendingOrderLifetimeMinutes)
+                    : null,
             };
             if (total == 0m)
             {

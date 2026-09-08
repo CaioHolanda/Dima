@@ -6,6 +6,8 @@ using Dima.Core.Enums;
 using Dima.Core.Models;
 using Dima.Tests.Orders.Fakes;
 using Microsoft.EntityFrameworkCore;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Tests.Orders;
 
@@ -70,7 +72,9 @@ public class OrderAccessDurationTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var beforeConfirmation = DateTime.Now;
 

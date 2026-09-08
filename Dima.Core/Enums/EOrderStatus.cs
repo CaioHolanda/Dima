@@ -10,6 +10,7 @@ namespace Dima.Core.Enums
         Paid=2,
         Canceled=3,
         Refunded=4,
-        RefundPending = 5
+        RefundPending = 5,
+        Expired =6
     }
 }

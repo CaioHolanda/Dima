@@ -8,11 +8,19 @@ using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Tests.Orders.Fakes;
 using Microsoft.EntityFrameworkCore;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Tests.Orders;
 
 public class CreateOrderVoucherTests
 {
+    private sealed class FixedTimeProvider(
+    DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow()
+            => utcNow;
+    }
     [Fact]
     public async Task CreateOrder_applies_fixed_voucher_and_keeps_it_active()
     {
@@ -31,7 +39,9 @@ public class CreateOrderVoucherTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new CreateOrderRequest
         {
@@ -106,7 +116,9 @@ public class CreateOrderVoucherTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new CreateOrderRequest
         {
@@ -143,7 +155,9 @@ public class CreateOrderVoucherTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new CreateOrderRequest
         {
@@ -186,7 +200,9 @@ public class CreateOrderVoucherTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var beforeCreation = DateTime.Now;
 
@@ -248,6 +264,10 @@ public class CreateOrderVoucherTests
             await context.Vouchers.SingleAsync();
 
         Assert.True(storedVoucher.IsActive);
+        Assert.Null(storedOrder.ExpiresAt);
+        Assert.Null(storedOrder.ExpiredAt);
+        Assert.Null(storedOrder.PaymentSessionId);
+        Assert.Null(storedOrder.PaymentSessionExpiresAt);
     }
 
     [Fact]
@@ -273,7 +293,9 @@ public class CreateOrderVoucherTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new CreateOrderRequest
         {
@@ -340,5 +362,71 @@ public class CreateOrderVoucherTests
         await context.SaveChangesAsync();
 
         return context;
+    }
+
+    [Theory]
+    [InlineData(30)]
+    [InlineData(45)]
+    public async Task CreateOrder_stores_configured_expiration(
+    int lifetimeMinutes)
+    {
+        await using var context = await CreateContextAsync(
+            productPrice: 100m,
+            voucherType: EVoucherDiscountType.FixedAmount,
+            voucherValue: 25m);
+
+        var user = await context.Users.SingleAsync();
+        var product = await context.Products.SingleAsync();
+        var voucher = await context.Vouchers.SingleAsync();
+
+        context.ChangeTracker.Clear();
+
+        var utcNow = new DateTimeOffset(
+            2026, 9, 8, 12, 0, 0, TimeSpan.Zero);
+
+        var handler = new OrderHandler(
+            context,
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions
+            {
+                PendingOrderLifetimeMinutes = lifetimeMinutes
+            }),
+            new FixedTimeProvider(utcNow));
+
+        var result = await handler.CreateAsync(
+            new CreateOrderRequest
+            {
+                UserId = user.Email!,
+                ProductId = product.Id,
+                VoucherId = voucher.Id
+            });
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(result.Data);
+
+        context.ChangeTracker.Clear();
+
+        var storedOrder = await context.Orders
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(
+            EOrderStatus.WaintingPayment,
+            storedOrder.Status);
+
+        Assert.NotNull(storedOrder.ExpiresAt);
+
+        Assert.Equal(
+            utcNow.AddMinutes(lifetimeMinutes),
+            storedOrder.ExpiresAt.Value);
+
+        Assert.Equal(
+            TimeSpan.Zero,
+            storedOrder.ExpiresAt.Value.Offset);
+
+        Assert.Null(storedOrder.ExpiredAt);
+        Assert.Null(storedOrder.PaymentSessionId);
+        Assert.Null(storedOrder.PaymentSessionExpiresAt);
     }
 }

@@ -8,6 +8,8 @@ using Dima.Core.Requests.Order;
 using Dima.Tests.Orders.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Xunit.Abstractions;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Tests.Orders;
 
@@ -76,7 +78,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             paymentHandler,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new RefundOrderRequest
         {
@@ -156,7 +160,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             paymentHandler,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new RefundOrderRequest
         {
@@ -245,7 +251,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             paymentHandler,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var firstResult = await handler.ConfirmRefundAsync(
             "pi_test_refund_001",
@@ -341,7 +349,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             paymentHandler,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new CreateOrderRequest
         {
@@ -420,7 +430,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             paymentHandler,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var request = new RefundOrderRequest
         {
@@ -507,7 +519,9 @@ public class RefundTests
         var handler = new OrderHandler(
             context,
             new FakePaymentHandler(),
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            TimeProvider.System);
 
         var succeededResult = await handler.ConfirmRefundAsync(
             order.ExternalReference,

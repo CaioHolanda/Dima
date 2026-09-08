@@ -33,6 +33,22 @@ namespace Dima.Api.Common.Api
             ApiConfiguration.StripeWebhookSecret = builder.Configuration
                 .GetValue<string>("StripeWebhookSecret") ?? string.Empty;
             StripeConfiguration.ApiKey = ApiConfiguration.StripeApiKey;
+
+            builder.Services
+                .AddOptions<OrderExpirationOptions>()
+                .Bind(
+                    builder.Configuration.GetSection(
+                        OrderExpirationOptions.SectionName))
+                .Validate(
+                    options =>
+                        options.PendingOrderLifetimeMinutes > 0,
+                    "O prazo para iniciar o pagamento deve ser positivo.")
+                .Validate(
+                    options =>
+                        options.PaymentSessionLifetimeMinutes >= 30 &&
+                        options.PaymentSessionLifetimeMinutes <= 1440,
+                    "A sessão de pagamento deve durar entre 30 minutos e 24 horas.")
+                .ValidateOnStart();
         }
         public static void AddDocumentation(this WebApplicationBuilder builder)
         {
@@ -137,6 +153,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IAdminUserHandler, AdminUserHandler>();
             builder.Services.AddTransient<IAdminOrderHandler, AdminOrderHandler>();
             builder.Services.AddTransient<VoucherEligibilityService>();
+            builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

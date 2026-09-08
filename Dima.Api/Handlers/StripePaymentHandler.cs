@@ -7,10 +7,16 @@ using Dima.Api.Data;
 using Dima.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using CoreConfiguration = Dima.Core.Configuration;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Api.Handlers
 {
-    public class StripePaymentHandler(AppDbContext context) : IPaymentHandler
+    public class StripePaymentHandler(
+        AppDbContext context,
+        TimeProvider timeProvider,
+        IOptions<OrderExpirationOptions> expirationOptions)
+        : IPaymentHandler
     {
         public async Task<Response<string?>> CreateSessionAsync(
             CreatePaymentSessionRequest request)
@@ -39,7 +45,6 @@ namespace Dima.Api.Handlers
                 }
 
                 var order = await context.Orders
-                    .AsNoTracking()
                     .Include(x => x.Product)
                     .FirstOrDefaultAsync(x =>
                         x.Number == request.OrderNumber &&
@@ -60,10 +65,104 @@ namespace Dima.Api.Handlers
                         400,
                         "[E195] Pedido nao esta aguardando pagamento");
                 }
+                var service = new SessionService();
+
+                if (!string.IsNullOrWhiteSpace(order.PaymentSessionId))
+                {
+                    var existingSession = await service.GetAsync(
+                        order.PaymentSessionId);
+
+                    if (existingSession.Status == "complete")
+                    {
+                        return new Response<string?>(
+                            null,
+                            409,
+                            "[E253] O checkout deste pedido já foi concluído. " +
+                            "Consulte Meus pedidos para acompanhar a confirmação.");
+                    }
+
+                    if (existingSession.Status == "expired")
+                    {
+                        return new Response<string?>(
+                            null,
+                            409,
+                            "[E254] A sessão de pagamento deste pedido expirou. " +
+                            "Consulte Meus pedidos para verificar a situação.");
+                    }
+
+                    var sessionIsAvailable =
+                        existingSession.Status == "open" &&
+                        existingSession.PaymentStatus == "unpaid" &&
+                        existingSession.ExpiresAt >
+                            timeProvider.GetUtcNow().UtcDateTime &&
+                        !string.IsNullOrWhiteSpace(existingSession.Url);
+
+                    if (!sessionIsAvailable)
+                    {
+                        return new Response<string?>(
+                            null,
+                            409,
+                            "[E255] A sessão deste pedido não está disponível " +
+                            "para pagamento. Consulte Meus pedidos.");
+                    }
+
+                    return new Response<string?>(
+                        existingSession.Url);
+                }
+                var nowUtc = timeProvider.GetUtcNow();
+
+                if (order.PaymentSessionExpiresAt is null)
+                {
+                    if (order.ExpiresAt.HasValue &&
+                        order.ExpiresAt.Value <= nowUtc)
+                    {
+                        return new Response<string?>(
+                            null,
+                            409,
+                            "[E252] O prazo de pagamento deste pedido terminou. " +
+                            "Consulte Meus pedidos para verificar a situação.");
+                    }
+
+                    var plannedExpiration = nowUtc.AddMinutes(
+                        expirationOptions.Value.PaymentSessionLifetimeMinutes);
+
+                    // O Stripe utiliza timestamps com precisão de segundos.
+                    order.PaymentSessionExpiresAt =
+                        DateTimeOffset.FromUnixTimeSeconds(
+                            plannedExpiration.ToUnixTimeSeconds());
+
+                    try
+                    {
+                        await context.SaveChangesAsync();
+                    }
+                    catch (DbUpdateConcurrencyException)
+                    {
+                        return new Response<string?>(
+                            null,
+                            409,
+                            "[E256] O pedido foi atualizado durante a preparação " +
+                            "do pagamento. Atualize a página e tente novamente.");
+                    }
+                }
+                else if (order.PaymentSessionExpiresAt.Value <= nowUtc)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E257] O prazo da tentativa de pagamento terminou. " +
+                        "A situação da sessão precisa ser verificada.");
+                }
                 var options = new SessionCreateOptions
                 {
-                    CustomerEmail = user.Email,
+                    ClientReferenceId = order.Number,
 
+                    ExpiresAt = order.PaymentSessionExpiresAt.Value.UtcDateTime,
+
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["order"] = order.Number,
+                        ["userId"] = order.UserId.ToString()
+                    },
                     PaymentIntentData =
                         new SessionPaymentIntentDataOptions
                         {
@@ -79,22 +178,23 @@ namespace Dima.Api.Handlers
                     LineItems =
                     [
                         new SessionLineItemOptions
-                {
-                    PriceData =
-                        new SessionLineItemPriceDataOptions
                         {
-                            Currency = "brl",
-                            ProductData =
-                                new SessionLineItemPriceDataProductDataOptions
-                                {
-                                    Name = order.Product.Title,
-                                    Description = order.Product.Description
-                                },
-                            UnitAmount = (long)Math.Round(order.Total * 100, 0)
-                        },
+                            PriceData =
+                            new SessionLineItemPriceDataOptions
+                            {
+                                Currency = "brl",
+                                ProductData =
+                                    new SessionLineItemPriceDataProductDataOptions
+                                    {
+                                        Name = $"Dima - Pedido {order.Number}",
+                                        Description =
+                                            $"Plano com duração de {order.AccessDurationMonths} mês(es)"                                
+                                    },
+                                UnitAmount = (long)Math.Round(order.Total * 100, 0)
+                            },
 
-                    Quantity = 1
-                }
+                             Quantity = 1
+                        }
                     ],
 
                     Mode = "payment",
@@ -105,13 +205,101 @@ namespace Dima.Api.Handlers
 
                     CancelUrl =
                         $"{CoreConfiguration.FrontendUrl}/pedidos/" +
-                        $"{order.Number}/cancelar"
+                        $"{order.Number}"
                 };
 
-                var service = new SessionService();
-                var session = await service.CreateAsync(options);
+                var requestOptions = new RequestOptions
+                {
+                    IdempotencyKey =
+                        $"dima:checkout:v1:{order.Id}:{order.Number}:" +
+                        $"{order.PaymentSessionExpiresAt.Value.ToUnixTimeSeconds()}"
+                };
 
-                return new Response<string?>(session.Url);
+                var session = await service.CreateAsync(
+                    options,
+                    requestOptions);
+
+                // Recupera alterações que possam ter ocorrido enquanto
+                // aguardávamos a resposta do Stripe.
+                await context.Entry(order).ReloadAsync();
+
+                if (context.Entry(order).State == EntityState.Detached)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E258] O pedido não está mais disponível. " +
+                        "Não foi possível concluir a abertura do checkout.");
+                }
+
+                if (!string.IsNullOrWhiteSpace(order.PaymentSessionId) &&
+                    order.PaymentSessionId != session.Id)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E259] O pedido já está associado a outra sessão " +
+                        "de pagamento. A situação precisa ser verificada.");
+                }
+
+                var confirmedExpiration = new DateTimeOffset(
+                    DateTime.SpecifyKind(
+                        session.ExpiresAt,
+                        DateTimeKind.Utc));
+
+                order.PaymentSessionId = session.Id;
+                order.PaymentSessionExpiresAt = confirmedExpiration;
+
+                // O prazo inicial para abrir o checkout passa a ser
+                // o vencimento da sessão efetivamente criada.
+                if (order.Status == EOrderStatus.WaintingPayment)
+                {
+                    order.ExpiresAt = confirmedExpiration;
+                }
+
+                try
+                {
+                    await context.SaveChangesAsync();
+                }
+                catch (DbUpdateConcurrencyException)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E260] O pedido foi atualizado durante a abertura " +
+                        "do checkout. Atualize a página para verificar a situação.");
+                }
+
+                if (order.Status != EOrderStatus.WaintingPayment)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E261] A situação do pedido mudou. " +
+                        "Consulte Meus pedidos antes de continuar.");
+                }
+
+                // Uma resposta idempotente pode conter o estado original
+                // da criação. Consultamos o estado atual antes de usar a URL.
+                var currentSession = await service.GetAsync(session.Id);
+
+                var existingSessionIsAvailable =
+                    currentSession.Status == "open" &&
+                    currentSession.PaymentStatus == "unpaid" &&
+                    currentSession.ExpiresAt >
+                        timeProvider.GetUtcNow().UtcDateTime &&
+                    !string.IsNullOrWhiteSpace(currentSession.Url);
+
+                if (!existingSessionIsAvailable)
+                {
+                    return new Response<string?>(
+                        null,
+                        409,
+                        "[E255] A sessão deste pedido não está disponível " +
+                        "para pagamento. Consulte Meus pedidos.");
+                }
+
+                return new Response<string?>(currentSession.Url);
             }
             catch (StripeException ex)
             {

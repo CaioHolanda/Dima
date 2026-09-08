@@ -26,6 +26,10 @@ namespace Dima.Core.Models
         public int AccessDurationMonths { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.Now;
         public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTimeOffset? ExpiresAt { get; set; }
+        public DateTimeOffset? ExpiredAt { get; set; }
+        public string? PaymentSessionId { get; set; }
+        public DateTimeOffset? PaymentSessionExpiresAt { get; set; }
         public DateTime? PaidAt { get; set; }
         public DateTime? AccessStartsAt { get; set; }
         public DateTime? AccessEndsAt { get; set; }
