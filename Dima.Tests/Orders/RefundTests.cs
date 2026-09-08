@@ -18,7 +18,6 @@ public class RefundTests
     {
         _output = output;
     }
-
     [Fact]
     public async Task Refund_started_more_than_14_days_ago_is_rejected()
     {
@@ -450,5 +449,93 @@ public class RefundTests
         Assert.Equal(
             expectedKey,
             paymentHandler.LastIdempotencyKey);
+    }
+    [Fact]
+    public async Task ConfirmRefund_pending_event_does_not_regress_succeeded_refund()
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(
+                $"DimaTests-{Guid.NewGuid()}")
+            .Options;
+
+        await using var context = new AppDbContext(options);
+
+        var user = new User
+        {
+            UserName = "refund-ordering@test.com",
+            Email = "refund-ordering@test.com"
+        };
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        var product = new Product
+        {
+            Title = "Plano Mensal",
+            Description = "Plano de teste",
+            Price = 100m,
+            IsActive = true,
+            AccessDurationMonths = 1
+        };
+
+        context.Products.Add(product);
+        await context.SaveChangesAsync();
+
+        var order = new Order
+        {
+            UserId = user.Id,
+            ProductId = product.Id,
+            Product = product,
+
+            OriginalPrice = 100m,
+            DiscountAmount = 0m,
+            Total = 100m,
+
+            Status = EOrderStatus.RefundPending,
+
+            ExternalReference = "pi_refund_ordering_001",
+            RefundReference = "re_refund_ordering_001",
+
+            PaidAt = DateTime.Now.AddDays(-2),
+            AccessStartsAt = DateTime.Now.AddDays(-2),
+            AccessEndsAt = DateTime.Now.AddDays(28)
+        };
+
+        context.Orders.Add(order);
+        await context.SaveChangesAsync();
+
+        var handler = new OrderHandler(
+            context,
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context));
+
+        var succeededResult = await handler.ConfirmRefundAsync(
+            order.ExternalReference,
+            order.RefundReference,
+            "succeeded",
+            null);
+
+        var refundedAt = order.RefundedAt;
+
+        var delayedPendingResult = await handler.ConfirmRefundAsync(
+            order.ExternalReference,
+            order.RefundReference,
+            "pending",
+            null);
+
+        Assert.True(succeededResult.IsSuccess);
+        Assert.True(delayedPendingResult.IsSuccess);
+
+        Assert.Equal(200, delayedPendingResult.Code);
+        Assert.Contains(
+            "já possui estado final",
+            delayedPendingResult.Message);
+
+        Assert.Equal(
+            EOrderStatus.Refunded,
+            order.Status);
+
+        Assert.NotNull(refundedAt);
+        Assert.Equal(refundedAt, order.RefundedAt);
     }
 }

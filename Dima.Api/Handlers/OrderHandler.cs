@@ -24,6 +24,7 @@ namespace Dima.Api.Handlers
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
+        #region Constants
         private const string PendingOrderMessage =
             "[E175] Você já possui um pedido aguardando pagamento. " +
             "Acesse Meus pedidos para concluir ou cancelar esse pedido.";
@@ -35,6 +36,9 @@ namespace Dima.Api.Handlers
         private const string ConcurrentOrderCreationMessage =
             "[E250] Outra solicitação foi processada ao mesmo tempo. " +
             "Consulte Meus pedidos e tente novamente.";
+        private const string RefundAlreadyLinkedMessage =
+            "[E251] Esta referência de reembolso já está associada a outro pedido.";
+        #endregion
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
             Order? order;
@@ -426,7 +430,19 @@ namespace Dima.Api.Handlers
                     409,
                     "[E224] Referencia de reembolso nao corresponde ao pedido");
             }
+            var refundIsFinalized =
+                order.Status == EOrderStatus.Refunded ||
+                (order.Status == EOrderStatus.Paid &&
+                 !string.IsNullOrWhiteSpace(order.RefundFailureReason));
 
+            if (refundIsFinalized)
+            {
+                return new Response<Order?>(
+                    order,
+                    200,
+                    $"Reembolso do pedido {order.Number} já possui estado final. " +
+                    $"Evento {refundStatus} ignorado.");
+            }
             var now = DateTime.Now;
 
             switch (refundStatus)
@@ -464,6 +480,59 @@ namespace Dima.Api.Handlers
             {
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.ExternalReference == paymentIntentId);
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E226] Falha ao atualizar estado do reembolso");
+                }
+
+                var expectedStatus = refundStatus switch
+                {
+                    "succeeded" => EOrderStatus.Refunded,
+
+                    "pending" or "requires_action"
+                        => EOrderStatus.RefundPending,
+
+                    "failed" or "canceled"
+                        => EOrderStatus.Paid,
+
+                    _ => order.Status
+                };
+
+                if (currentOrder is not null &&
+                    string.Equals(
+                        currentOrder.RefundReference,
+                        refundId,
+                        StringComparison.Ordinal) &&
+                    currentOrder.Status == expectedStatus)
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Reembolso do pedido {currentOrder.Number} " +
+                        "já atualizado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
             }
             catch
             {
@@ -1053,6 +1122,18 @@ namespace Dima.Api.Handlers
                     currentOrder,
                     409,
                     ConcurrentOrderUpdateMessage);
+            }
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    (sqlException.Number is 2601 or 2627) &&
+                    sqlException.Message.Contains(
+                        "UX_Order_RefundReference",
+                        StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    RefundAlreadyLinkedMessage);
             }
             catch
             {

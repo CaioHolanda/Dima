@@ -17,8 +17,11 @@ namespace Dima.Api.Endpoints.Orders
                 .WithSummary("Refund by Id")
                 .WithDescription("Refund by Id")
                 .WithOrder(6)
-                .Produces<Response<Order?>>();
-        
+                .Produces<Response<Order?>>(StatusCodes.Status200OK)
+                .Produces<Response<Order?>>(StatusCodes.Status400BadRequest)
+                .Produces<Response<Order?>>(StatusCodes.Status404NotFound)
+                .Produces<Response<Order?>>(StatusCodes.Status409Conflict)
+                .Produces<Response<Order?>>(StatusCodes.Status500InternalServerError);
         private static async Task<IResult> HandleAsync(
             IOrderHandler handler,
             long id,
@@ -33,9 +36,13 @@ namespace Dima.Api.Endpoints.Orders
             request.Id = id;
             request.UserId = user.Identity!.Name??string.Empty;
             var result = await handler.RefundAsync(request);
-            return result.IsSuccess
-                ? TypedResults.Ok(result)
-                : TypedResults.BadRequest(result);
+
+            if (result.IsSuccess)
+                return TypedResults.Ok(result);
+
+            return TypedResults.Json(
+                result,
+                statusCode: result.Code);
         }
     }
 }

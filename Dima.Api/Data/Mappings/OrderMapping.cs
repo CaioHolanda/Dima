@@ -111,6 +111,10 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasMaxLength(60)
             .HasColumnType("NVARCHAR");
 
+        builder.HasIndex(x => x.RefundReference,"UX_Order_RefundReference")
+            .IsUnique()
+            .HasFilter("[RefundReference] IS NOT NULL");
+
         builder.Property(x => x.RefundFailureReason)
             .IsRequired(false)
             .HasMaxLength(100)
