@@ -12,6 +12,8 @@ using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Immutable;
 using Microsoft.Data.SqlClient;
+using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Dima.Api.Handlers
 {
@@ -28,6 +30,11 @@ namespace Dima.Api.Handlers
         private const string ConcurrentOrderUpdateMessage =
             "[E247] O pedido foi atualizado durante esta operação. " +
             "Atualize a página para verificar a situação atual.";
+        private const string PaymentAlreadyLinkedMessage =
+            "[E248] Esta referência de pagamento já está associada a outro pedido.";
+        private const string ConcurrentOrderCreationMessage =
+            "[E250] Outra solicitação foi processada ao mesmo tempo. " +
+            "Consulte Meus pedidos e tente novamente.";
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
             Order? order;
@@ -345,6 +352,18 @@ namespace Dima.Api.Handlers
                     409,
                     ConcurrentOrderUpdateMessage);
             }
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    (sqlException.Number is 2601 or 2627) &&
+                    sqlException.Message.Contains(
+                        "UX_Order_ExternalReference",
+                        StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    PaymentAlreadyLinkedMessage);
+            }
             catch
             {
                 return new Response<Order?>(
@@ -468,6 +487,26 @@ namespace Dima.Api.Handlers
                     null,
                     404,
                     "[E167] Usuario nao encontrado");
+            IDbContextTransaction? transaction = null;
+
+            try
+            {
+                if (context.Database.IsRelational())
+                {
+                    transaction = await context.Database
+                        .BeginTransactionAsync(
+                            IsolationLevel.Serializable);
+                }
+            }
+            catch
+            {
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E249] Não foi possível iniciar o processamento do pedido");
+            }
+
+            await using var transactionScope = transaction;
 
             var now = DateTime.Now;
 
@@ -673,6 +712,10 @@ namespace Dima.Api.Handlers
                 }
 
                 await context.SaveChangesAsync();
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync();
+                }
             }
             catch (DbUpdateException ex) when (
                 ex.InnerException is SqlException sqlException &&
@@ -685,6 +728,23 @@ namespace Dima.Api.Handlers
                     null,
                     409,
                     PendingOrderMessage);
+            }
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    sqlException.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (SqlException ex) when (
+                ex.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
             }
             catch
             {

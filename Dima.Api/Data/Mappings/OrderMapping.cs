@@ -29,6 +29,11 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasColumnType("NVARCHAR")
             .HasMaxLength(60);
 
+        builder.HasIndex(x => x.ExternalReference,
+            "UX_Order_ExternalReference")
+            .IsUnique()
+            .HasFilter("[ExternalReference] IS NOT NULL");
+
         builder.Property(x => x.Gateway)
             .IsRequired()
             .HasColumnType("SMALLINT");
