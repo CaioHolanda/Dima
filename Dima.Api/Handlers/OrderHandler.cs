@@ -479,7 +479,43 @@ namespace Dima.Api.Handlers
                 $"Reembolso do pedido {order.Number} atualizado para {refundStatus}");
         }
 
-        public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
+        public async Task<Response<Order?>> CreateAsync(
+            CreateOrderRequest request)
+        {
+            try
+            {
+                return await CreateWithinTransactionAsync(request);
+            }
+            catch (DbUpdateException ex) when (
+                ex.InnerException is SqlException sqlException &&
+                sqlException.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (SqlException ex) when (
+                ex.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (Exception ex) when (
+                    IsSqlDeadlock(ex))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+        }
+
+        private async Task<Response<Order?>>
+            CreateWithinTransactionAsync(
+                CreateOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
             if (userId is null)
@@ -557,6 +593,10 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(null, 404, "[E041] Produto nao encontrado");
                 context.Attach(product);
             }
+            catch (Exception ex) when (IsSqlDeadlock(ex))
+            {
+                throw;
+            }
             catch
             {
                 return new Response<Order?>(null, 500, "[E042] Nao foi possivel buscar produto");
@@ -600,6 +640,10 @@ namespace Dima.Api.Handlers
 
                     context.Attach(voucher);
                 }
+            }
+            catch (Exception ex) when (IsSqlDeadlock(ex))
+            {
+                throw;
             }
             catch
             {
@@ -672,6 +716,10 @@ namespace Dima.Api.Handlers
                     order.AccessEndsAt =
                         accessStartsAt.AddMonths(
                         order.AccessDurationMonths);
+                }
+                catch (Exception ex) when (IsSqlDeadlock(ex))
+                {
+                    throw;
                 }
                 catch
                 {
@@ -746,8 +794,15 @@ namespace Dima.Api.Handlers
                     409,
                     ConcurrentOrderCreationMessage);
             }
-            catch
+            catch (Exception ex) when (IsSqlDeadlock(ex))
             {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    $"[CREATE ORDER] {ex}");
+
                 return new Response<Order?>(
                     null,
                     500,
@@ -958,9 +1013,53 @@ namespace Dima.Api.Handlers
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.Id == order.Id &&
+                            x.UserId == userId.Value);
+                }
+                catch
+                {
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E059] Falha ao processar reembolso");
+                }
+
+                if (currentOrder?.Status ==
+                        EOrderStatus.RefundPending &&
+                    string.Equals(
+                        currentOrder.RefundReference,
+                        refundResult.Data,
+                        StringComparison.Ordinal))
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Reembolso do pedido {currentOrder.Number} " +
+                        "já solicitado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
+            }
             catch
             {
-                return new Response<Order?>(order, 500, "[E059] Falha ao processar reembolso");
+                return new Response<Order?>(
+                    order,
+                    500,
+                    "[E059] Falha ao processar reembolso");
             }
             return new Response<Order?>(order, 200, $"Reembolso do pedido {order.Number} solicitado com sucesso");
         }
@@ -974,6 +1073,27 @@ namespace Dima.Api.Handlers
                     x.UserName == userIdentifier)
                 .Select(x => (long?)x.Id)
                 .FirstOrDefaultAsync();
+        }
+        private static bool IsSqlDeadlock(
+                    Exception exception)
+        {
+            Exception? currentException = exception;
+
+            while (currentException is not null)
+            {
+                if (currentException is SqlException
+                    {
+                        Number: 1205
+                    })
+                {
+                    return true;
+                }
+
+                currentException =
+                    currentException.InnerException;
+            }
+
+            return false;
         }
     }
 }
