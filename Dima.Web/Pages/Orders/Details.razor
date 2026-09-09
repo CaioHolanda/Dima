@@ -32,6 +32,7 @@
     <br />
     <h4>Situacao</h4>
     <OrderStatus Status="Order.Status"
+                 ExpiresAt="@Order.ExpiresAt"
                  IsComplimentary="@(
                  Order.Gateway ==
                  EPaymentGateway.NotApplicable)" />

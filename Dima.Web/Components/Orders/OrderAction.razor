@@ -38,7 +38,13 @@
             CANCELAR O PEDIDO
         </MudButton>
     break;
-
+    case EOrderStatus.Expired:
+        <MudAlert Severity="Severity.Info"
+                  Variant="Variant.Outlined">
+            O prazo para pagamento deste pedido terminou.
+            Faça um novo pedido para continuar.
+        </MudAlert>
+    break;
     default:
         <MudText></MudText>
     break;

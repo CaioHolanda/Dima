@@ -13,6 +13,12 @@ namespace Dima.Web.Components.Orders
         [Parameter]
         public bool IsComplimentary { get; set; }
 
+        [Parameter]
+        public DateTimeOffset? ExpiresAt { get; set; }
+        protected bool HasElapsed =>
+            ExpiresAt.HasValue &&
+            ExpiresAt.Value <= DateTimeOffset.UtcNow;
+
         #endregion
     }
 }

@@ -4,7 +4,14 @@
 <MudText Typo="Typo.h3">
     Meus Pedidos
 </MudText>
-
+@if (!string.IsNullOrWhiteSpace(VerificationWarning))
+{
+    <MudAlert Severity="Severity.Warning"
+              Variant="Variant.Outlined"
+              Class="mt-4">
+        @VerificationWarning
+    </MudAlert>
+}
 @if (IsBusy)
 {
     <MudProgressLinear Indeterminate="true" Class="mt-4" />
@@ -46,7 +53,11 @@ else
 
             <TemplateColumn Title="Situação">
                 <CellTemplate>
-                    <OrderStatus Status="@context.Item.Status" />
+                    <OrderStatus Status="@context.Item.Status"
+                                 ExpiresAt="@context.Item.ExpiresAt"
+                                 IsComplimentary="@(
+                                 context.Item.Gateway ==
+                                 EPaymentGateway.NotApplicable)" />
                 </CellTemplate>
             </TemplateColumn>
 

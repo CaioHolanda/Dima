@@ -33,7 +33,24 @@
         break;
 
     case EOrderStatus.WaintingPayment:
-    <MudChip T="string" Color="Color.Warning">AGUARDANDO PAGAMENTO</MudChip>
+        @if (HasElapsed)
+        {
+            <MudChip T="string" Color="Color.Warning">
+                PRAZO ENCERRADO — EM VERIFICAÇÃO
+            </MudChip>
+        }
+        else
+        {
+            <MudChip T="string" Color="Color.Warning">
+                AGUARDANDO PAGAMENTO
+            </MudChip>
+        }
+        break;
+
+    case EOrderStatus.Expired:
+        <MudChip T="string" Color="Color.Default">
+            EXPIRADO
+        </MudChip>
         break;
 
     default:
