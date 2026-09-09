@@ -31,13 +31,43 @@
         break;
 
     case EOrderStatus.WaintingPayment:
-        <MudButton FullWidth="true" Color="Color.Success" Variant="Variant.Filled" Size="Size.Large" Class="mb-4" OnClick="OnPayButtonClickedAsync">
-            PAGAR COM STRIPE
-        </MudButton>
-        <MudButton FullWidth="true" Color="Color.Error" Variant="Variant.Outlined" OnClick="OnCancelButtonClicked">
-            CANCELAR O PEDIDO
-        </MudButton>
-    break;
+        @if (!Order.ExpiresAt.HasValue)
+        {
+            <MudAlert Severity="Severity.Warning"
+                      Variant="Variant.Outlined">
+                Não foi possível determinar o prazo deste pedido.
+                Entre em contato com o suporte antes de continuar.
+            </MudAlert>
+        }
+        else if (Order.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        {
+            <MudAlert Severity="Severity.Info"
+                      Variant="Variant.Outlined">
+                O prazo deste pedido terminou e estamos verificando
+                a situação do pagamento. Esta página será atualizada
+                automaticamente. Se você já pagou, aguarde a confirmação
+                antes de tentar outra compra.
+            </MudAlert>
+        }
+        else
+        {
+            <MudButton FullWidth="true"
+                       Color="Color.Success"
+                       Variant="Variant.Filled"
+                       Size="Size.Large"
+                       Class="mb-4"
+                       OnClick="OnPayButtonClickedAsync">
+                PAGAR COM STRIPE
+            </MudButton>
+
+            <MudButton FullWidth="true"
+                       Color="Color.Error"
+                       Variant="Variant.Outlined"
+                       OnClick="OnCancelButtonClicked">
+                CANCELAR O PEDIDO
+            </MudButton>
+        }
+        break;
     case EOrderStatus.Expired:
         <MudAlert Severity="Severity.Info"
                   Variant="Variant.Outlined">

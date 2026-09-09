@@ -5,6 +5,14 @@
 {
     <h1>Detalhes do Pedido</h1>
     <br />
+    @if (!string.IsNullOrWhiteSpace(VerificationWarning))
+    {
+        <MudAlert Severity="Severity.Warning"
+                  Variant="Variant.Outlined"
+                  Class="my-4">
+            @VerificationWarning
+        </MudAlert>
+    }
     <h4>Numero do Pedido</h4>
     <p>@Order.Number</p>
     <br />

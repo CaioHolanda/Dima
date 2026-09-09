@@ -1,56 +1,165 @@
-﻿using Dima.Core.Handlers;
+﻿using Dima.Core.Enums;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 
-namespace Dima.Web.Pages.Orders
+namespace Dima.Web.Pages.Orders;
+
+public partial class DetailsPage : ComponentBase, IAsyncDisposable
 {
-    public partial class DetailsPage : ComponentBase
+    [Parameter]
+    public string Number { get; set; } = string.Empty;
+
+    public Order Order { get; set; } = null!;
+
+    public string? VerificationWarning { get; set; }
+
+    private readonly CancellationTokenSource _refreshCancellation = new();
+    private Task? _refreshTask;
+    private bool _disposed;
+    private long _stateVersion;
+
+    [Inject]
+    public IOrderHandler Handler { get; set; } = null!;
+
+    [Inject]
+    public ISnackbar Snackbar { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
     {
-        #region Parameters
+        await LoadOrderAsync(initialLoad: true);
 
-       
-        [Parameter] public string Number { get; set; } = string.Empty;
-
-        #endregion
-
-        #region Properties
-
-        public Order Order { get; set; } = null!;
-
-        #endregion
-
-        #region Services
-        [Inject] public IOrderHandler Handler { get; set; } = null!;
-        [Inject] public ISnackbar Snackbar { get; set; } = null!;
-
-        #endregion
-
-        #region Overrides
-        protected override async Task OnInitializedAsync()
+        if (!_disposed)
         {
-            var request = new GetOrderByNumberRequest
+            _refreshTask = RefreshPeriodicallyAsync(
+                _refreshCancellation.Token);
+        }
+    }
+
+    private async Task LoadOrderAsync(bool initialLoad)
+    {
+        var version = _stateVersion;
+
+        try
+        {
+            var result = await Handler.GetByNumberAsync(
+                new GetOrderByNumberRequest
+                {
+                    Number = Number
+                });
+
+            if (_disposed || version != _stateVersion)
+                return;
+
+            if (result.IsSuccess && result.Data is not null)
             {
-                Number = Number
-            };
-            var result = await Handler.GetByNumberAsync(request);
-            if (result.IsSuccess)
-                Order = result.Data!;
-            else
-                Snackbar.Add(result.Message, Severity.Error);
+                Order = result.Data;
+
+                VerificationWarning =
+                    string.IsNullOrWhiteSpace(result.Message)
+                        ? null
+                        : result.Message;
+
+                return;
+            }
+
+            VerificationWarning =
+                "Não foi possível atualizar este pedido. " +
+                "Uma nova tentativa será feita automaticamente.";
+
+            if (initialLoad)
+            {
+                Snackbar.Add(
+                    string.IsNullOrWhiteSpace(result.Message)
+                        ? "Não foi possível carregar o pedido."
+                        : result.Message,
+                    Severity.Error);
+            }
         }
-
-
-        #endregion
-        #region Methods
-
-        public void RefreshState(Order order)
+        catch (Exception)
         {
-            Order = order;
-            StateHasChanged();
-        }
+            if (_disposed || version != _stateVersion)
+                return;
 
-        #endregion
+            VerificationWarning =
+                "Não foi possível atualizar este pedido. " +
+                "Verifique sua conexão. Tentaremos novamente automaticamente.";
+
+            if (initialLoad)
+            {
+                Snackbar.Add(
+                    "Não foi possível carregar o pedido.",
+                    Severity.Error);
+            }
+        }
+    }
+
+    private async Task RefreshPeriodicallyAsync(
+        CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(
+            TimeSpan.FromSeconds(30));
+
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await InvokeAsync(async () =>
+                {
+                    if (_disposed)
+                        return;
+
+                    var needsRefresh =
+                        Order?.Status == EOrderStatus.WaintingPayment
+                        || !string.IsNullOrWhiteSpace(VerificationWarning);
+
+                    if (!needsRefresh)
+                        return;
+
+                    await LoadOrderAsync(initialLoad: false);
+
+                    if (!_disposed)
+                        StateHasChanged();
+                });
+            }
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.IsCancellationRequested)
+        {
+            // Encerramento normal ao sair da página.
+        }
+    }
+
+    public void RefreshState(Order order)
+    {
+        if (_disposed)
+            return;
+
+        // Invalida o resultado de uma consulta anterior
+        // à atualização feita por uma ação da página.
+        _stateVersion++;
+
+        Order = order;
+        VerificationWarning = null;
+
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+        _refreshCancellation.Cancel();
+
+        try
+        {
+            if (_refreshTask is not null)
+                await _refreshTask;
+        }
+        finally
+        {
+            _refreshCancellation.Dispose();
+        }
     }
 }
