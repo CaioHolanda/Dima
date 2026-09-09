@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
+using Stripe.Checkout;
 using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Common.Api
@@ -154,6 +155,9 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IAdminOrderHandler, AdminOrderHandler>();
             builder.Services.AddTransient<VoucherEligibilityService>();
             builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+            builder.Services.AddTransient<SessionService>(_ => new SessionService());
+            builder.Services.AddTransient<IPaymentSessionCloser,StripePaymentSessionCloser>();
+            builder.Services.AddTransient<OrderExpirationService>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

@@ -10,6 +10,9 @@ using Dima.Tests.Orders.Fakes;
 using Microsoft.EntityFrameworkCore;
 using Dima.Api.Configuration;
 using Microsoft.Extensions.Options;
+using Dima.Api.Common.Api;
+using Dima.Core.Responses;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Dima.Tests.Orders;
 
@@ -21,6 +24,83 @@ public class CreateOrderVoucherTests
         public override DateTimeOffset GetUtcNow()
             => utcNow;
     }
+    private sealed class UnexpectedSessionCloser
+    : IPaymentSessionCloser
+    {
+        public int Calls { get; private set; }
+
+        public Task<Response<bool>> CloseAsync(string sessionId)
+        {
+            Calls++;
+
+            throw new InvalidOperationException(
+                "Este pedido não possui sessão de pagamento.");
+        }
+    }
+    private sealed class ControlledSessionCloser(
+    Response<bool> result) : IPaymentSessionCloser
+    {
+        public int Calls { get; private set; }
+        public string? LastSessionId { get; private set; }
+
+        public Task<Response<bool>> CloseAsync(string sessionId)
+        {
+            Calls++;
+            LastSessionId = sessionId;
+
+            return Task.FromResult(result);
+        }
+    }
+    private static async Task<AppDbContext> CreateContextAsync(
+    decimal productPrice,
+    EVoucherDiscountType voucherType,
+    decimal voucherValue)
+    {
+        var options =
+            new DbContextOptionsBuilder<AppDbContext>()
+                .UseInMemoryDatabase(
+                    $"DimaTests-{Guid.NewGuid()}")
+                .Options;
+
+        var context = new AppDbContext(options);
+
+        var user = new User
+        {
+            UserName = "voucher@test.com",
+            Email = "voucher@test.com"
+        };
+
+        var product = new Product
+        {
+            Title = "Plano de teste",
+            Description = "Produto para teste de voucher",
+            Price = productPrice,
+            IsActive = true,
+            AccessDurationMonths = 1
+        };
+
+        context.Users.Add(user);
+        context.Products.Add(product);
+
+        await context.SaveChangesAsync();
+
+        var voucher = new Voucher
+        {
+            Code = $"TEST{Guid.NewGuid():N}"[..12],
+            Title = "Voucher de teste",
+            Description = "Voucher para teste do pedido",
+            DiscountType = voucherType,
+            Value = voucherValue,
+            IsActive = true
+        };
+
+        context.Vouchers.Add(voucher);
+
+        await context.SaveChangesAsync();
+
+        return context;
+    }
+
     [Fact]
     public async Task CreateOrder_applies_fixed_voucher_and_keeps_it_active()
     {
@@ -314,54 +394,146 @@ public class CreateOrderVoucherTests
         Assert.Empty(context.Orders);
         Assert.Empty(context.VoucherRedemptions);
     }
-    private static async Task<AppDbContext> CreateContextAsync(
-        decimal productPrice,
-        EVoucherDiscountType voucherType,
-        decimal voucherValue)
+
+    [Fact]
+    public async Task ExpireOrder_without_session_releases_voucher_once()
     {
-        var options =
-            new DbContextOptionsBuilder<AppDbContext>()
-                .UseInMemoryDatabase(
-                    $"DimaTests-{Guid.NewGuid()}")
-                .Options;
+        var nowUtc = new DateTimeOffset(
+            2026, 9, 9, 12, 0, 0, TimeSpan.Zero);
 
-        var context = new AppDbContext(options);
+        await using var context = await CreateContextAsync(
+            productPrice: 100m,
+            voucherType: EVoucherDiscountType.FixedAmount,
+            voucherValue: 25m);
 
-        var user = new User
+        var user = await context.Users.SingleAsync();
+        var product = await context.Products.SingleAsync();
+        var voucher = await context.Vouchers.SingleAsync();
+
+        var deadline = nowUtc.AddMinutes(-1);
+
+        var order = new Order
         {
-            UserName = "voucher@test.com",
-            Email = "voucher@test.com"
+            UserId = user.Id,
+
+            ProductId = product.Id,
+            Product = product,
+
+            VoucherId = voucher.Id,
+            Voucher = voucher,
+
+            VoucherCodeSnapshot = voucher.Code,
+            VoucherDiscountTypeSnapshot = voucher.DiscountType,
+            VoucherValueSnapshot = voucher.Value,
+
+            OriginalPrice = 100m,
+            DiscountAmount = 25m,
+            Total = 75m,
+
+            AccessDurationMonths = product.AccessDurationMonths,
+
+            Status = EOrderStatus.WaintingPayment,
+            Gateway = EPaymentGateway.Stripe,
+
+            CreatedAt = nowUtc.AddMinutes(-31).LocalDateTime,
+            UpdatedAt = nowUtc.AddMinutes(-31).LocalDateTime,
+
+            ExpiresAt = deadline
         };
 
-        var product = new Product
+        var redemption = new VoucherRedemption
         {
-            Title = "Plano de teste",
-            Description = "Produto para teste de voucher",
-            Price = productPrice,
-            IsActive = true,
-            AccessDurationMonths = 1
+            Order = order,
+            Voucher = voucher,
+            VoucherId = voucher.Id,
+            UserId = user.Id,
+
+            Status = EVoucherRedemptionStatus.Reserved,
+            ReservedAt = order.CreatedAt
         };
 
-        context.Users.Add(user);
-        context.Products.Add(product);
+        context.Orders.Add(order);
+        context.VoucherRedemptions.Add(redemption);
 
         await context.SaveChangesAsync();
 
-        var voucher = new Voucher
-        {
-            Code = $"TEST{Guid.NewGuid():N}"[..12],
-            Title = "Voucher de teste",
-            Description = "Voucher para teste do pedido",
-            DiscountType = voucherType,
-            Value = voucherValue,
-            IsActive = true
-        };
+        var orderId = order.Id;
 
-        context.Vouchers.Add(voucher);
+        context.ChangeTracker.Clear();
 
-        await context.SaveChangesAsync();
+        var sessionCloser = new UnexpectedSessionCloser();
 
-        return context;
+        var service = new OrderExpirationService(
+            context,
+            sessionCloser,
+            new FixedTimeProvider(nowUtc),
+            NullLogger<OrderExpirationService>.Instance);
+
+        var result = await service.ExpireAsync(orderId);
+
+        Assert.True(result.IsSuccess);
+        Assert.True(result.Data);
+
+        context.ChangeTracker.Clear();
+
+        var storedOrder = await context.Orders
+            .AsNoTracking()
+            .SingleAsync();
+
+        var storedRedemption = await context.VoucherRedemptions
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(EOrderStatus.Expired, storedOrder.Status);
+        Assert.Equal((DateTimeOffset?)nowUtc, storedOrder.ExpiredAt);
+        Assert.Equal((DateTimeOffset?)deadline, storedOrder.ExpiresAt);
+
+        Assert.Equal(
+            EVoucherRedemptionStatus.Released,
+            storedRedemption.Status);
+
+        Assert.Equal(
+            (DateTime?)nowUtc.LocalDateTime,
+            storedRedemption.ReleasedAt);
+
+        Assert.Null(storedRedemption.RedeemedAt);
+        Assert.Equal(0, sessionCloser.Calls);
+
+        // Repete a operação cinco minutos depois.
+        var repeatedService = new OrderExpirationService(
+            context,
+            sessionCloser,
+            new FixedTimeProvider(nowUtc.AddMinutes(5)),
+            NullLogger<OrderExpirationService>.Instance);
+
+        var repeatedResult = await repeatedService.ExpireAsync(orderId);
+
+        Assert.True(repeatedResult.IsSuccess);
+        Assert.True(repeatedResult.Data);
+
+        context.ChangeTracker.Clear();
+
+        var repeatedOrder = await context.Orders
+            .AsNoTracking()
+            .SingleAsync();
+
+        var repeatedRedemption = await context.VoucherRedemptions
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(
+            (DateTimeOffset?)nowUtc,
+            repeatedOrder.ExpiredAt);
+
+        Assert.Equal(
+            (DateTime?)nowUtc.LocalDateTime,
+            repeatedRedemption.ReleasedAt);
+
+        Assert.Equal(0, sessionCloser.Calls);
+
+        Assert.True(
+            (await context.Vouchers.AsNoTracking().SingleAsync())
+            .IsActive);
     }
 
     [Theory]
@@ -428,5 +600,123 @@ public class CreateOrderVoucherTests
         Assert.Null(storedOrder.ExpiredAt);
         Assert.Null(storedOrder.PaymentSessionId);
         Assert.Null(storedOrder.PaymentSessionExpiresAt);
+    }
+
+    [Theory]
+    [InlineData(true, 409)]
+    [InlineData(true, 502)]
+    [InlineData(false, 409)]
+    public async Task ExpireOrder_preserves_reservation_when_payment_is_uncertain(
+    bool hasSessionId,
+    int failureCode)
+    {
+        var createdAtUtc = new DateTimeOffset(
+            2026, 9, 9, 12, 0, 0, TimeSpan.Zero);
+
+        await using var context = await CreateContextAsync(
+            productPrice: 100m,
+            voucherType: EVoucherDiscountType.FixedAmount,
+            voucherValue: 25m);
+
+        var user = await context.Users.SingleAsync();
+        var product = await context.Products.SingleAsync();
+        var voucher = await context.Vouchers.SingleAsync();
+        context.ChangeTracker.Clear();
+        var orderHandler = new OrderHandler(
+            context,
+            new FakePaymentHandler(),
+            new VoucherEligibilityService(context),
+            Options.Create(new OrderExpirationOptions()),
+            new FixedTimeProvider(createdAtUtc));
+
+        var creationResult = await orderHandler.CreateAsync(
+            new CreateOrderRequest
+            {
+                UserId = user.Email!,
+                ProductId = product.Id,
+                VoucherId = voucher.Id
+            });
+
+        Assert.True(
+            creationResult.IsSuccess,
+            $"Falha ao preparar o pedido: " +
+            $"{creationResult.Code} - {creationResult.Message}");
+        
+        Assert.NotNull(creationResult.Data);
+
+        context.ChangeTracker.Clear();
+
+        var order = await context.Orders.SingleAsync();
+
+        var deadline = createdAtUtc.AddMinutes(60);
+
+        order.ExpiresAt = deadline;
+        order.PaymentSessionExpiresAt = deadline;
+
+        order.PaymentSessionId = hasSessionId
+            ? "cs_test_uncertain_payment"
+            : null;
+
+        await context.SaveChangesAsync();
+
+        var orderId = order.Id;
+
+        context.ChangeTracker.Clear();
+
+        var sessionCloser = new ControlledSessionCloser(
+            new Response<bool>(
+                false,
+                failureCode,
+                "Não foi possível confirmar o encerramento."));
+
+        var service = new OrderExpirationService(
+            context,
+            sessionCloser,
+            new FixedTimeProvider(deadline.AddMinutes(1)),
+            NullLogger<OrderExpirationService>.Instance);
+
+        var result = await service.ExpireAsync(orderId);
+
+        Assert.False(result.IsSuccess);
+        Assert.False(result.Data);
+        Assert.Equal(failureCode, result.Code);
+
+        context.ChangeTracker.Clear();
+
+        var storedOrder = await context.Orders
+            .AsNoTracking()
+            .SingleAsync();
+
+        var storedRedemption = await context.VoucherRedemptions
+            .AsNoTracking()
+            .SingleAsync();
+
+        Assert.Equal(
+            EOrderStatus.WaintingPayment,
+            storedOrder.Status);
+
+        Assert.Null(storedOrder.ExpiredAt);
+        Assert.Equal((DateTimeOffset?)deadline, storedOrder.ExpiresAt);
+
+        Assert.Equal(
+            EVoucherRedemptionStatus.Reserved,
+            storedRedemption.Status);
+
+        Assert.Null(storedRedemption.ReleasedAt);
+        Assert.Null(storedRedemption.RedeemedAt);
+
+        Assert.Equal(hasSessionId ? 1 : 0, sessionCloser.Calls);
+
+        if (hasSessionId)
+        {
+            Assert.Equal(
+                "cs_test_uncertain_payment",
+                sessionCloser.LastSessionId);
+        }
+        else
+        {
+            Assert.Null(sessionCloser.LastSessionId);
+            Assert.Contains("[E268]", result.Message);
+        }
     }
 }
