@@ -1,6 +1,7 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Api.Data;
 using Dima.Core.Enums;
+using Dima.Core.Handlers;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,7 +9,7 @@ namespace Dima.Api.Services;
 
 public sealed class OrderExpirationService(
     AppDbContext context,
-    IPaymentSessionCloser sessionCloser,
+    IPaymentHandler paymentHandler,
     TimeProvider timeProvider,
     ILogger<OrderExpirationService> logger)
 {
@@ -116,7 +117,7 @@ public sealed class OrderExpirationService(
 
             if (!string.IsNullOrWhiteSpace(order.PaymentSessionId))
             {
-                var closeResult = await sessionCloser.CloseAsync(
+                var closeResult = await paymentHandler.CloseSessionAsync(
                     order.PaymentSessionId);
 
                 if (!closeResult.IsSuccess || !closeResult.Data)

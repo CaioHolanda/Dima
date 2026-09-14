@@ -156,7 +156,6 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<VoucherEligibilityService>();
             builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
             builder.Services.AddTransient<SessionService>(_ => new SessionService());
-            builder.Services.AddTransient<IPaymentSessionCloser,StripePaymentSessionCloser>();
             builder.Services.AddTransient<OrderExpirationService>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)

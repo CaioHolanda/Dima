@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using CoreConfiguration = Dima.Core.Configuration;
 using Dima.Api.Configuration;
 using Microsoft.Extensions.Options;
+using Dima.Core.Models.Payments;
 
 namespace Dima.Api.Handlers
 {
@@ -18,14 +19,14 @@ namespace Dima.Api.Handlers
         IOptions<OrderExpirationOptions> expirationOptions)
         : IPaymentHandler
     {
-        public async Task<Response<string?>> CreateSessionAsync(
+        public async Task<Response<PaymentSessionResult?>> CreateSessionAsync(
             CreatePaymentSessionRequest request)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         500,
                         "[E089] StripeApiKey não configurada");
@@ -38,7 +39,7 @@ namespace Dima.Api.Handlers
 
                 if (user is null)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         404,
                         "[E193] Usuario nao encontrado");
@@ -52,7 +53,7 @@ namespace Dima.Api.Handlers
 
                 if (order is null)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         404,
                         "[E194] Pedido nao encontrado");
@@ -60,7 +61,7 @@ namespace Dima.Api.Handlers
 
                 if (order.Status != EOrderStatus.WaintingPayment)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         400,
                         "[E195] Pedido nao esta aguardando pagamento");
@@ -74,7 +75,7 @@ namespace Dima.Api.Handlers
 
                     if (existingSession.Status == "complete")
                     {
-                        return new Response<string?>(
+                        return new Response<PaymentSessionResult?>(
                             null,
                             409,
                             "[E253] O checkout deste pedido já foi concluído. " +
@@ -83,7 +84,7 @@ namespace Dima.Api.Handlers
 
                     if (existingSession.Status == "expired")
                     {
-                        return new Response<string?>(
+                        return new Response<PaymentSessionResult?>(
                             null,
                             409,
                             "[E254] A sessão de pagamento deste pedido expirou. " +
@@ -99,15 +100,24 @@ namespace Dima.Api.Handlers
 
                     if (!sessionIsAvailable)
                     {
-                        return new Response<string?>(
+                        return new Response<PaymentSessionResult?>(
                             null,
                             409,
                             "[E255] A sessão deste pedido não está disponível " +
                             "para pagamento. Consulte Meus pedidos.");
                     }
 
-                    return new Response<string?>(
-                        existingSession.Url);
+                    return new Response<PaymentSessionResult?>(
+                        new PaymentSessionResult
+                        {
+                            SessionId = existingSession.Id,
+                            RedirectUrl = existingSession.Url!,
+                            ExpiresAt = new DateTimeOffset(
+                                DateTime.SpecifyKind(
+                                    existingSession.ExpiresAt,
+                                    DateTimeKind.Utc)),
+                            Gateway = EPaymentGateway.Stripe
+                        });
                 }
                 var nowUtc = timeProvider.GetUtcNow();
 
@@ -116,7 +126,7 @@ namespace Dima.Api.Handlers
                     if (order.ExpiresAt.HasValue &&
                         order.ExpiresAt.Value <= nowUtc)
                     {
-                        return new Response<string?>(
+                        return new Response<PaymentSessionResult?>(
                             null,
                             409,
                             "[E252] O prazo de pagamento deste pedido terminou. " +
@@ -137,7 +147,7 @@ namespace Dima.Api.Handlers
                     }
                     catch (DbUpdateConcurrencyException)
                     {
-                        return new Response<string?>(
+                        return new Response<PaymentSessionResult?>(
                             null,
                             409,
                             "[E256] O pedido foi atualizado durante a preparação " +
@@ -146,7 +156,7 @@ namespace Dima.Api.Handlers
                 }
                 else if (order.PaymentSessionExpiresAt.Value <= nowUtc)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E257] O prazo da tentativa de pagamento terminou. " +
@@ -225,7 +235,7 @@ namespace Dima.Api.Handlers
 
                 if (context.Entry(order).State == EntityState.Detached)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E258] O pedido não está mais disponível. " +
@@ -235,7 +245,7 @@ namespace Dima.Api.Handlers
                 if (!string.IsNullOrWhiteSpace(order.PaymentSessionId) &&
                     order.PaymentSessionId != session.Id)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E259] O pedido já está associado a outra sessão " +
@@ -249,6 +259,7 @@ namespace Dima.Api.Handlers
 
                 order.PaymentSessionId = session.Id;
                 order.PaymentSessionExpiresAt = confirmedExpiration;
+                order.Gateway = EPaymentGateway.Stripe;
 
                 // O prazo inicial para abrir o checkout passa a ser
                 // o vencimento da sessão efetivamente criada.
@@ -263,7 +274,7 @@ namespace Dima.Api.Handlers
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E260] O pedido foi atualizado durante a abertura " +
@@ -272,7 +283,7 @@ namespace Dima.Api.Handlers
 
                 if (order.Status != EOrderStatus.WaintingPayment)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E261] A situação do pedido mudou. " +
@@ -292,21 +303,31 @@ namespace Dima.Api.Handlers
 
                 if (!existingSessionIsAvailable)
                 {
-                    return new Response<string?>(
+                    return new Response<PaymentSessionResult?>(
                         null,
                         409,
                         "[E255] A sessão deste pedido não está disponível " +
                         "para pagamento. Consulte Meus pedidos.");
                 }
 
-                return new Response<string?>(currentSession.Url);
+                return new Response<PaymentSessionResult?>(
+                        new PaymentSessionResult
+                        {
+                            SessionId = currentSession.Id,
+                            RedirectUrl = currentSession.Url!,
+                            ExpiresAt = new DateTimeOffset(
+                                DateTime.SpecifyKind(
+                                    currentSession.ExpiresAt,
+                                    DateTimeKind.Utc)),
+                            Gateway = EPaymentGateway.Stripe
+                        });
             }
             catch (StripeException ex)
             {
                 Console.WriteLine(
                     $"[STRIPE CREATE SESSION] {ex.Message}");
 
-                return new Response<string?>(
+                return new Response<PaymentSessionResult?>(
                     null,
                     502,
                     $"[E090] Falha no Stripe: {ex.Message}");
@@ -316,7 +337,7 @@ namespace Dima.Api.Handlers
                 Console.WriteLine(
                     $"[STRIPE CREATE SESSION] {ex}");
 
-                return new Response<string?>(
+                return new Response<PaymentSessionResult?>(
                     null,
                     500,
                     "[E091] Falha interna ao criar sessão de pagamento");
@@ -385,6 +406,64 @@ namespace Dima.Api.Handlers
                     null,
                     500,
                     "[E218] Falha interna ao solicitar reembolso");
+            }
+        }
+        public async Task<Response<bool>> CloseSessionAsync(
+    string sessionId)
+        {
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                return new Response<bool>(
+                    false,
+                    400,
+                    "[E262] Sessão de pagamento não informada.");
+            }
+
+            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
+            {
+                return new Response<bool>(
+                    false,
+                    500,
+                    "[E263] StripeApiKey não configurada.");
+            }
+
+            try
+            {
+                var service = new SessionService();
+
+                var session = await service.GetAsync(sessionId);
+
+                if (session.Status == "open" &&
+                    session.PaymentStatus == "unpaid")
+                {
+                    session = await service.ExpireAsync(sessionId);
+                }
+
+                if (session.Status == "expired" &&
+                    session.PaymentStatus == "unpaid")
+                {
+                    return new Response<bool>(
+                        true,
+                        200,
+                        "Sessão expirada e sem pagamento.");
+                }
+
+                return new Response<bool>(
+                    false,
+                    409,
+                    "[E264] A sessão não permite liberar a reserva. " +
+                    "O pagamento pode estar concluído ou em processamento.");
+            }
+            catch (StripeException ex)
+            {
+                Console.WriteLine(
+                    $"[STRIPE CLOSE SESSION] {ex.Message}");
+
+                return new Response<bool>(
+                    false,
+                    502,
+                    "[E265] Não foi possível confirmar o encerramento " +
+                    "da sessão de pagamento. Tente novamente.");
             }
         }
     }

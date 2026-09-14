@@ -35,7 +35,7 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasFilter("[ExternalReference] IS NOT NULL");
 
         builder.Property(x => x.Gateway)
-            .IsRequired()
+            .IsRequired(false)
             .HasColumnType("SMALLINT");
 
         builder.Property(x => x.CreatedAt)
