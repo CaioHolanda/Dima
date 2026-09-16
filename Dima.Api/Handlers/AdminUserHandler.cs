@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
@@ -6,26 +6,16 @@ using Dima.Core.Requests.Users;
 using Dima.Core.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Dima.Api.Configuration;
-using Microsoft.Extensions.Options;
+using Dima.Core.Security;
+using System.Data;
 using IdentityUser = Dima.Api.Models.User;
 
 namespace Dima.Api.Handlers;
 
 public class AdminUserHandler(AppDbContext context,
-                              UserManager<IdentityUser> userManager,
-                              IOptions<InitialAdminOptions> adminOptions)
-            : IAdminUserHandler    
+                              UserManager<IdentityUser> userManager)
+            : IAdminUserHandler
 {
-    private readonly InitialAdminOptions _adminOptions = adminOptions.Value;
-    private bool IsProtectedAdmin(IdentityUser user)
-    {
-        return !string.IsNullOrWhiteSpace(_adminOptions.Email) &&
-               string.Equals(
-                   user.Email,
-                   _adminOptions.Email,
-                   StringComparison.OrdinalIgnoreCase);
-    }
     public async Task<Response<AdminUserListItem?>>
         ActivateAsync(ActivateUserRequest request)
     {
@@ -86,6 +76,10 @@ public class AdminUserHandler(AppDbContext context,
     {
         try
         {
+            // Serialize the administrator count and update across API instances.
+            await using var transaction = await context.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable);
+
             var user = await userManager.FindByIdAsync(
                 request.Id.ToString());
 
@@ -97,12 +91,12 @@ public class AdminUserHandler(AppDbContext context,
                     "[E179] Usuário não encontrado");
             }
 
-            if (IsProtectedAdmin(user))
+            if (request.ActorId <= 0 || request.ActorId == user.Id)
             {
                 return new Response<AdminUserListItem?>(
                     null,
                     403,
-                    "[E180] O usuário administrador não pode ser desativado");
+                    "[E180] Não é permitido desativar a própria conta");
             }
 
             if (user.LockoutEnd == DateTimeOffset.MaxValue)
@@ -113,26 +107,29 @@ public class AdminUserHandler(AppDbContext context,
                     "[E181] O usuário já está desativado");
             }
 
-            if (!user.LockoutEnabled)
+            if (await userManager.IsInRoleAsync(user, AppRoles.Admin))
             {
-                var enableResult =
-                    await userManager.SetLockoutEnabledAsync(
-                        user,
-                        true);
+                var now = DateTimeOffset.UtcNow;
+                var hasOtherActiveAdmin = await (
+                    from candidate in context.Users
+                    join membership in context.UserRoles on candidate.Id equals membership.UserId
+                    join role in context.Roles on membership.RoleId equals role.Id
+                    where role.NormalizedName == AppRoles.Admin.ToUpperInvariant()
+                        && candidate.Id != user.Id
+                        && candidate.EmailConfirmed
+                        && (!candidate.LockoutEnabled || candidate.LockoutEnd == null
+                            || candidate.LockoutEnd <= now)
+                    select candidate.Id).AnyAsync();
 
-                if (!enableResult.Succeeded)
-                {
-                    return new Response<AdminUserListItem?>(
-                        null,
-                        400,
-                        "[E187] Não foi possível habilitar o bloqueio do usuário");
-                }
+                if (!hasOtherActiveAdmin)
+                    return new Response<AdminUserListItem?>(null, 403,
+                        "[E188] O último administrador ativo não pode ser desativado");
             }
 
-            var result =
-                await userManager.SetLockoutEndDateAsync(
-                    user,
-                    DateTimeOffset.MaxValue);
+            // Persist lockout and stamp together; failure must not partially deactivate.
+            user.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            var result = await userManager.UpdateSecurityStampAsync(user);
 
             if (!result.Succeeded)
             {
@@ -141,6 +138,8 @@ public class AdminUserHandler(AppDbContext context,
                     400,
                     "[E182] Não foi possível desativar o usuário");
             }
+
+            await transaction.CommitAsync();
 
             return new Response<AdminUserListItem?>(
                 new AdminUserListItem

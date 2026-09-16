@@ -1,4 +1,5 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
+using System.Security.Claims;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
 using Dima.Core.Requests.Users;
@@ -25,11 +26,16 @@ public class DeactivateUserEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         IAdminUserHandler handler,
+        ClaimsPrincipal principal,
         long id)
     {
+        if (!long.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var actorId))
+            return Results.Unauthorized();
+
         var request = new DeactivateUserRequest
         {
-            Id = id
+            Id = id,
+            ActorId = actorId
         };
 
         var result = await handler.DeactivateAsync(request);
