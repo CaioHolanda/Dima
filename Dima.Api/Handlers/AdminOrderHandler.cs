@@ -10,6 +10,43 @@ namespace Dima.Api.Handlers;
 public class AdminOrderHandler(AppDbContext context)
     : IAdminOrderHandler
 {
+    public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
+    {
+        try
+        {
+            var order = await (
+                from item in context.Orders.AsNoTracking()
+                join user in context.Users.AsNoTracking() on item.UserId equals user.Id
+                where item.Id == id
+                select new AdminOrderDetails
+                {
+                    Id = item.Id, Number = item.Number,
+                    UserId = item.UserId, UserEmail = user.Email ?? string.Empty,
+                    ProductId = item.ProductId, ProductName = item.Product.Title,
+                    VoucherCode = item.VoucherCodeSnapshot,
+                    VoucherDiscountTypeSnapshot = item.VoucherDiscountTypeSnapshot,
+                    VoucherValueSnapshot = item.VoucherValueSnapshot,
+                    OriginalPrice = item.OriginalPrice, DiscountAmount = item.DiscountAmount, Total = item.Total,
+                    CreatedAt = item.CreatedAt, UpdatedAt = item.UpdatedAt, Status = item.Status,
+                    PaidAt = item.PaidAt, Gateway = item.Gateway, ExternalReference = item.ExternalReference,
+                    PaymentSessionId = item.PaymentSessionId, PaymentSessionExpiresAt = item.PaymentSessionExpiresAt,
+                    ExpiresAt = item.ExpiresAt, ExpiredAt = item.ExpiredAt,
+                    AccessStartsAt = item.AccessStartsAt, AccessEndsAt = item.AccessEndsAt,
+                    AccessDurationMonths = item.AccessDurationMonths,
+                    RefundReference = item.RefundReference, RefundFailureReason = item.RefundFailureReason,
+                    RefundedAt = item.RefundedAt, RefundReason = item.RefundReason,
+                    RefundReasonDetails = item.RefundReasonDetails
+                }).SingleOrDefaultAsync();
+            return order is null
+                ? new Response<AdminOrderDetails?>(null, 404, "Pedido não encontrado.")
+                : new Response<AdminOrderDetails?>(order);
+        }
+        catch
+        {
+            return new Response<AdminOrderDetails?>(null, 500, "Não foi possível consultar o pedido.");
+        }
+    }
+
     public async Task<PagedResponse<List<AdminOrderListItem>?>>
         GetAllAsync(GetAllAdminOrdersRequest request)
     {
@@ -31,9 +68,7 @@ public class AdminOrderHandler(AppDbContext context)
                     ProductId = order.ProductId,
                     ProductName = order.Product.Title,
 
-                    VoucherCode = order.Voucher != null
-                        ? order.Voucher.Code
-                        : null,
+                    VoucherCode = order.VoucherCodeSnapshot,
 
                     OriginalPrice = order.OriginalPrice,
                     DiscountAmount = order.DiscountAmount,

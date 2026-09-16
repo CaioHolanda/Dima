@@ -1,0 +1,93 @@
+@page "/admin/orders/{Id:long}"
+@attribute [Authorize(Roles = AppRoles.Admin)]
+@inherits AdminOrderDetailsPage
+
+<MudButton Href="@BackUrl" StartIcon="@Icons.Material.Filled.ArrowBack" Class="mb-4">Voltar aos pedidos</MudButton>
+<MudText Typo="Typo.h3" Class="mb-4">Detalhes do pedido</MudText>
+@if (IsBusy)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else if (Order is null)
+{
+    <MudAlert Severity="Severity.Error">@ErrorMessage</MudAlert>
+    <MudButton OnClick="LoadAsync">Tentar novamente</MudButton>
+}
+else
+{
+    <MudText Typo="Typo.h5" Class="mb-2">Pedido @Order.Number</MudText>
+    <MudChip T="string" Color="@ListAdminOrdersPage.GetStatusColor(Order.Status)">@ListAdminOrdersPage.GetStatusText(Order.Status)</MudChip>
+    <MudGrid Class="mt-2">
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.h6">Compra</MudText>
+                <dl class="order-details">
+                    <dt>Usuário</dt><dd>@Order.UserEmail (ID @Order.UserId)</dd>
+                    <dt>Produto</dt><dd>@Order.ProductName (ID @Order.ProductId)</dd>
+                    <dt>Criado em</dt><dd>@Date(Order.CreatedAt)</dd>
+                    <dt>Atualizado em</dt><dd>@Date(Order.UpdatedAt)</dd>
+                    <dt>Valor original</dt><dd>@ListAdminOrdersPage.FormatCurrency(Order.OriginalPrice)</dd>
+                    <dt>Desconto</dt><dd>@ListAdminOrdersPage.FormatCurrency(Order.DiscountAmount)</dd>
+                    <dt>Total</dt><dd>@ListAdminOrdersPage.FormatCurrency(Order.Total)</dd>
+                    <dt>Voucher utilizado</dt><dd>@VoucherText</dd>
+                    @if (Order.VoucherValueSnapshot.HasValue)
+                    {
+                        <dt>Regra do voucher na compra</dt><dd>@VoucherRule</dd>
+                    }
+                </dl>
+                <MudText Typo="Typo.caption">Valores e voucher registrados na compra. O nome do produto e o e-mail refletem os cadastros atuais.</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.h6">Pagamento e expiração</MudText>
+                <dl class="order-details">
+                    <dt>Gateway</dt><dd>@GatewayText</dd>
+                    <dt>Referência do pagamento</dt><dd>@Text(Order.ExternalReference)</dd>
+                    <dt>Pagamento registrado em</dt><dd>@Date(Order.PaidAt)</dd>
+                    <dt>Sessão de pagamento</dt><dd>@Text(Order.PaymentSessionId)</dd>
+                    <dt>Prazo da sessão (UTC)</dt><dd>@UtcDate(Order.PaymentSessionExpiresAt)</dd>
+                    <dt>Prazo do pedido (UTC)</dt><dd>@UtcDate(Order.ExpiresAt)</dd>
+                    <dt>Expiração registrada (UTC)</dt><dd>@UtcDate(Order.ExpiredAt)</dd>
+                </dl>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.h6">Acesso</MudText>
+                <dl class="order-details">
+                    <dt>Duração contratada</dt><dd>@Order.AccessDurationMonths mês(es)</dd>
+                    <dt>Início</dt><dd>@Date(Order.AccessStartsAt)</dd>
+                    <dt>Fim</dt><dd>@Date(Order.AccessEndsAt)</dd>
+                </dl>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.h6">Reembolso</MudText>
+                <dl class="order-details">
+                    <dt>Referência</dt><dd>@Text(Order.RefundReference)</dd>
+                    <dt>Registrado em</dt><dd>@Date(Order.RefundedAt)</dd>
+                    <dt>Motivo</dt><dd>@(Order.RefundReason.HasValue ? ListAdminOrdersPage.GetRefundReasonText(Order.RefundReason.Value) : "Não registrado")</dd>
+                    <dt>Comentário</dt><dd>@Text(Order.RefundReasonDetails)</dd>
+                    <dt>Falha registrada</dt><dd>@Text(Order.RefundFailureReason)</dd>
+                </dl>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12">
+            <MudPaper Class="pa-4" Outlined="true">
+                <MudText Typo="Typo.h6">Conferência dos registros</MudText>
+                <MudAlert Severity="Severity.Info" Class="my-2">Esta consulta apresenta os registros locais. Não consulta o provedor nem confirma a situação atual da sessão ou do pagamento.</MudAlert>
+                <MudText>@ReconciliationText</MudText>
+                @if (Order.Status == EOrderStatus.RefundPending)
+                {
+                    <MudText>O reembolso está pendente de confirmação.</MudText>
+                }
+                @if (!string.IsNullOrWhiteSpace(Order.RefundFailureReason))
+                {
+                    <MudAlert Severity="Severity.Warning" Class="mt-2">Há uma falha de reembolso registrada. Consulte o detalhe acima.</MudAlert>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}

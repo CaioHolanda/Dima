@@ -25,6 +25,13 @@ public abstract class AdminListPage<T> : ComponentBase
         if (request is Dima.Core.Requests.Users.GetAllAdminUsersRequest users) users.IsPremium = PremiumFilter;
         if (request is Dima.Core.Requests.Order.GetAllAdminOrdersRequest orders) orders.Status = StatusFilter;
     }
+    protected void RestoreOrderList(int page, int size, string? search, Dima.Core.Enums.EOrderStatus? status)
+    {
+        PageNumber = Math.Max(1, page);
+        PageSize = Math.Clamp(size, 1, 100);
+        SearchTerm = search ?? string.Empty;
+        StatusFilter = status;
+    }
     protected override Task OnInitializedAsync() => ReloadAsync();
     public async Task ReloadAsync()
     {
