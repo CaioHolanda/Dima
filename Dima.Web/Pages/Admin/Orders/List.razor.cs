@@ -11,6 +11,25 @@ namespace Dima.Web.Pages.Admin.Orders;
 public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<AdminOrderListItem>
 {
     public List<AdminOrderListItem> Orders { get; set; } = [];
+    [SupplyParameterFromQuery(Name = "pageNumber")] public int? InitialPage { get; set; }
+    [SupplyParameterFromQuery(Name = "pageSize")] public int? InitialSize { get; set; }
+    [SupplyParameterFromQuery(Name = "searchTerm")] public string? InitialSearch { get; set; }
+    [SupplyParameterFromQuery(Name = "status")] public int? InitialStatus { get; set; }
+
+    protected override Task OnInitializedAsync() => Task.CompletedTask;
+    protected override async Task OnParametersSetAsync()
+    {
+        RestoreOrderList(InitialPage ?? 1, InitialSize ?? 25, InitialSearch,
+            InitialStatus.HasValue && Enum.IsDefined(typeof(EOrderStatus), InitialStatus.Value)
+                ? (EOrderStatus)InitialStatus.Value : null);
+        await ReloadAsync();
+    }
+    public string DetailsUrl(long id)
+    {
+        var request = new GetAllAdminOrdersRequest();
+        Configure(request);
+        return $"/admin/orders/{id}" + Dima.Web.Handlers.AdminQuery.Build(request);
+    }
 
     [Inject]
     public IAdminOrderHandler Handler { get; set; } = null!;
@@ -84,6 +103,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
             EOrderStatus.RefundPending =>
                 "Reembolso em processamento",
 
+            EOrderStatus.Expired => "Expirado",
             _ => "Desconhecido"
         };
     }
@@ -107,6 +127,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
             EOrderStatus.RefundPending =>
                 Color.Warning,
 
+            EOrderStatus.Expired => Color.Default,
             _ => Color.Default
         };
     }

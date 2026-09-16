@@ -14,6 +14,13 @@ public class AdminOrderHandler(
         httpClientFactory.CreateClient(
             Configuration.HttpClientName);
 
+    public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
+    {
+        using var response = await _client.GetAsync($"v1/admin/orders/{id}");
+        return await response.Content.ReadFromJsonAsync<Response<AdminOrderDetails?>>()
+            ?? new Response<AdminOrderDetails?>(null, (int)response.StatusCode, "Não foi possível consultar o pedido.");
+    }
+
     public async Task<PagedResponse<List<AdminOrderListItem>?>>
         GetAllAsync(GetAllAdminOrdersRequest request)
     {

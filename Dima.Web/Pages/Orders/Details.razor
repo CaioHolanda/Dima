@@ -1,4 +1,4 @@
-﻿@page "/pedidos/{number}"
+@page "/pedidos/{number}"
 @inherits DetailsPage
 
 @if (Order is not null)
@@ -26,11 +26,11 @@
     <p>@Order.Product.Title</p>
     <br />
     <h4>Valor do Produto</h4>
-    <p>@Order.Product.Price.ToString("C")</p>
+    <p>@Order.OriginalPrice.ToString("C")</p>
     <br />
     <h4>Desconto</h4>
     <p>
-        @(Order.Voucher is null
+        @(Order.DiscountAmount == 0
         ? "Não aplicado"
         : Order.DiscountAmount.ToString("C"))
     </p>

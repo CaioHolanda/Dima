@@ -38,7 +38,7 @@
                         HeaderStyle="width: 85px; min-width: 85px;"
                         CellStyle="width: 85px; min-width: 85px; white-space: nowrap;">
             <CellTemplate>
-                @context.Item.Number
+                <MudLink Href="@DetailsUrl(context.Item.Id)">@context.Item.Number</MudLink>
             </CellTemplate>
         </TemplateColumn>
 

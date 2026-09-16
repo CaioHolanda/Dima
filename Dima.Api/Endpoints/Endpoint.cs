@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Api.Endpoints.Admin;
 using Dima.Api.Endpoints.Categories;
 using Dima.Api.Endpoints.Identity;
@@ -83,7 +83,8 @@ public static class Endpoint
         endpoint.MapGroup("v1/admin/orders")
             .WithTags("Admin - Orders")
             .RequireAuthorization("AdminOnly")
-            .MapEndpoint<GetAllAdminOrdersEndpoint>();
+            .MapEndpoint<GetAllAdminOrdersEndpoint>()
+            .MapEndpoint<GetAdminOrderByIdEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
