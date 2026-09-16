@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -30,16 +30,8 @@ public class GetAllAdminOrdersEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         IAdminOrderHandler handler,
-        [FromQuery] int pageSize =
-            CoreConfiguration.DefaultPageSize,
-        [FromQuery] int pageNumber =
-            CoreConfiguration.DefaultPageNumber)
+        [AsParameters] GetAllAdminOrdersRequest request)
     {
-        var request = new GetAllAdminOrdersRequest
-        {
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
 
         var result = await handler.GetAllAsync(request);
 

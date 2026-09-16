@@ -1,4 +1,4 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -8,77 +8,20 @@ using System.Globalization;
 
 namespace Dima.Web.Pages.Admin.Orders;
 
-public partial class ListAdminOrdersPage : ComponentBase
+public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<AdminOrderListItem>
 {
-    public bool IsBusy { get; set; }
-
     public List<AdminOrderListItem> Orders { get; set; } = [];
-
-    public string SearchTerm { get; set; } = string.Empty;
 
     [Inject]
     public IAdminOrderHandler Handler { get; set; } = null!;
 
-    [Inject]
-    public ISnackbar Snackbar { get; set; } = null!;
-
-    public Func<AdminOrderListItem, bool> Filter =>
-        order =>
-        {
-            if (string.IsNullOrWhiteSpace(SearchTerm))
-                return true;
-
-            var status = GetStatusText(order.Status);
-
-            return order.Number.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || order.UserEmail.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || order.ProductName.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || status.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase);
-        };
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task<Dima.Core.Responses.PagedResponse<List<AdminOrderListItem>?>> FetchAsync()
     {
-        IsBusy = true;
-
-        try
-        {
-            var result = await Handler.GetAllAsync(
-                new GetAllAdminOrdersRequest
-                {
-                    PageNumber = 1,
-                    PageSize = 100
-                });
-
-            if (result.IsSuccess)
-            {
-                Orders = result.Data ?? [];
-                return;
-            }
-
-            Snackbar.Add(
-                result.Message ??
-                "[E192] Não foi possível carregar os pedidos",
-                Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(
-                ex.Message,
-                Severity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        var request = new GetAllAdminOrdersRequest();
+        Configure(request);
+        return await Handler.GetAllAsync(request);
     }
+    protected override void SetItems(List<AdminOrderListItem> items) => Orders = items;
 
     public static string FormatDateTime(DateTime date)
     {

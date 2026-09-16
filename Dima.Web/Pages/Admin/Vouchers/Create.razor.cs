@@ -1,9 +1,7 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Requests.Vouchers;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
-using Dima.Core.Models;
-using Dima.Core.Requests.Products;
 using Dima.Core.Models.Account;
 using Dima.Core.Requests.Users;
 
@@ -14,7 +12,6 @@ public partial class CreateAdminVoucherPage : ComponentBase
     #region Properties
 
     public bool IsBusy { get; set; }
-    public List<Product> Products { get; set; } = [];
     public CreateVoucherRequest InputModel { get; set; } = new()
     {
         IsActive = true
@@ -35,9 +32,6 @@ public partial class CreateAdminVoucherPage : ComponentBase
 
     [Inject]
     public IAdminVoucherHandler Handler { get; set; } = null!;
-
-    [Inject]
-    public IAdminProductHandler ProductHandler { get; set; } = null!;
 
     [Inject]
     public IAdminUserHandler UserHandler { get; set; } = null!;
@@ -92,42 +86,6 @@ public partial class CreateAdminVoucherPage : ComponentBase
         {
             Snackbar.Add(ex.Message, Severity.Error);
             return [];
-        }
-    }
-    protected override async Task OnInitializedAsync()
-    {
-        IsBusy = true;
-
-        try
-        {
-            var result = await ProductHandler.GetAllForAdminAsync(
-                new GetAllAdminProductsRequest
-                {
-                    PageNumber = 1,
-                    PageSize = 100
-                });
-
-            if (result.IsSuccess)
-            {
-                Products = result.Data?
-                    .OrderBy(x => x.Title)
-                    .ToList() ?? [];
-
-                return;
-            }
-
-            Snackbar.Add(
-                result.Message ??
-                "[E158] Não foi possível carregar os produtos",
-                Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
         }
     }
     public async Task OnValidSubmitAsync()

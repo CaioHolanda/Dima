@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
 using Dima.Core.Requests.Users;
 using Dima.Core.Responses;
@@ -19,8 +19,7 @@ public class AdminUserHandler(
     {
         var response = await _client.GetAsync(
             $"v1/admin/users" +
-            $"?pageSize={request.PageSize}" +
-            $"&pageNumber={request.PageNumber}");
+            AdminQuery.Build(request));
 
         var result = await response.Content
             .ReadFromJsonAsync<PagedResponse<List<AdminUserListItem>?>>();

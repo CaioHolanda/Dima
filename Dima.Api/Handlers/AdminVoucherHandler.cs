@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Requests.Vouchers;
@@ -199,7 +199,7 @@ namespace Dima.Api.Handlers
                     from user in users.DefaultIfEmpty()
 
                     orderby voucher.IsActive descending,
-                            voucher.Code
+                            voucher.Code, voucher.Id
 
                     select new AdminVoucherListItem
                     {
@@ -218,6 +218,16 @@ namespace Dima.Api.Handlers
                         IsActive = voucher.IsActive
                     };
 
+                if (request.IsActive.HasValue)
+                    query = query.Where(x => x.IsActive == request.IsActive.Value);
+                if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                {
+                    var term = request.SearchTerm.Trim().ToLower();
+                    query = query.Where(x => x.Id.ToString().Contains(term)
+                        || x.Code.ToLower().Contains(term) || x.Title.ToLower().Contains(term)
+                        || x.Description.ToLower().Contains(term)
+                        || (x.AssignedUserEmail ?? "Todos").ToLower().Contains(term));
+                }
                 var vouchers = await query
                     .Skip(
                         (request.PageNumber - 1) *
@@ -225,8 +235,7 @@ namespace Dima.Api.Handlers
                     .Take(request.PageSize)
                     .ToListAsync();
 
-                var count = await context.Vouchers
-                    .CountAsync();
+                var count = await query.CountAsync();
 
                 return new PagedResponse<
                     List<AdminVoucherListItem>?>(

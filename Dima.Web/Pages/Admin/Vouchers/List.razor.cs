@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
@@ -8,11 +8,9 @@ using MudBlazor;
 namespace Dima.Web.Pages.Admin.Vouchers;
 
 public partial class ListAdminVouchersPage
-    : ComponentBase
+    : Dima.Web.Pages.Admin.AdminListPage<AdminVoucherListItem>
 {
-    public bool IsBusy { get; set; }
     public List<AdminVoucherListItem> Vouchers { get; set; } = [];
-    public string SearchTerm { get; set; } = string.Empty;
     public HashSet<long> VouchersBeingUpdated { get; set; } = [];
 
     [Inject]
@@ -21,71 +19,14 @@ public partial class ListAdminVouchersPage
     [Inject]
     public IDialogService DialogService { get; set; } = null!;
 
-    [Inject]
-    public ISnackbar Snackbar { get; set; } = null!;
-
-    public Func<AdminVoucherListItem, bool> Filter =>
-        voucher =>
-        {
-            if (string.IsNullOrWhiteSpace(SearchTerm))
-                return true;
-
-            var assignedUser =
-            voucher.AssignedUserEmail ?? "Todos";
-
-            return voucher.Id.ToString().Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || voucher.Code.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || voucher.Title.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || voucher.Description.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || assignedUser.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase);
-        };
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task<Dima.Core.Responses.PagedResponse<List<AdminVoucherListItem>?>> FetchAsync()
     {
-        IsBusy = true;
-
-        try
-        {
-            var result =
-                await Handler.GetAllForAdminAsync(
-                    new GetAllAdminVouchersRequest
-                    {
-                        PageNumber = 1,
-                        PageSize = 100
-                    });
-
-            if (result.IsSuccess)
-            {
-                Vouchers = result.Data ?? [];
-                return;
-            }
-
-            Snackbar.Add(
-                result.Message ??
-                "Não foi possível carregar os vouchers",
-                Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(
-                ex.Message,
-                Severity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        var request = new GetAllAdminVouchersRequest();
+        Configure(request);
+        return await Handler.GetAllForAdminAsync(request);
     }
+    protected override void SetItems(List<AdminVoucherListItem> items) => Vouchers = items;
+
     public async Task OnStatusButtonClickedAsync(AdminVoucherListItem voucher)
     {
         var action = voucher.IsActive
@@ -142,6 +83,7 @@ public partial class ListAdminVouchersPage
             }
 
             voucher.IsActive = !wasActive;
+            await ReloadAsync();
 
             Snackbar.Add(
                 result.Message ??

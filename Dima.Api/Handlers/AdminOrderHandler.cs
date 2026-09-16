@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -19,7 +19,7 @@ public class AdminOrderHandler(AppDbContext context)
                 from order in context.Orders.AsNoTracking()
                 join user in context.Users.AsNoTracking()
                     on order.UserId equals user.Id
-                orderby order.CreatedAt descending
+                orderby order.CreatedAt descending, order.Id descending
                 select new AdminOrderListItem
                 {
                     Id = order.Id,
@@ -54,6 +54,14 @@ public class AdminOrderHandler(AppDbContext context)
                     RefundReasonDetails = order.RefundReasonDetails,
                 };
 
+            if (request.Status.HasValue)
+                query = query.Where(x => x.Status == request.Status.Value);
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                var term = request.SearchTerm.Trim().ToLower();
+                query = query.Where(x => x.Number.ToLower().Contains(term)
+                    || x.UserEmail.ToLower().Contains(term) || x.ProductName.ToLower().Contains(term));
+            }
             var count = await query.CountAsync();
 
             var orders = await query

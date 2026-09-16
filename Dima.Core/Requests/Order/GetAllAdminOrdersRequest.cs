@@ -1,5 +1,6 @@
-﻿namespace Dima.Core.Requests.Order;
+namespace Dima.Core.Requests.Order;
 
-public class GetAllAdminOrdersRequest : PagedRequest
+public class GetAllAdminOrdersRequest : AdminPagedRequest
 {
+    public Dima.Core.Enums.EOrderStatus? Status { get; set; }
 }

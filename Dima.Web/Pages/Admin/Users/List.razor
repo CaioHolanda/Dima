@@ -1,4 +1,4 @@
-﻿@page "/admin/users"
+@page "/admin/users"
 @attribute [Authorize(Roles = AppRoles.Admin)]
 @inherits ListAdminUsersPage
 
@@ -7,19 +7,34 @@
 </MudText>
 
 <MudDataGrid Class="mt-4"
-             Items="@Users"
-             QuickFilter="Filter"
+             Items="@Users" RowsPerPage="PageSize"
+             SortMode="SortMode.None"
+             Filterable="false"
              Hideable="true"
              Loading="@IsBusy"
              Dense="true">
 
     <ToolBarContent>
-        <MudTextField @bind-Value="SearchTerm"
-                      Placeholder="Filtrar..."
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Style="width: 100%;">
+        <MudTextField Label="Pesquisa" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1; min-width: 220px;" T="string" Value="SearchTerm" ValueChanged="SearchAsync" DebounceInterval="350"
+                      Placeholder="Pesquisar em todos os registros..."
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Immediate="true"
                       IconSize="Size.Medium" />
+        <div style="display: flex; gap: 0; flex: 0 0 auto; align-items: center;">
+            <div style="width: 180px;"><MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 100%;" T="bool?" Label="Plano" Value="PremiumFilter" ValueChanged="ChangePremiumAsync">
+            <MudSelectItem T="bool?" Value="@((bool?)null)">Todos</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)true)">Premium</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)false)">Free</MudSelectItem>
+        </MudSelect></div>
+            <div style="width: 180px;"><MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" Style="width: 100%;" T="bool?" Label="Estado" Value="ActiveFilter" ValueChanged="ChangeActiveAsync">
+            <MudSelectItem T="bool?" Value="@((bool?)null)">Todos</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)true)">Ativos</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)false)">Inativos</MudSelectItem>
+        </MudSelect></div>
+        </div>
+        </MudStack>
     </ToolBarContent>
 
     <Columns>
@@ -178,3 +193,14 @@
 
     </Columns>
 </MudDataGrid>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4">
+    <MudText>@TotalCount registros · Página @PageNumber de @TotalPages</MudText>
+    <MudButton OnClick="PreviousAsync" Disabled="@(IsBusy || PageNumber <= 1)">Anterior</MudButton>
+    <MudButton OnClick="NextAsync" Disabled="@(IsBusy || PageNumber >= TotalPages)">Próxima</MudButton>
+    <MudSelect T="int" Label="Por página" Value="PageSize" ValueChanged="ChangePageSizeAsync" Disabled="IsBusy">
+        @foreach (var size in new[] { 10, 25, 50, 100 })
+        {
+            <MudSelectItem Value="size">@size</MudSelectItem>
+        }
+    </MudSelect>
+</MudStack>

@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Products;
 using Microsoft.AspNetCore.Components;
@@ -7,45 +7,16 @@ using MudBlazor;
 namespace Dima.Web.Pages.Admin.Products;
 
 public partial class ListAdminProductsPage
-    : ComponentBase
+    : Dima.Web.Pages.Admin.AdminListPage<Product>
 {
-    public bool IsBusy { get; set; }
     public List<Product> Products { get; set; } = [];
-    public string SearchTerm { get; set; } = string.Empty;
     public HashSet<long> ProductsBeingUpdated { get; set; } = [];
 
     [Inject]
     public IAdminProductHandler Handler { get; set; } = null!;
 
     [Inject]
-    public ISnackbar Snackbar { get; set; } = null!;
-
-    [Inject]
     public IDialogService DialogService { get; set; } = null!;
-
-    public Func<Product, bool> Filter => product =>
-    {
-        if (string.IsNullOrWhiteSpace(SearchTerm))
-            return true;
-
-        return product.Id.ToString().Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || product.Title.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || product.Slug.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || product.Description.Contains(
-                   SearchTerm,
-                   StringComparison.OrdinalIgnoreCase)
-               || product.AccessDurationMonths
-                   .ToString()
-                   .Contains(
-                      SearchTerm,
-                      StringComparison.OrdinalIgnoreCase); 
-    };
 
     public async Task OnStatusButtonClickedAsync(
     Product product)
@@ -105,6 +76,7 @@ public partial class ListAdminProductsPage
             }
 
             product.IsActive = !wasActive;
+            await ReloadAsync();
 
             Snackbar.Add(
                 result.Message ??
@@ -123,40 +95,14 @@ public partial class ListAdminProductsPage
         }
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task<Dima.Core.Responses.PagedResponse<List<Product>?>> FetchAsync()
     {
-        IsBusy = true;
-
-        try
-        {
-            var result =
-                await Handler.GetAllForAdminAsync(
-                    new GetAllAdminProductsRequest
-                    {
-                        PageNumber = 1,
-                        PageSize = 100
-                    });
-
-            if (result.IsSuccess)
-            {
-                Products = result.Data ?? [];
-                return;
-            }
-
-            Snackbar.Add(
-                result.Message ??
-                "Não foi possível carregar os produtos",
-                Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(ex.Message, Severity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        var request = new GetAllAdminProductsRequest();
+        Configure(request);
+        return await Handler.GetAllForAdminAsync(request);
     }
+    protected override void SetItems(List<Product> items) => Products = items;
+
     public static string FormatAccessDuration(int months)
     {
         return months == 1

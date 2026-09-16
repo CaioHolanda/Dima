@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Products;
 using Dima.Core.Responses;
@@ -20,8 +20,7 @@ public class AdminProductHandler(
     {
         var response = await _client.GetAsync(
             $"v1/admin/products" +
-            $"?pageNumber={request.PageNumber}" +
-            $"&pageSize={request.PageSize}");
+            AdminQuery.Build(request));
 
         var result = await response.Content
             .ReadFromJsonAsync<PagedResponse<List<Product>?>>();

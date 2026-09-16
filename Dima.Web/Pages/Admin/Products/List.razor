@@ -1,4 +1,4 @@
-﻿@page "/admin/produtos"
+@page "/admin/produtos"
 @attribute [Authorize(Roles = AppRoles.Admin)]
 @inherits ListAdminProductsPage
 
@@ -17,20 +17,27 @@
 </MudStack>
 
 <MudDataGrid Class="mt-4"
-             Items="@Products"
-             Filterable="true"
-             QuickFilter="Filter"
+             Items="@Products" RowsPerPage="PageSize"
+             SortMode="SortMode.None"
+             Filterable="false"
              Hideable="true"
              Loading="@IsBusy"
              FilterMode="DataGridFilterMode.Simple">
 
     <ToolBarContent>
-        <MudTextField @bind-Value="SearchTerm"
-                      Placeholder="Filtrar..."
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Style="width: 100%;">
+        <MudTextField Label="Pesquisa" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1; min-width: 220px;" T="string" Value="SearchTerm" ValueChanged="SearchAsync" DebounceInterval="350"
+                      Placeholder="Pesquisar em todos os registros..."
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Immediate="true"
                       IconSize="Size.Medium" />
+        <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 0 0 180px;" T="bool?" Label="Estado" Value="ActiveFilter" ValueChanged="ChangeActiveAsync">
+            <MudSelectItem T="bool?" Value="@((bool?)null)">Todos</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)true)">Ativos</MudSelectItem>
+            <MudSelectItem T="bool?" Value="@((bool?)false)">Inativos</MudSelectItem>
+        </MudSelect>
+        </MudStack>
     </ToolBarContent>
 
     <Columns>
@@ -101,3 +108,14 @@
         </TemplateColumn>
     </Columns>
 </MudDataGrid>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4">
+    <MudText>@TotalCount registros · Página @PageNumber de @TotalPages</MudText>
+    <MudButton OnClick="PreviousAsync" Disabled="@(IsBusy || PageNumber <= 1)">Anterior</MudButton>
+    <MudButton OnClick="NextAsync" Disabled="@(IsBusy || PageNumber >= TotalPages)">Próxima</MudButton>
+    <MudSelect T="int" Label="Por página" Value="PageSize" ValueChanged="ChangePageSizeAsync" Disabled="IsBusy">
+        @foreach (var size in new[] { 10, 25, 50, 100 })
+        {
+            <MudSelectItem Value="size">@size</MudSelectItem>
+        }
+    </MudSelect>
+</MudStack>
