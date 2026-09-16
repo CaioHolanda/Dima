@@ -21,7 +21,8 @@ public static class Endpoint
     public static void MapEndpoints(this WebApplication app)
     {
         var endpoint = app
-            .MapGroup("/api");
+            .MapGroup("/api")
+            .AddEndpointFilter<Dima.Api.Auditing.AdminAuditFilter>();
 
         endpoint.MapGroup("/")
             .WithTags("Health Check")
@@ -144,4 +145,3 @@ public static class Endpoint
             return app;
     }
 }
-
