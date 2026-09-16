@@ -1,5 +1,7 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
+using Dima.Core.Models.Payments;
+using Dima.Core.Responses;
 using Dima.Core.Requests.Payment;
 using System.Security.Claims;
 
@@ -9,7 +11,8 @@ namespace Dima.Api.Endpoints.Stripe
     {
         public static void Map(IEndpointRouteBuilder app)
         => app.MapPost("/session", HandleAsync)
-            .Produces<string?>();
+            .Produces<Response<PaymentSessionResult?>>()
+            .Produces<Response<PaymentSessionResult?>>(StatusCodes.Status400BadRequest);
         private static async Task<IResult> HandleAsync(
             ClaimsPrincipal user,
             IPaymentHandler handler,

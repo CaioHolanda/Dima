@@ -1,8 +1,9 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Payment;
+using Dima.Web.Handlers;
 using Dima.Web.Pages.Orders;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -64,7 +65,7 @@ namespace Dima.Web.Components.Orders
         [Inject] public IDialogService DialogService { get; set; } = null!;
         [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
         [Inject] public IOrderHandler OrderHandler { get; set; } = null!;
-        [Inject] public IPaymentHandler PaymentHandler { get; set; } = null!;
+        [Inject] public IPaymentCheckoutClient PaymentHandler { get; set; } = null!;
         [Inject] public ISnackbar Snackbar { get; set; } = null!;
 
         #endregion
@@ -149,14 +150,14 @@ namespace Dima.Web.Components.Orders
                     Snackbar.Add(result.Message, Severity.Error);
                     return;
                 }
-                if (result.Data is null)
+                if (result.Data is null || string.IsNullOrWhiteSpace(result.Data.RedirectUrl))
                 {
                     Snackbar.Add(result.Message, Severity.Error);
                     return;
                 }
                 await JsRuntime.InvokeVoidAsync(
                     "checkout",
-                    result.Data);
+                    result.Data.RedirectUrl);
             }
             catch (JSException ex)
             {

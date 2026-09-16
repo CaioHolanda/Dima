@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
 using Dima.Core.Enums;
@@ -13,6 +13,9 @@ using Microsoft.Extensions.Options;
 using Dima.Api.Common.Api;
 using Dima.Core.Responses;
 using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Core.Handlers;
+using Dima.Core.Models.Payments;
+using Dima.Core.Requests.Payment;
 
 namespace Dima.Tests.Orders;
 
@@ -25,11 +28,25 @@ public class CreateOrderVoucherTests
             => utcNow;
     }
     private sealed class UnexpectedSessionCloser
-    : IPaymentSessionCloser
+        : IPaymentHandler
     {
         public int Calls { get; private set; }
 
-        public Task<Response<bool>> CloseAsync(string sessionId)
+        public Task<Response<PaymentSessionResult?>> CreateSessionAsync(
+            CreatePaymentSessionRequest request)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Response<string?>> RefundAsync(
+            string externalReference,
+            string idempotencyKey)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Response<bool>> CloseSessionAsync(
+            string sessionId)
         {
             Calls++;
 
@@ -38,12 +55,27 @@ public class CreateOrderVoucherTests
         }
     }
     private sealed class ControlledSessionCloser(
-    Response<bool> result) : IPaymentSessionCloser
+        Response<bool> result) : IPaymentHandler
     {
         public int Calls { get; private set; }
+
         public string? LastSessionId { get; private set; }
 
-        public Task<Response<bool>> CloseAsync(string sessionId)
+        public Task<Response<PaymentSessionResult?>> CreateSessionAsync(
+            CreatePaymentSessionRequest request)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Response<string?>> RefundAsync(
+            string externalReference,
+            string idempotencyKey)
+        {
+            throw new NotSupportedException();
+        }
+
+        public Task<Response<bool>> CloseSessionAsync(
+            string sessionId)
         {
             Calls++;
             LastSessionId = sessionId;
@@ -172,9 +204,7 @@ public class CreateOrderVoucherTests
             EOrderStatus.WaintingPayment,
             result.Data.Status);
 
-        Assert.Equal(
-            EPaymentGateway.Stripe,
-            result.Data.Gateway);
+        Assert.Null(result.Data.Gateway);
 
     }
 
@@ -641,7 +671,7 @@ public class CreateOrderVoucherTests
             creationResult.IsSuccess,
             $"Falha ao preparar o pedido: " +
             $"{creationResult.Code} - {creationResult.Message}");
-        
+
         Assert.NotNull(creationResult.Data);
 
         context.ChangeTracker.Clear();

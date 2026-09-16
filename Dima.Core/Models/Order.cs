@@ -1,4 +1,4 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Dima.Core.Models.Vouchers;
 using System;
 using System.Collections.Generic;
@@ -34,7 +34,7 @@ namespace Dima.Core.Models
         public DateTime? AccessStartsAt { get; set; }
         public DateTime? AccessEndsAt { get; set; }
         public string? ExternalReference { get; set; }
-        public EPaymentGateway Gateway { get; set; } = EPaymentGateway.Stripe;
+        public EPaymentGateway? Gateway { get; set; }
         public EOrderStatus Status { get; set; } = EOrderStatus.WaintingPayment;
         public long UserId { get; set; }
         public string? RefundReference { get; set; }
