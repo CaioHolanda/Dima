@@ -1,4 +1,4 @@
-﻿using Dima.Api.Configuration;
+using Dima.Api.Configuration;
 using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
@@ -61,6 +61,10 @@ namespace Dima.Api.Common.Api
             builder.Services
                 .AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddIdentityCookies();
+
+            // Revoke an old application cookie on its next authenticated request.
+            builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+                options.ValidationInterval = TimeSpan.Zero);
 
             builder.Services.Configure<CookieAuthenticationOptions>(
                 IdentityConstants.ApplicationScheme,
