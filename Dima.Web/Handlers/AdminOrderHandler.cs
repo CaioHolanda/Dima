@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Dima.Core.Responses;
@@ -20,8 +20,7 @@ public class AdminOrderHandler(
         var response = await _client.GetFromJsonAsync<
             PagedResponse<List<AdminOrderListItem>?>>(
             $"v1/admin/orders" +
-            $"?pageNumber={request.PageNumber}" +
-            $"&pageSize={request.PageSize}");
+            AdminQuery.Build(request));
 
         return response ??
             new PagedResponse<List<AdminOrderListItem>?>(

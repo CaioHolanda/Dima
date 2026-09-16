@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -227,12 +227,20 @@ namespace Dima.Api.Handlers
         {
             try
             {
-                var query = context.Products
-                    .AsNoTracking()
-                    .OrderByDescending(x => x.IsActive)
-                    .ThenByDescending(x => x.Price);
+                var query = context.Products.AsNoTracking();
+                if (request.IsActive.HasValue)
+                    query = query.Where(x => x.IsActive == request.IsActive.Value);
+                if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                {
+                    var term = request.SearchTerm.Trim().ToLower();
+                    query = query.Where(x => x.Id.ToString().Contains(term)
+                        || x.Title.ToLower().Contains(term) || x.Slug.ToLower().Contains(term)
+                        || x.Description.ToLower().Contains(term)
+                        || x.AccessDurationMonths.ToString().Contains(term));
+                }
 
                 var products = await query
+                    .OrderBy(x => x.Title).ThenBy(x => x.Id)
                     .Skip((request.PageNumber - 1) * request.PageSize)
                     .Take(request.PageSize)
                     .ToListAsync();

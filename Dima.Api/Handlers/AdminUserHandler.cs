@@ -170,9 +170,7 @@ public class AdminUserHandler(AppDbContext context,
                 .AsNoTracking()
                 .OrderBy(x => x.Email);
 
-            var users = await query
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize)
+            var projected = query
                 .Select(user => new AdminUserListItem
                 {
                     Id = user.Id,
@@ -258,10 +256,21 @@ public class AdminUserHandler(AppDbContext context,
 
                     IsActive =
                         user.LockoutEnd != DateTimeOffset.MaxValue
-                })
-                .ToListAsync();
-
-            var count = await query.CountAsync();
+                });
+            if (request.IsActive.HasValue)
+                projected = projected.Where(x => x.IsActive == request.IsActive.Value);
+            if (request.IsPremium.HasValue)
+                projected = projected.Where(x => x.IsPremium == request.IsPremium.Value);
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                var term = request.SearchTerm.Trim().ToLower();
+                projected = projected.Where(x => x.Email.ToLower().Contains(term)
+                    || (x.ProductName ?? "").ToLower().Contains(term)
+                    || (x.NextProductName ?? "").ToLower().Contains(term));
+            }
+            var count = await projected.CountAsync();
+            var users = await projected.OrderBy(x => x.Email).ThenBy(x => x.Id)
+                .Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync();
 
             return new PagedResponse<List<AdminUserListItem>?>(
                 users,

@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
@@ -21,16 +21,8 @@ public class GetAllAdminUsersEndpoint : IEndpoint
 
     private static async Task<IResult> HandleAsync(
         IAdminUserHandler handler,
-        [FromQuery] int pageSize =
-            CoreConfiguration.DefaultPageSize,
-        [FromQuery] int pageNumber =
-            CoreConfiguration.DefaultPageNumber)
+        [AsParameters] GetAllAdminUsersRequest request)
     {
-        var request = new GetAllAdminUsersRequest
-        {
-            PageNumber = pageNumber,
-            PageSize = pageSize
-        };
 
         var result = await handler.GetAllAsync(request);
 

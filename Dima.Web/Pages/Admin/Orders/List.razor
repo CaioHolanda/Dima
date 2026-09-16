@@ -1,4 +1,4 @@
-﻿@page "/admin/orders"
+@page "/admin/orders"
 @attribute [Authorize(Roles = AppRoles.Admin)]
 @inherits ListAdminOrdersPage
 
@@ -7,19 +7,29 @@
 </MudText>
 
 <MudDataGrid Class="mt-4"
-             Items="@Orders"
-             QuickFilter="@Filter"
+             Items="@Orders" RowsPerPage="PageSize"
+             SortMode="SortMode.None"
+             Filterable="false"
              Hideable="true"
              Loading="@IsBusy"
              Dense="true">
 
     <ToolBarContent>
-        <MudTextField @bind-Value="SearchTerm"
-                      Placeholder="Filtrar..."
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Style="width: 100%;">
+        <MudTextField Label="Pesquisa" Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 1; min-width: 220px;" T="string" Value="SearchTerm" ValueChanged="SearchAsync" DebounceInterval="350"
+                      Placeholder="Pesquisar em todos os registros..."
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Search"
                       Immediate="true"
                       IconSize="Size.Medium" />
+        <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex: 0 0 180px;" T="Dima.Core.Enums.EOrderStatus?" Label="Estado" Value="StatusFilter" ValueChanged="ChangeStatusAsync">
+            <MudSelectItem T="Dima.Core.Enums.EOrderStatus?" Value="@((Dima.Core.Enums.EOrderStatus?)null)">Todos</MudSelectItem>
+            @foreach (var status in Enum.GetValues<Dima.Core.Enums.EOrderStatus>())
+            {
+                <MudSelectItem T="Dima.Core.Enums.EOrderStatus?" Value="@((Dima.Core.Enums.EOrderStatus?)status)">@GetStatusText(status)</MudSelectItem>
+            }
+        </MudSelect>
+        </MudStack>
     </ToolBarContent>
 
     <Columns>
@@ -196,3 +206,14 @@
     </Columns>
 
 </MudDataGrid>
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-4">
+    <MudText>@TotalCount registros · Página @PageNumber de @TotalPages</MudText>
+    <MudButton OnClick="PreviousAsync" Disabled="@(IsBusy || PageNumber <= 1)">Anterior</MudButton>
+    <MudButton OnClick="NextAsync" Disabled="@(IsBusy || PageNumber >= TotalPages)">Próxima</MudButton>
+    <MudSelect T="int" Label="Por página" Value="PageSize" ValueChanged="ChangePageSizeAsync" Disabled="IsBusy">
+        @foreach (var size in new[] { 10, 25, 50, 100 })
+        {
+            <MudSelectItem Value="size">@size</MudSelectItem>
+        }
+    </MudSelect>
+</MudStack>

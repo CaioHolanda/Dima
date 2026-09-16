@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
 using Dima.Core.Requests.Account;
 using Dima.Core.Requests.Users;
@@ -9,15 +9,11 @@ using MudBlazor;
 namespace Dima.Web.Pages.Admin.Users;
 
 public partial class ListAdminUsersPage
-    : ComponentBase
+    : Dima.Web.Pages.Admin.AdminListPage<AdminUserListItem>
 {
-    public bool IsBusy { get; set; }
-
     public List<AdminUserListItem> Users { get; set; } = [];
     protected HashSet<long> UsersBeingUpdated { get; set; } = [];
     protected HashSet<long> UsersBeingReset { get; set; } = [];
-
-    public string SearchTerm { get; set; } = string.Empty;
 
     [Inject]
     public IAdminUserHandler Handler { get; set; } = null!;
@@ -26,78 +22,15 @@ public partial class ListAdminUsersPage
     public IAccountHandler AccountHandler { get; set; } = null!;
 
     [Inject]
-    public ISnackbar Snackbar { get; set; } = null!;
-
-    [Inject]
     public IDialogService DialogService { get; set; } = null!;
 
-    public Func<AdminUserListItem, bool> Filter =>
-        user =>
-        {
-            if (string.IsNullOrWhiteSpace(SearchTerm))
-                return true;
-
-            var plan = user.IsPremium
-                ? "Premium"
-                : "Free";
-
-            var state = user.IsActive
-                ? "Ativo"
-                : "Inativo";
-
-            return user.Email.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || plan.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || state.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase)
-                   || (user.ProductName?.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase) ?? false)
-                   || (user.NextProductName?.Contains(
-                       SearchTerm,
-                       StringComparison.OrdinalIgnoreCase) ?? false);
-        };
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task<Dima.Core.Responses.PagedResponse<List<AdminUserListItem>?>> FetchAsync()
     {
-        IsBusy = true;
-
-        try
-        {
-            var result =
-                await Handler.GetAllAsync(
-                    new GetAllAdminUsersRequest
-                    {
-                        PageNumber = 1,
-                        PageSize = 100
-                    });
-
-            if (result.IsSuccess)
-            {
-                Users = result.Data ?? [];
-                return;
-            }
-
-            Snackbar.Add(
-                result.Message ??
-                "Não foi possível carregar os usuários",
-                Severity.Error);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add(
-                ex.Message,
-                Severity.Error);
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        var request = new GetAllAdminUsersRequest();
+        Configure(request);
+        return await Handler.GetAllAsync(request);
     }
+    protected override void SetItems(List<AdminUserListItem> items) => Users = items;
 
     public static string FormatDate(DateTime? date)
     {
@@ -176,6 +109,7 @@ public partial class ListAdminUsersPage
             }
 
             user.IsActive = !user.IsActive;
+            await ReloadAsync();
 
             Snackbar.Add(
                 response.Message ??

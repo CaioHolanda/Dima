@@ -1,7 +1,5 @@
-﻿using Dima.Core.Handlers;
-using Dima.Core.Models;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
-using Dima.Core.Requests.Products;
 using Dima.Core.Requests.Users;
 using Dima.Core.Requests.Vouchers;
 using Microsoft.AspNetCore.Components;
@@ -18,8 +16,6 @@ public partial class EditAdminVoucherPage : ComponentBase
 
     public bool IsBusy { get; set; }
     public bool IsSaving { get; set; }
-
-    public List<Product> Products { get; set; } = [];
 
     public UpdateVoucherRequest InputModel { get; set; } = new();
 
@@ -41,9 +37,6 @@ public partial class EditAdminVoucherPage : ComponentBase
 
     [Inject]
     public IAdminVoucherHandler Handler { get; set; } = null!;
-
-    [Inject]
-    public IAdminProductHandler ProductHandler { get; set; } = null!;
 
     [Inject]
     public IAdminUserHandler UserHandler { get; set; } = null!;
@@ -166,20 +159,7 @@ public partial class EditAdminVoucherPage : ComponentBase
                         Id = Id
                     });
 
-            var productsTask =
-                ProductHandler.GetAllForAdminAsync(
-                    new GetAllAdminProductsRequest
-                    {
-                        PageNumber = 1,
-                        PageSize = 100
-                    });
-
-            await Task.WhenAll(
-                voucherTask,
-                productsTask);
-
             var voucherResult = await voucherTask;
-            var productsResult = await productsTask;
 
             if (!voucherResult.IsSuccess ||
                 voucherResult.Data is null)
@@ -194,23 +174,6 @@ public partial class EditAdminVoucherPage : ComponentBase
 
                 return;
             }
-
-            if (!productsResult.IsSuccess)
-            {
-                Snackbar.Add(
-                    productsResult.Message ??
-                    "[E165] Não foi possível carregar os produtos",
-                    Severity.Error);
-
-                NavigationManager.NavigateTo(
-                    "/admin/vouchers");
-
-                return;
-            }
-
-            Products = productsResult.Data?
-                .OrderBy(x => x.Title)
-                .ToList() ?? [];
 
             var voucher = voucherResult.Data;
 

@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
@@ -40,8 +40,7 @@ namespace Dima.Web.Handlers
         {
             var response = await _client.GetAsync(
                 $"v1/admin/vouchers" +
-                $"?pageNumber={request.PageNumber}" +
-                $"&pageSize={request.PageSize}");
+                AdminQuery.Build(request));
 
             var result = await response.Content
                 .ReadFromJsonAsync<
