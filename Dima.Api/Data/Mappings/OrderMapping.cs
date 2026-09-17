@@ -77,7 +77,7 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
                 x => x.ExpiresAt,
                 "IX_Order_WaitingPayment_ExpiresAt")
             .HasFilter(
-                $"[Status] = {(int)EOrderStatus.WaintingPayment} " +
+                $"[Status] = {(int)EOrderStatus.WaitingPayment} " +
                 "AND [ExpiresAt] IS NOT NULL");
 
         builder.Property(x => x.PaidAt)
@@ -112,7 +112,7 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
                 "UX_Order_UserId_WaitingPayment")
             .IsUnique()
             .HasFilter(
-                $"[Status] = {(int)EOrderStatus.WaintingPayment}");
+                $"[Status] = {(int)EOrderStatus.WaitingPayment}");
 
         builder.Property(x => x.VoucherCodeSnapshot)
             .IsRequired(false)

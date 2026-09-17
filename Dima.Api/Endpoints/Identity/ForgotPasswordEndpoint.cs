@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Api.Models;
 using Dima.Core.Requests.Account;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +20,7 @@ public class ForgotPasswordEndpoint : IEndpoint
         ForgotPasswordRequest request,
         UserManager<User> userManager,
         IEmailSender<User> emailSender,
-        HttpContext httpContext)
+        Microsoft.Extensions.Options.IOptions<Dima.Api.Configuration.ApiOptions> apiOptions)
     {
         var user = await userManager.FindByEmailAsync(request.Email);
 
@@ -38,7 +38,7 @@ public class ForgotPasswordEndpoint : IEndpoint
                 Encoding.UTF8.GetBytes(resetToken));
 
         var resetLink = QueryHelpers.AddQueryString(
-            $"{Dima.Core.Configuration.FrontendUrl}/reset-password",
+            $"{apiOptions.Value.FrontendUrl}/reset-password",
             new Dictionary<string, string?>
             {
                 ["email"] = user.Email,

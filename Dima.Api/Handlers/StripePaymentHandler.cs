@@ -8,7 +8,6 @@ using Stripe.Checkout;
 using Dima.Api.Data;
 using Dima.Core.Enums;
 using Microsoft.EntityFrameworkCore;
-using CoreConfiguration = Dima.Core.Configuration;
 using Dima.Api.Configuration;
 using Microsoft.Extensions.Options;
 using Dima.Core.Models.Payments;
@@ -19,7 +18,7 @@ namespace Dima.Api.Handlers
     public class StripePaymentHandler(
         AppDbContext context,
         TimeProvider timeProvider,
-        IOptions<OrderExpirationOptions> expirationOptions, ILogger<StripePaymentHandler>? logger = null)
+        IOptions<OrderExpirationOptions> expirationOptions, IOptions<ApiOptions> apiOptions, IStripeClient stripeClient, ILogger<StripePaymentHandler>? logger = null)
         : IPaymentHandler
     {
         private readonly ILogger<StripePaymentHandler> _logger = logger ?? NullLogger<StripePaymentHandler>.Instance;
@@ -29,7 +28,7 @@ namespace Dima.Api.Handlers
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
+                if (string.IsNullOrWhiteSpace(apiOptions.Value.StripeApiKey))
                 {
                     return new Response<PaymentSessionResult?>(
                         null,
@@ -64,14 +63,14 @@ namespace Dima.Api.Handlers
                         "[E194] Pedido nao encontrado");
                 }
 
-                if (order.Status != EOrderStatus.WaintingPayment)
+                if (order.Status != EOrderStatus.WaitingPayment)
                 {
                     return new Response<PaymentSessionResult?>(
                         null,
                         400,
                         "[E195] Pedido nao esta aguardando pagamento");
                 }
-                var service = new SessionService();
+                var service = new SessionService(stripeClient);
 
                 if (!string.IsNullOrWhiteSpace(order.PaymentSessionId))
                 {
@@ -215,11 +214,11 @@ namespace Dima.Api.Handlers
                     Mode = "payment",
 
                     SuccessUrl =
-                        $"{CoreConfiguration.FrontendUrl}/pedidos/" +
+                        $"{apiOptions.Value.FrontendUrl}/pedidos/" +
                         $"{order.Number}/confirmar",
 
                     CancelUrl =
-                        $"{CoreConfiguration.FrontendUrl}/pedidos/" +
+                        $"{apiOptions.Value.FrontendUrl}/pedidos/" +
                         $"{order.Number}"
                 };
 
@@ -284,7 +283,7 @@ namespace Dima.Api.Handlers
 
                 // O prazo inicial para abrir o checkout passa a ser
                 // o vencimento da sessão efetivamente criada.
-                if (order.Status == EOrderStatus.WaintingPayment)
+                if (order.Status == EOrderStatus.WaitingPayment)
                 {
                     order.ExpiresAt = confirmedExpiration;
                 }
@@ -302,7 +301,7 @@ namespace Dima.Api.Handlers
                         "do checkout. Atualize a página para verificar a situação.");
                 }
 
-                if (order.Status != EOrderStatus.WaintingPayment)
+                if (order.Status != EOrderStatus.WaitingPayment)
                 {
                     return new Response<PaymentSessionResult?>(
                         null,
@@ -366,7 +365,7 @@ namespace Dima.Api.Handlers
             string externalReference,
             string idempotencyKey)
         {
-            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
+            if (string.IsNullOrWhiteSpace(apiOptions.Value.StripeApiKey))
             {
                 return new Response<string?>(
                     null,
@@ -390,7 +389,7 @@ namespace Dima.Api.Handlers
                     Reason = "requested_by_customer"
                 };
 
-                var service = new RefundService();
+                var service = new RefundService(stripeClient);
 
                 var requestOptions = new RequestOptions
                 {
@@ -438,7 +437,7 @@ namespace Dima.Api.Handlers
                     "[E262] Sessão de pagamento não informada.");
             }
 
-            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeApiKey))
+            if (string.IsNullOrWhiteSpace(apiOptions.Value.StripeApiKey))
             {
                 return new Response<bool>(
                     false,
@@ -448,7 +447,7 @@ namespace Dima.Api.Handlers
 
             try
             {
-                var service = new SessionService();
+                var service = new SessionService(stripeClient);
 
                 var session = await service.GetAsync(sessionId);
 

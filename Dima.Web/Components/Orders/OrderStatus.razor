@@ -1,4 +1,4 @@
-﻿@inherits OrderStatusComponent
+@inherits OrderStatusComponent
 @switch (Status)
 {
     case EOrderStatus.Canceled:
@@ -32,7 +32,7 @@
         <MudChip T="string" Color="Color.Info">REEMBOLSADO</MudChip>
         break;
 
-    case EOrderStatus.WaintingPayment:
+    case EOrderStatus.WaitingPayment:
         @if (HasElapsed)
         {
             <MudChip T="string" Color="Color.Warning">

@@ -13,7 +13,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Stripe;
 using Stripe.Checkout;
-using CoreConfiguration = Dima.Core.Configuration;
 
 namespace Dima.Api.Common.Api
 {
@@ -28,17 +27,7 @@ namespace Dima.Api.Common.Api
                 .ValidateOnStart();
             builder.Services.Configure<InitialAdminOptions>
                 (builder.Configuration.GetSection(InitialAdminOptions.SectionName));
-            CoreConfiguration.ConnectionString=builder.Configuration
-                .GetConnectionString("DefaultConnection") ?? string.Empty;
-            CoreConfiguration.BackendUrl=builder.Configuration
-                .GetValue<string>("BackendUrl")?? string.Empty;
-            CoreConfiguration.FrontendUrl=builder.Configuration
-                .GetValue<string>("FrontendUrl")?? string.Empty;
-            ApiConfiguration.StripeApiKey = builder.Configuration
-                .GetValue<string>("StripeApiKey") ?? string.Empty;
-            ApiConfiguration.StripeWebhookSecret = builder.Configuration
-                .GetValue<string>("StripeWebhookSecret") ?? string.Empty;
-            StripeConfiguration.ApiKey = ApiConfiguration.StripeApiKey;
+            builder.Services.Configure<ApiOptions>(builder.Configuration);
 
             builder.Services
                 .AddOptions<OrderExpirationOptions>()
@@ -136,7 +125,7 @@ namespace Dima.Api.Common.Api
         public static void AddDataContexts(this WebApplicationBuilder builder)
         {
             builder.Services.AddDbContext<AppDbContext>
-                    (x => { x.UseSqlServer(CoreConfiguration.ConnectionString); });
+                    (x => { x.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")); });
             builder.Services
                     .AddIdentityCore<User>(options =>
                     {
@@ -170,7 +159,11 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<VoucherEligibilityService>();
             builder.Services.AddSingleton<BusinessTime>();
             builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
-            builder.Services.AddTransient<SessionService>(_ => new SessionService());
+            builder.Services.AddSingleton<IStripeClient>(services =>
+            {
+                var key = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiOptions>>().Value.StripeApiKey;
+                return new StripeClient(string.IsNullOrWhiteSpace(key) ? null : key);
+            });
             builder.Services.AddTransient<OrderExpirationService>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
@@ -180,8 +173,8 @@ namespace Dima.Api.Common.Api
                     ApiConfiguration.CorsPolicyName,
                     policy => policy
                     .WithOrigins([
-                        CoreConfiguration.BackendUrl,
-                        CoreConfiguration.FrontendUrl
+                        builder.Configuration.GetValue<string>("BackendUrl") ?? string.Empty,
+                        builder.Configuration.GetValue<string>("FrontendUrl") ?? string.Empty
                         ])
                     .AllowAnyMethod()
                     .AllowAnyHeader()

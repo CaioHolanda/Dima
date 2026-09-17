@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Requests.Account;
 using Dima.Core.Responses;
 using System.Net;
@@ -12,7 +12,7 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> LoginAsync(
             LoginRequest request)
         {
-            var result = await _client.PostAsJsonAsync(
+            using var result = await _client.PostAsJsonAsync(
                 "v1/identity/login-user",
                 request);
 
@@ -59,7 +59,7 @@ namespace Dima.Web.Handlers
 
         public async Task<Response<string>> RegisterAsync(RegisterRequest request)
         {
-            var result = await _client.PostAsJsonAsync("v1/identity/register-user", request);
+            using var result = await _client.PostAsJsonAsync("v1/identity/register-user", request);
             return result.IsSuccessStatusCode
                 ? new Response<string>(
                     "Cadastro realizado. Verifique seu e-mail para ativar a conta.",
@@ -73,7 +73,7 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> ForgotPasswordAsync(
                                             ForgotPasswordRequest request)
         {
-            var result = await _client.PostAsJsonAsync(
+            using var result = await _client.PostAsJsonAsync(
                 "v1/identity/forgot-password",
                 request);
 
@@ -100,7 +100,7 @@ namespace Dima.Web.Handlers
                 request.NewPassword
             };
 
-            var result = await _client.PostAsJsonAsync(
+            using var result = await _client.PostAsJsonAsync(
                 "v1/identity/reset-password",
                 payload);
 

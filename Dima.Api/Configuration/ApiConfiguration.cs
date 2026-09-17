@@ -1,11 +1,6 @@
-﻿namespace Dima.Api
+namespace Dima.Api;
+
+public static class ApiConfiguration
 {
-    public static class ApiConfiguration
-    {
-        public const string CorsPolicyName = "wasm";
-
-        public static string StripeApiKey { get; set; } = string.Empty;
-
-        public static string StripeWebhookSecret { get; set; } = string.Empty;
-    }
+    public const string CorsPolicyName = "wasm";
 }

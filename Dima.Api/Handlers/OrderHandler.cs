@@ -82,7 +82,7 @@ namespace Dima.Api.Handlers
             {
                 case EOrderStatus.Canceled:
                     return new Response<Order?>(order, 400, "[E037] Pedido ja cancelado");
-                case EOrderStatus.WaintingPayment:
+                case EOrderStatus.WaitingPayment:
                     break;
                 case EOrderStatus.Paid:
                     return new Response<Order?>(order, 400, "[E038] Pedido ja pago nao pode ser cancelado");
@@ -241,7 +241,7 @@ namespace Dima.Api.Handlers
                     "[E206] Pedido ja pago com outra referencia externa");
             }
 
-            if (order.Status != EOrderStatus.WaintingPayment)
+            if (order.Status != EOrderStatus.WaitingPayment)
             {
                 return new Response<Order?>(
                     order,
@@ -641,7 +641,7 @@ namespace Dima.Api.Handlers
                 .AsNoTracking()
                 .AnyAsync(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.WaintingPayment);
+                    x.Status == EOrderStatus.WaitingPayment);
 
             if (hasPendingOrder)
             {
@@ -1021,7 +1021,7 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(order, 400, "[E056] Pedido reembolsado, reembolso nao possivel");
                 case EOrderStatus.Paid:
                     break;
-                case EOrderStatus.WaintingPayment:
+                case EOrderStatus.WaitingPayment:
                     return new Response<Order?>(order, 400, "[E057] Pedido ainda nao foi pago, reembolso nao possivel");
                 default:
                     return new Response<Order?>(order, 400, "[E058] Falha ao processar pagamento");

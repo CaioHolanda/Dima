@@ -56,7 +56,7 @@ public class OrderAccessDurationTests
             Total = 659.99m,
             AccessDurationMonths = 6,
             Gateway = EPaymentGateway.Stripe,
-            Status = EOrderStatus.WaintingPayment
+            Status = EOrderStatus.WaitingPayment
         };
 
         context.Orders.Add(order);

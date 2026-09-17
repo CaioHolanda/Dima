@@ -1,4 +1,4 @@
-﻿using MudBlazor;
+using MudBlazor;
 using MudBlazor.Utilities;
 
 namespace Dima.Web
@@ -6,10 +6,8 @@ namespace Dima.Web
     public static class Configuration
     {
         public const string HttpClientName = "dima";
-        public static string BackendUrl { get; set; } = "http://localhost:5088";
-        public static string StripePublickey { get; set; } = "";
 
-        public static MudTheme Theme= new()
+        public static MudTheme Theme { get; } = new()
         {
             Typography = new Typography
             {

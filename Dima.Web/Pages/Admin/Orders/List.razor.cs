@@ -59,7 +59,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
             return Dima.Core.Common.Time.UtcInstant.FormatLocal(order.AccessStartsAt, "dd/MM/yyyy");
         }
 
-        return order.Status == EOrderStatus.WaintingPayment
+        return order.Status == EOrderStatus.WaitingPayment
             ? "Aguardando pagamento"
             : "-";
     }
@@ -68,7 +68,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
     {
         if (order.AccessStartsAt is null)
         {
-            return order.Status == EOrderStatus.WaintingPayment
+            return order.Status == EOrderStatus.WaitingPayment
                 ? "Aguardando pagamento"
                 : "-";
         }
@@ -86,7 +86,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
     {
         return status switch
         {
-            EOrderStatus.WaintingPayment =>
+            EOrderStatus.WaitingPayment =>
                 "Aguardando pagamento",
 
             EOrderStatus.Paid =>
@@ -110,7 +110,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
     {
         return status switch
         {
-            EOrderStatus.WaintingPayment =>
+            EOrderStatus.WaitingPayment =>
                 Color.Warning,
 
             EOrderStatus.Paid =>

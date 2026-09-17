@@ -21,7 +21,6 @@ using Xunit;
 
 namespace Dima.Tests.Observability;
 
-[Collection("Stripe configuration")]
 public sealed class RequestObservabilityTests : IAsyncLifetime
 {
     private readonly RecordingLoggerProvider _logs = new();
@@ -34,6 +33,7 @@ public sealed class RequestObservabilityTests : IAsyncLifetime
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Logging.ClearProviders();
         builder.Logging.AddProvider(_logs);
+        builder.Services.Configure<Dima.Api.Configuration.ApiOptions>(options => options.StripeWebhookSecret = "whsec_dt19_test");
         builder.Services.AddSingleton<IOrderPaymentConfirmationHandler, PaymentConfirmation>();
         builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
             .WithOrigins("https://frontend.example").AllowAnyHeader().AllowAnyMethod()
@@ -141,39 +141,34 @@ public sealed class RequestObservabilityTests : IAsyncLifetime
     public async Task SignedWebhookCarriesEventPaymentAndOriginCorrelationIntoHandlerLogs()
     {
         const string secret = "whsec_dt19_test";
-        var previous = Dima.Api.ApiConfiguration.StripeWebhookSecret;
-        Dima.Api.ApiConfiguration.StripeWebhookSecret = secret;
-        try
+
+        var origin = RequestCorrelation.Create();
+        var body = JsonSerializer.Serialize(new
         {
-            var origin = RequestCorrelation.Create();
-            var body = JsonSerializer.Serialize(new
+            id = "evt_dt19", @object = "event", type = "payment_intent.succeeded",
+            api_version = StripeConfiguration.ApiVersion,
+            data = new { @object = new
             {
-                id = "evt_dt19", @object = "event", type = "payment_intent.succeeded",
-                api_version = StripeConfiguration.ApiVersion,
-                data = new { @object = new
-                {
-                    id = "pi_dt19", @object = "payment_intent", status = "succeeded",
-                    amount_received = 1000, currency = "brl",
-                    metadata = new Dictionary<string, string>
-                    { ["order"] = "ORDER019", ["userId"] = "1", [RequestCorrelation.StripeMetadataKey] = origin }
-                } }
-            });
-            var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret),
-                Encoding.UTF8.GetBytes($"{timestamp}.{body}"))).ToLowerInvariant();
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/webhook")
-            { Content = new StringContent(body, Encoding.UTF8, "application/json") };
-            request.Headers.Add("Stripe-Signature", $"t={timestamp},v1={signature}");
-            using var response = await _client.SendAsync(request);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var entry = Assert.Single(_logs.Entries, x => x.Message == "Confirmando pagamento no handler");
-            Assert.Equal("evt_dt19", entry.Properties["EventId"]);
-            Assert.Equal("pi_dt19", entry.Properties["PaymentIntentId"]);
-            Assert.Equal("ORDER019", entry.Properties["OrderNumber"]);
-            Assert.Equal(origin, entry.Properties["CheckoutCorrelationId"]);
-            Assert.Equal(response.Headers.GetValues(RequestCorrelation.HeaderName).Single(), entry.Properties["CorrelationId"]);
-        }
-        finally { Dima.Api.ApiConfiguration.StripeWebhookSecret = previous; }
+                id = "pi_dt19", @object = "payment_intent", status = "succeeded",
+                amount_received = 1000, currency = "brl",
+                metadata = new Dictionary<string, string>
+                { ["order"] = "ORDER019", ["userId"] = "1", [RequestCorrelation.StripeMetadataKey] = origin }
+            } }
+        });
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var signature = Convert.ToHexString(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret),
+            Encoding.UTF8.GetBytes($"{timestamp}.{body}"))).ToLowerInvariant();
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/webhook")
+        { Content = new StringContent(body, Encoding.UTF8, "application/json") };
+        request.Headers.Add("Stripe-Signature", $"t={timestamp},v1={signature}");
+        using var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var entry = Assert.Single(_logs.Entries, x => x.Message == "Confirmando pagamento no handler");
+        Assert.Equal("evt_dt19", entry.Properties["EventId"]);
+        Assert.Equal("pi_dt19", entry.Properties["PaymentIntentId"]);
+        Assert.Equal("ORDER019", entry.Properties["OrderNumber"]);
+        Assert.Equal(origin, entry.Properties["CheckoutCorrelationId"]);
+        Assert.Equal(response.Headers.GetValues(RequestCorrelation.HeaderName).Single(), entry.Properties["CorrelationId"]);
     }
 
     private sealed class PaymentConfirmation(ILogger<PaymentConfirmation> logger) : IOrderPaymentConfirmationHandler

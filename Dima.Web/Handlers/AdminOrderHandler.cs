@@ -17,22 +17,14 @@ public class AdminOrderHandler(
     public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
     {
         using var response = await _client.GetAsync($"v1/admin/orders/{id}");
-        return await response.Content.ReadFromJsonAsync<Response<AdminOrderDetails?>>()
-            ?? new Response<AdminOrderDetails?>(null, (int)response.StatusCode, "Não foi possível consultar o pedido.");
+        return await HttpResponseReader.ReadAsync<AdminOrderDetails?>(response, "Não foi possível consultar o pedido.");
     }
 
     public async Task<PagedResponse<List<AdminOrderListItem>?>>
         GetAllAsync(GetAllAdminOrdersRequest request)
     {
-        var response = await _client.GetFromJsonAsync<
-            PagedResponse<List<AdminOrderListItem>?>>(
+        return await _client.GetPagedResponseAsync<List<AdminOrderListItem>?>(
             $"v1/admin/orders" +
-            AdminQuery.Build(request));
-
-        return response ??
-            new PagedResponse<List<AdminOrderListItem>?>(
-                null,
-                400,
-                "[E191] Não foi possível listar os pedidos");
+            AdminQuery.Build(request), "[E191] Não foi possível listar os pedidos");
     }
 }

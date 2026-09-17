@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
 using Dima.Core.Common;
 using Stripe;
@@ -18,9 +18,9 @@ namespace Dima.Api.Endpoints.Stripe
 
         private static async Task<IResult> HandleAsync(HttpRequest request,             
             IOrderPaymentConfirmationHandler orderHandler,
-            ILogger<WebhookEndpoint> logger)
+            ILogger<WebhookEndpoint> logger, Microsoft.Extensions.Options.IOptions<Dima.Api.Configuration.ApiOptions> apiOptions)
         {
-            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeWebhookSecret))
+            if (string.IsNullOrWhiteSpace(apiOptions.Value.StripeWebhookSecret))
                 return Results.Problem(
                     "[E196] StripeWebhookSecret nao configurado",
                     statusCode: StatusCodes.Status500InternalServerError);
@@ -41,7 +41,7 @@ namespace Dima.Api.Endpoints.Stripe
                 var stripeEvent = EventUtility.ConstructEvent(
                     json,
                     stripeSignature,
-                    ApiConfiguration.StripeWebhookSecret);
+                    apiOptions.Value.StripeWebhookSecret);
                 using var eventScope = logger.BeginScope(new Dictionary<string, object?>
                 {
                     ["EventId"] = stripeEvent.Id,

@@ -1,16 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+namespace Dima.Core.Enums;
 
-namespace Dima.Core.Enums
+public enum EOrderStatus
 {
-    public enum EOrderStatus
-    {
-        WaintingPayment =1,
-        Paid=2,
-        Canceled=3,
-        Refunded=4,
-        RefundPending = 5,
-        Expired =6
-    }
+    WaitingPayment = 1,
+    Paid = 2,
+    Canceled = 3,
+    Refunded = 4,
+    RefundPending = 5,
+    Expired = 6
 }

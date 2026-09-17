@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Categories;
@@ -41,7 +41,7 @@ namespace Dima.Api.Endpoints.Orders
             if (result.Data is null)
                 return TypedResults.NotFound();
 
-            if (result.Data.Status != EOrderStatus.WaintingPayment)
+            if (result.Data.Status != EOrderStatus.WaitingPayment)
                 return TypedResults.Ok(result);
 
             var expirationResult =

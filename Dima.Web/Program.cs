@@ -11,8 +11,8 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 var configuredBackendUrl =
     builder.Configuration.GetValue<string>("BackendUrl");
 
-if (!string.IsNullOrWhiteSpace(configuredBackendUrl))
-    Configuration.BackendUrl = configuredBackendUrl; Configuration.StripePublickey=builder.Configuration.GetValue<string>("StripePublicKey")??string.Empty;
+configuredBackendUrl = string.IsNullOrWhiteSpace(configuredBackendUrl)
+    ? "http://localhost:5088" : configuredBackendUrl.Trim();
 
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
@@ -25,7 +25,7 @@ builder.Services.AddMudServices();
 
 var configuredAddress =
     builder.HostEnvironment.IsDevelopment()
-        ? Configuration.BackendUrl
+        ? configuredBackendUrl
         : builder.HostEnvironment.BaseAddress;
 
 var backendUrl =

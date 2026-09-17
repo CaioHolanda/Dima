@@ -38,7 +38,7 @@ public sealed class OrderExpirationService(
                 .AsNoTracking()
                 .Where(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.WaintingPayment)
+                    x.Status == EOrderStatus.WaitingPayment)
                 .Select(x => (long?)x.Id)
                 .FirstOrDefaultAsync();
 
@@ -88,7 +88,7 @@ public sealed class OrderExpirationService(
                     "Pedido já expirado.");
             }
 
-            if (order.Status != EOrderStatus.WaintingPayment)
+            if (order.Status != EOrderStatus.WaitingPayment)
             {
                 return new Response<bool>(
                     false,

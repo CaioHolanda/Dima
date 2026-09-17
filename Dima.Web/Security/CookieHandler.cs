@@ -8,7 +8,7 @@ namespace Dima.Web.Security
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancellationToken)
         {
             request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
-            request.Headers.Add("X-Requested-Witdh", ["XMLHttpRequest"]);
+            request.Headers.Add("X-Requested-With", ["XMLHttpRequest"]);
 
             var response = await base.SendAsync(request, cancellationToken);
 

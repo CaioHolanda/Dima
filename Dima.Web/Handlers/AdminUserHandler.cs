@@ -17,18 +17,11 @@ public class AdminUserHandler(
     public async Task<PagedResponse<List<AdminUserListItem>?>>
     GetAllAsync(GetAllAdminUsersRequest request)
     {
-        var response = await _client.GetAsync(
+        using var response = await _client.GetAsync(
             $"v1/admin/users" +
             AdminQuery.Build(request));
 
-        var result = await response.Content
-            .ReadFromJsonAsync<PagedResponse<List<AdminUserListItem>?>>();
-
-        return result ??
-            new PagedResponse<List<AdminUserListItem>?>(
-                null,
-                (int)response.StatusCode,
-                "[E178] Não foi possível obter os usuários");
+        return await HttpResponseReader.ReadPagedAsync<List<AdminUserListItem>?>(response, "[E178] Não foi possível obter os usuários");
     }
 
     public async Task<Response<List<UserLookup>?>>
@@ -37,50 +30,29 @@ public class AdminUserHandler(
         var searchTerm = Uri.EscapeDataString(
             request.SearchTerm?.Trim() ?? string.Empty);
 
-        var response = await _client.GetAsync(
+        using var response = await _client.GetAsync(
             $"v1/admin/users/lookup" +
             $"?searchTerm={searchTerm}" +
             $"&limit={request.Limit}");
 
-        var result = await response.Content
-            .ReadFromJsonAsync<Response<List<UserLookup>?>>();
-
-        return result ??
-            new Response<List<UserLookup>?>(
-                null,
-                (int)response.StatusCode,
-                "[E161] Não foi possível pesquisar os usuários");
+        return await HttpResponseReader.ReadAsync<List<UserLookup>?>(response, "[E161] Não foi possível pesquisar os usuários");
     }
     public async Task<Response<AdminUserListItem?>>
     ActivateAsync(ActivateUserRequest request)
     {
-        var response = await _client.PatchAsync(
+        using var response = await _client.PatchAsync(
             $"v1/admin/users/{request.Id}/activate",
             null);
 
-        var result = await response.Content
-            .ReadFromJsonAsync<Response<AdminUserListItem?>>();
-
-        return result ??
-            new Response<AdminUserListItem?>(
-                null,
-                (int)response.StatusCode,
-                "[E188] Não foi possível ativar o usuário");
+        return await HttpResponseReader.ReadAsync<AdminUserListItem?>(response, "[E188] Não foi possível ativar o usuário");
     }
     public async Task<Response<AdminUserListItem?>>
     DeactivateAsync(DeactivateUserRequest request)
     {
-        var response = await _client.PatchAsync(
+        using var response = await _client.PatchAsync(
             $"v1/admin/users/{request.Id}/deactivate",
             null);
 
-        var result = await response.Content
-            .ReadFromJsonAsync<Response<AdminUserListItem?>>();
-
-        return result ??
-            new Response<AdminUserListItem?>(
-                null,
-                (int)response.StatusCode,
-                "[E189] Não foi possível desativar o usuário");
+        return await HttpResponseReader.ReadAsync<AdminUserListItem?>(response, "[E189] Não foi possível desativar o usuário");
     }
 }

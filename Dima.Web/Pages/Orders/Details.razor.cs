@@ -1,4 +1,4 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -112,7 +112,7 @@ public partial class DetailsPage : ComponentBase, IAsyncDisposable
                         return;
 
                     var needsRefresh =
-                        Order?.Status == EOrderStatus.WaintingPayment
+                        Order?.Status == EOrderStatus.WaitingPayment
                         || !string.IsNullOrWhiteSpace(VerificationWarning);
 
                     if (!needsRefresh)

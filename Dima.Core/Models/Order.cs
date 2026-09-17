@@ -35,7 +35,7 @@ namespace Dima.Core.Models
         public DateTime? AccessEndsAt { get; set; }
         public string? ExternalReference { get; set; }
         public EPaymentGateway? Gateway { get; set; }
-        public EOrderStatus Status { get; set; } = EOrderStatus.WaintingPayment;
+        public EOrderStatus Status { get; set; } = EOrderStatus.WaitingPayment;
         public long UserId { get; set; }
         public string? RefundReference { get; set; }
         public string? RefundFailureReason { get; set; }

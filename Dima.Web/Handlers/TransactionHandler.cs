@@ -12,28 +12,23 @@ namespace Dima.Web.Handlers
         private readonly HttpClient _client = httpClientFactory.CreateClient(Configuration.HttpClientName);
         public async Task<Response<Transaction?>> CreateAsync(CreateTransactionRequest request)
         {
-            var result = await _client.PostAsJsonAsync("v1/transactions", request);
-            return await result.Content.ReadFromJsonAsync<Response<Transaction?>>() 
-                ??
-                new Response<Transaction?>(null, 400, "[E018] Fail to create transaction.");
+            using var result = await _client.PostAsJsonAsync("v1/transactions", request);
+            return await HttpResponseReader.ReadAsync<Transaction?>(result, "[E018] Fail to create transaction.");
         }
 
 
 
         public async Task<Response<Transaction?>> DeleteAsync(DeleteTransactionRequest request)
         {
-            var result = await _client.DeleteAsync($"v1/transactions/{request.Id}");
-            return await result.Content.ReadFromJsonAsync<Response<Transaction?>>() ??
-                        new Response<Transaction?>(null, 400, "[E019] Fail to remove transaction.");
+            using var result = await _client.DeleteAsync($"v1/transactions/{request.Id}");
+            return await HttpResponseReader.ReadAsync<Transaction?>(result, "[E019] Fail to remove transaction.");
         }
 
 
 
         public async Task<Response<Transaction?>> GetByIdAsync(GetTransactionByIdRequest request)
         =>
-            await _client.GetFromJsonAsync<Response<Transaction?>>($"v1/transactions/{request.Id}")
-            ??
-            new Response<Transaction?>(null, 400, "[E020] Fail to read transaction.");
+            await _client.GetResponseAsync<Transaction?>($"v1/transactions/{request.Id}", "[E020] Fail to read transaction.");
 
 
 
@@ -46,9 +41,8 @@ namespace Dima.Web.Handlers
             var endDate = request.EndDate is not null 
                 ? request.EndDate.Value.ToString(format)
                 : DateTime.UtcNow.GetLastDay().ToString(format);
-            var url = $"v1/transactions?startDate={startDate}&endDate={endDate}";
-            return await _client.GetFromJsonAsync<PagedResponse<List<Transaction>?>>(url)
-                ?? new PagedResponse<List<Transaction>?>(null, 400, "[E021] Fail to consult period.");
+            var url = $"v1/transactions?startDate={startDate}&endDate={endDate}&pageNumber={request.PageNumber}&pageSize={request.PageSize}";
+            return await _client.GetPagedResponseAsync<List<Transaction>?>(url, "[E021] Fail to consult period.");
         }
 
 
@@ -56,9 +50,8 @@ namespace Dima.Web.Handlers
 
         public async Task<Response<Transaction?>> UpdateAsync(UpdateTransactionRequest request)
         {
-            var result = await _client.PutAsJsonAsync($"v1/transactions/{request.Id}", request);
-            return await result.Content.ReadFromJsonAsync<Response<Transaction?>>() ??
-                        new Response<Transaction?>(null, 400, "[E022] Fail to update transaction.");
+            using var result = await _client.PutAsJsonAsync($"v1/transactions/{request.Id}", request);
+            return await HttpResponseReader.ReadAsync<Transaction?>(result, "[E022] Fail to update transaction.");
         }
     }
 }

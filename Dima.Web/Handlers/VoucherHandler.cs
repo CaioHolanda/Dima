@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
@@ -13,20 +13,11 @@ namespace Dima.Web.Handlers
         public async Task<Response<VoucherApplication?>> ApplyAsync(
             ApplyVoucherRequest request)
         {
-            var response = await _client.PostAsJsonAsync(
+            using var response = await _client.PostAsJsonAsync(
                 "v1/vouchers/apply",
                 request);
 
-            var result =
-                await response.Content
-                    .ReadFromJsonAsync<
-                        Response<VoucherApplication?>>();
-
-            return result ??
-                new Response<VoucherApplication?>(
-                    null,
-                    (int)response.StatusCode,
-                    "[E235] Resposta vazia ao aplicar o voucher");
+            return await HttpResponseReader.ReadAsync<VoucherApplication?>(response, "[E235] Resposta vazia ao aplicar o voucher");
         }
 
     }

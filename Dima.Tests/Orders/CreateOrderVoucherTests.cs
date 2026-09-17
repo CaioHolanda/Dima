@@ -202,7 +202,7 @@ public class CreateOrderVoucherTests
 
         Assert.True(storedVoucher.IsActive);
         Assert.Equal(
-            EOrderStatus.WaintingPayment,
+            EOrderStatus.WaitingPayment,
             result.Data.Status);
 
         Assert.Null(result.Data.Gateway);
@@ -459,7 +459,7 @@ public class CreateOrderVoucherTests
 
             AccessDurationMonths = product.AccessDurationMonths,
 
-            Status = EOrderStatus.WaintingPayment,
+            Status = EOrderStatus.WaitingPayment,
             Gateway = EPaymentGateway.Stripe,
 
             CreatedAt = nowUtc.AddMinutes(-31).UtcDateTime,
@@ -611,7 +611,7 @@ public class CreateOrderVoucherTests
             .SingleAsync();
 
         Assert.Equal(
-            EOrderStatus.WaintingPayment,
+            EOrderStatus.WaitingPayment,
             storedOrder.Status);
 
         Assert.NotNull(storedOrder.ExpiresAt);
@@ -719,7 +719,7 @@ public class CreateOrderVoucherTests
             .SingleAsync();
 
         Assert.Equal(
-            EOrderStatus.WaintingPayment,
+            EOrderStatus.WaitingPayment,
             storedOrder.Status);
 
         Assert.Null(storedOrder.ExpiredAt);

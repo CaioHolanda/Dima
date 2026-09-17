@@ -63,7 +63,7 @@ public class AdminOrderDetailsPage : ComponentBase
         ? "Pedido gratuito: pagamento externo não se aplica."
         : !string.IsNullOrWhiteSpace(Order?.ExternalReference)
             ? "Há uma referência de pagamento registrada para conferência no provedor."
-            : Order?.Status == EOrderStatus.WaintingPayment
+            : Order?.Status == EOrderStatus.WaitingPayment
                 ? "Pedido aguardando pagamento, sem referência confirmada. A ausência de referência não comprova falha no provedor."
                 : "Não há referência de pagamento registrada. Se necessário, confira o pedido no provedor antes de concluir sua situação financeira.";
 }

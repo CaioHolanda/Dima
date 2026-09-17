@@ -468,7 +468,7 @@ public class VoucherEligibilityTests
                     EOrderStatus.Canceled,
 
                 _ =>
-                    EOrderStatus.WaintingPayment
+                    EOrderStatus.WaitingPayment
             }
         };
 

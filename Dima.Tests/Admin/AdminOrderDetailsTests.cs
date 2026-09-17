@@ -72,7 +72,7 @@ public class AdminOrderDetailsTests
     }
 
     [Theory]
-    [InlineData(null, EOrderStatus.WaintingPayment)]
+    [InlineData(null, EOrderStatus.WaitingPayment)]
     [InlineData(EPaymentGateway.NotApplicable, EOrderStatus.Paid)]
     [InlineData(EPaymentGateway.Stripe, EOrderStatus.Expired)]
     [InlineData(EPaymentGateway.Stripe, EOrderStatus.Refunded)]

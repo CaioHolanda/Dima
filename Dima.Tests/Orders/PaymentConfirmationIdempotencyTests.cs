@@ -41,7 +41,7 @@ public class PaymentConfirmationIdempotencyTests
             ProductId = product.Id, UserId = user.Id, OriginalPrice = 100m,
             DiscountAmount = withVoucher ? 10m : 0m, Total = withVoucher ? 90m : 100m,
             AccessDurationMonths = 6, Gateway = EPaymentGateway.Stripe,
-            Status = EOrderStatus.WaintingPayment, VoucherId = withVoucher ? voucher.Id : null
+            Status = EOrderStatus.WaitingPayment, VoucherId = withVoucher ? voucher.Id : null
         };
         db.Orders.Add(order);
         await db.SaveChangesAsync();
