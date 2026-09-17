@@ -1,4 +1,4 @@
-﻿using Dima.Api.Models;
+using Dima.Api.Models;
 using Microsoft.AspNetCore.Identity;
 using System.Security.Claims;
 
@@ -8,9 +8,12 @@ namespace Dima.Api.Common.Api
     {
         public static void ConfigureDevEnvironment(this WebApplication app)
         {
+            if (!app.Environment.IsDevelopment()
+                || !app.Configuration.GetValue<bool>("EnableSwagger"))
+                return;
+
             app.UseSwagger();
             app.UseSwaggerUI();
-            app.MapSwagger().RequireAuthorization();
         }
         public static void UserSecurity(this WebApplication app)
         {
