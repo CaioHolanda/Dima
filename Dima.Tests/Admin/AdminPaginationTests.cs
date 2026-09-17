@@ -25,7 +25,7 @@ public class AdminPaginationTests
             context.Products.Add(new Product { Id = i, Title = $"Produto {i:000}", Slug = $"produto-{i}", Description = "Descrição", IsActive = i != 125, AccessDurationMonths = 1 });
             context.Users.Add(new User { Id = i, Email = $"user{i:000}@test.com", UserName = $"user{i:000}", NormalizedUserName = $"USER{i:000}", LockoutEnd = i == 125 ? DateTimeOffset.MaxValue : null });
             context.Vouchers.Add(new Voucher { Id = i, Code = $"V{i:000}", Title = "Voucher", Description = "Descrição", IsActive = i != 125 });
-            context.Orders.Add(new Order { Id = i, Number = $"ORDER{i:000}", ProductId = i, UserId = i, CreatedAt = new DateTime(2026, 1, 1), Status = i == 125 ? EOrderStatus.Paid : EOrderStatus.Canceled, AccessStartsAt = i == 125 ? DateTime.Now.AddDays(-1) : null, AccessEndsAt = i == 125 ? DateTime.Now.AddDays(5) : null });
+            context.Orders.Add(new Order { Id = i, Number = $"ORDER{i:000}", ProductId = i, UserId = i, CreatedAt = new DateTime(2026, 1, 1), Status = i == 125 ? EOrderStatus.Paid : EOrderStatus.Canceled, AccessStartsAt = i == 125 ? DateTime.UtcNow.AddDays(-1) : null, AccessEndsAt = i == 125 ? DateTime.UtcNow.AddDays(5) : null });
         }
         await context.SaveChangesAsync();
         var products = new ProductHandler(context);
@@ -36,7 +36,7 @@ public class AdminPaginationTests
         Assert.Equal(125, p1.TotalCount); Assert.Equal(25, p2.Data!.Count); Assert.Empty(p1.Data!.Select(x => x.Id).Intersect(p2.Data.Select(x => x.Id)));
         var vouchers = await new AdminVoucherHandler(context).GetAllForAdminAsync(new GetAllAdminVouchersRequest { SearchTerm = "v125", IsActive = false });
         Assert.True(vouchers.IsSuccess); Assert.Equal(1, vouchers.TotalCount); Assert.Equal(125, Assert.Single(vouchers.Data!).Id);
-        var users = await new AdminUserHandler(context, null!).GetAllAsync(new GetAllAdminUsersRequest { SearchTerm = "USER125", IsActive = false, IsPremium = true });
+        var users = await new AdminUserHandler(context, null!, TimeProvider.System).GetAllAsync(new GetAllAdminUsersRequest { SearchTerm = "USER125", IsActive = false, IsPremium = true });
         Assert.True(users.IsSuccess); Assert.Equal(1, users.TotalCount); Assert.Equal(125, Assert.Single(users.Data!).Id);
         var ordersHandler = new AdminOrderHandler(context);
         var orders = await ordersHandler.GetAllAsync(new GetAllAdminOrdersRequest { SearchTerm = "order125", Status = EOrderStatus.Paid });

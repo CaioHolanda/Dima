@@ -1,4 +1,4 @@
-﻿@page "/lancamentos/historico"
+@page "/lancamentos/historico"
 @inherits ListTransactionsPage
 
 <MudText Typo="Typo.h3">Lancamentos</MudText>
@@ -7,7 +7,7 @@
     <MudSelect T="int" Label="Mes" @bind-Value="@CurrentMonth" AnchorOrigin="Origin.BottomCenter" Class="mr-4">
         @for(var month =1;month <= 12; month++)
         {
-            var date = new DateTime(DateTime.Now.Year, month, 1);
+            var date = new DateTime(DateTime.UtcNow.Year, month, 1);
             <MudSelectItem T="int" Value="@month">
                 @(date.ToString("MMMM"))
             </MudSelectItem>

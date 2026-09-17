@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
 using Dima.Api.Services;
@@ -15,6 +15,7 @@ namespace Dima.Tests.Orders;
 
 public class RefundTests
 {
+    private static readonly TimeProvider Clock = new FixedClock(new DateTimeOffset(2026, 9, 17, 12, 0, 0, TimeSpan.Zero));
     private readonly ITestOutputHelper _output;
     public RefundTests(ITestOutputHelper output)
     {
@@ -49,7 +50,7 @@ public class RefundTests
         context.Products.Add(product);
         await context.SaveChangesAsync();
 
-        var now = DateTime.Now;
+        var now = Clock.GetUtcNow().UtcDateTime;
 
         var order = new Order
         {
@@ -80,7 +81,7 @@ public class RefundTests
             paymentHandler,
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new RefundOrderRequest
         {
@@ -130,7 +131,7 @@ public class RefundTests
         context.Products.Add(product);
         await context.SaveChangesAsync();
 
-        var now = DateTime.Now;
+        var now = Clock.GetUtcNow().UtcDateTime;
 
         var order = new Order
         {
@@ -162,7 +163,7 @@ public class RefundTests
             paymentHandler,
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new RefundOrderRequest
         {
@@ -238,9 +239,9 @@ public class RefundTests
             ExternalReference = "pi_test_refund_001",
             RefundReference = "re_test_refund_001",
 
-            PaidAt = DateTime.Now.AddDays(-2),
-            AccessStartsAt = DateTime.Now.AddDays(-2),
-            AccessEndsAt = DateTime.Now.AddDays(28)
+            PaidAt = Clock.GetUtcNow().UtcDateTime.AddDays(-2),
+            AccessStartsAt = Clock.GetUtcNow().UtcDateTime.AddDays(-2),
+            AccessEndsAt = Clock.GetUtcNow().UtcDateTime.AddDays(28)
         };
 
         context.Orders.Add(order);
@@ -253,7 +254,7 @@ public class RefundTests
             paymentHandler,
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var firstResult = await handler.ConfirmRefundAsync(
             "pi_test_refund_001",
@@ -319,7 +320,7 @@ public class RefundTests
         context.Products.Add(product);
         await context.SaveChangesAsync();
 
-        var now = DateTime.Now;
+        var now = Clock.GetUtcNow().UtcDateTime;
 
         var futureOrder = new Order
         {
@@ -351,7 +352,7 @@ public class RefundTests
             paymentHandler,
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new CreateOrderRequest
         {
@@ -402,7 +403,7 @@ public class RefundTests
         context.Products.Add(product);
         await context.SaveChangesAsync();
 
-        var now = DateTime.Now;
+        var now = Clock.GetUtcNow().UtcDateTime;
 
         var order = new Order
         {
@@ -432,7 +433,7 @@ public class RefundTests
             paymentHandler,
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new RefundOrderRequest
         {
@@ -508,9 +509,9 @@ public class RefundTests
             ExternalReference = "pi_refund_ordering_001",
             RefundReference = "re_refund_ordering_001",
 
-            PaidAt = DateTime.Now.AddDays(-2),
-            AccessStartsAt = DateTime.Now.AddDays(-2),
-            AccessEndsAt = DateTime.Now.AddDays(28)
+            PaidAt = Clock.GetUtcNow().UtcDateTime.AddDays(-2),
+            AccessStartsAt = Clock.GetUtcNow().UtcDateTime.AddDays(-2),
+            AccessEndsAt = Clock.GetUtcNow().UtcDateTime.AddDays(28)
         };
 
         context.Orders.Add(order);
@@ -521,7 +522,7 @@ public class RefundTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var succeededResult = await handler.ConfirmRefundAsync(
             order.ExternalReference,

@@ -1,4 +1,5 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
+using Dima.Api.Services;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Reports;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers
 {
-    public class ReportHandler(AppDbContext context) : IReportHandler
+    public class ReportHandler(AppDbContext context, BusinessTime businessTime) : IReportHandler
     {
         public async Task<Response<List<ExpensesByCategory>?>> GetExpensesByCategoryReportAsync(GetExpensesByCategoryRequest request)
         {
@@ -33,7 +34,8 @@ namespace Dima.Api.Handlers
         public async Task<Response<FinancialSummary?>> GetFinancialSummaryReportAsync(GetFinancialSummaryRequest request)
         {
             // Faz o resumo financeiro do mes corrente, comecando do dia 01
-            var startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var now = businessTime.Now;
+            var startDate = new DateTime(now.Year, now.Month, 1);
             try
             {
                 var data = await context
@@ -42,7 +44,7 @@ namespace Dima.Api.Handlers
                 .Where(
                     x => x.UserId == request.UserId &&
                         x.PaidOrReceivedAt >= startDate &&
-                        x.PaidOrReceivedAt <= DateTime.Now)
+                        x.PaidOrReceivedAt <= now)
                 .GroupBy(x => 1) // sempre verdadeiro, nao depende de informacao em comum
                 .Select(
                     x => new FinancialSummary(

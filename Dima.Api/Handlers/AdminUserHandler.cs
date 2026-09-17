@@ -13,7 +13,8 @@ using IdentityUser = Dima.Api.Models.User;
 namespace Dima.Api.Handlers;
 
 public class AdminUserHandler(AppDbContext context,
-                              UserManager<IdentityUser> userManager)
+                              UserManager<IdentityUser> userManager,
+                              TimeProvider timeProvider)
             : IAdminUserHandler
 {
     public async Task<Response<AdminUserListItem?>>
@@ -109,7 +110,7 @@ public class AdminUserHandler(AppDbContext context,
 
             if (await userManager.IsInRoleAsync(user, AppRoles.Admin))
             {
-                var now = DateTimeOffset.UtcNow;
+                var now = timeProvider.GetUtcNow();
                 var hasOtherActiveAdmin = await (
                     from candidate in context.Users
                     join membership in context.UserRoles on candidate.Id equals membership.UserId
@@ -164,7 +165,7 @@ public class AdminUserHandler(AppDbContext context,
     {
         try
         {
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var query = context.Users
                 .AsNoTracking()

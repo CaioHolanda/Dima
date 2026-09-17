@@ -1,4 +1,4 @@
-﻿using Dima.Core.Common.Extensions;
+using Dima.Core.Common.Extensions;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Transactions;
@@ -14,14 +14,14 @@ namespace Dima.Web.Pages.Transactions
         public bool IsBusy { get; set; } = false;
         public List<Transaction> Transactions { get; set; } = [];
         public string SearchTerm { get; set; } = string.Empty;
-        public int CurrentYear { get; set; } = DateTime.Now.Year;
-        public int CurrentMonth { get; set; } = DateTime.Now.Month;
+        public int CurrentYear { get; set; } = DateTime.UtcNow.Year;
+        public int CurrentMonth { get; set; } = DateTime.UtcNow.Month;
         public int[] Years { get; set; } =
         {
-            DateTime.Now.Year,
-            DateTime.Now.AddYears(-1).Year,
-            DateTime.Now.AddYears(-2).Year,
-            DateTime.Now.AddYears(-3).Year
+            DateTime.UtcNow.Year,
+            DateTime.UtcNow.AddYears(-1).Year,
+            DateTime.UtcNow.AddYears(-2).Year,
+            DateTime.UtcNow.AddYears(-3).Year
         };
 
         #endregion
@@ -52,8 +52,8 @@ namespace Dima.Web.Pages.Transactions
             {
                 var request = new GetTransactionsByPeriodRequest
                 {
-                    StartDate = DateTime.Now.GetFirstDay(CurrentYear, CurrentMonth),
-                    EndDate = DateTime.Now.GetLastDay(CurrentYear, CurrentMonth),
+                    StartDate = DateTime.UtcNow.GetFirstDay(CurrentYear, CurrentMonth),
+                    EndDate = DateTime.UtcNow.GetLastDay(CurrentYear, CurrentMonth),
                     PageNumber = 1,
                     PageSize = 1000
                 };

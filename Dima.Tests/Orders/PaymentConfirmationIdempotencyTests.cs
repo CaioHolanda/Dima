@@ -50,7 +50,7 @@ public class PaymentConfirmationIdempotencyTests
             db.VoucherRedemptions.Add(new VoucherRedemption
             {
                 OrderId = order.Id, VoucherId = voucher.Id, UserId = user.Id,
-                Status = EVoucherRedemptionStatus.Reserved, ReservedAt = DateTime.Now.AddMinutes(-5)
+                Status = EVoucherRedemptionStatus.Reserved, ReservedAt = DateTime.UtcNow.AddMinutes(-5)
             });
             await db.SaveChangesAsync();
         }
@@ -105,5 +105,5 @@ public class PaymentConfirmationIdempotencyTests
     }
 
     private static OrderHandler Handler(AppDbContext db) => new(db, new FakePaymentHandler(),
-        new VoucherEligibilityService(db), Options.Create(new OrderExpirationOptions()), TimeProvider.System);
+        new VoucherEligibilityService(db), Options.Create(new OrderExpirationOptions()), TimeProvider.System, TestBusinessTime.Create(TimeProvider.System));
 }

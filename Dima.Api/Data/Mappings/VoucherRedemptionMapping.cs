@@ -1,4 +1,4 @@
-﻿using Dima.Core.Models.Vouchers;
+using Dima.Core.Models.Vouchers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,14 +23,17 @@ public class VoucherRedemptionMapping
             .HasColumnType("SMALLINT");
 
         builder.Property(x => x.ReservedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired()
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.RedeemedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.ReleasedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 

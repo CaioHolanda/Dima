@@ -34,7 +34,7 @@ public partial class ListAdminUsersPage
 
     public static string FormatDate(DateTime? date)
     {
-        return date?.ToString("dd/MM/yyyy") ?? "-";
+        return Dima.Core.Common.Time.UtcInstant.FormatLocal(date, "dd/MM/yyyy");
     }
 
     public static string GetAccessUntil(
@@ -43,18 +43,14 @@ public partial class ListAdminUsersPage
         // Existe um próximo produto já pago/agendado.
         if (user.NextAccessStartsAt is not null)
         {
-            return user.NextAccessEndsAt?
-                       .ToString("dd/MM/yyyy")
-                   ?? "-";
+            return Dima.Core.Common.Time.UtcInstant.FormatLocal(user.NextAccessEndsAt, "dd/MM/yyyy");
         }
 
         // Nunca houve acesso pago.
         if (user.AccessStartsAt is null)
             return "-";
 
-        return user.AccessEndsAt?
-                   .ToString("dd/MM/yyyy")
-               ?? "-";
+        return Dima.Core.Common.Time.UtcInstant.FormatLocal(user.AccessEndsAt, "dd/MM/yyyy");
     }
     protected async Task ToggleUserStatusAsync(AdminUserListItem user)
     {

@@ -17,10 +17,10 @@
     <p>@Order.Number</p>
     <br />
     <h4>Data do Pedido</h4>
-    <p>@Order.CreatedAt.ToString("dd/MM/yyyy")</p>
+    <p>@Dima.Core.Common.Time.UtcInstant.FormatLocal(Order.CreatedAt, "dd/MM/yyyy")</p>
     <br />
     <h4>Ultima Atualizacao</h4>
-    <p>@Order.UpdatedAt.ToString("dd/MM/yyyy")</p>
+    <p>@Dima.Core.Common.Time.UtcInstant.FormatLocal(Order.UpdatedAt, "dd/MM/yyyy")</p>
     <br />
     <h4>Produto</h4>
     <p>@Order.Product.Title</p>

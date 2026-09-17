@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
@@ -158,8 +158,8 @@ public sealed class OrderExpirationService(
             order.Status = EOrderStatus.Expired;
             order.ExpiredAt = expiredAtUtc;
 
-            // Compatibilidade com os campos legados em horário local.
-            order.UpdatedAt = expiredAtUtc.LocalDateTime;
+            // Instant columns contain UTC, including legacy values confirmed as UTC.
+            order.UpdatedAt = expiredAtUtc.UtcDateTime;
 
             if (redemption?.Status ==
                 EVoucherRedemptionStatus.Reserved)
@@ -168,7 +168,7 @@ public sealed class OrderExpirationService(
                     EVoucherRedemptionStatus.Released;
 
                 redemption.ReleasedAt =
-                    expiredAtUtc.LocalDateTime;
+                    expiredAtUtc.UtcDateTime;
             }
 
             // Uma única gravação: pedido e reserva são atualizados

@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Services;
 using Dima.Core.Enums;
@@ -62,7 +62,7 @@ public class ApplyVoucherTests
 
         var handler = new VoucherHandler(
             context,
-            new VoucherEligibilityService(context));
+            new VoucherEligibilityService(context), TestBusinessTime.Create(TimeProvider.System));
 
         var request = new ApplyVoucherRequest
         {

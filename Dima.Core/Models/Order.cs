@@ -24,8 +24,8 @@ namespace Dima.Core.Models
         public decimal DiscountAmount { get; set; }
         public decimal Total { get; set; }
         public int AccessDurationMonths { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
-        public DateTime UpdatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         public DateTimeOffset? ExpiresAt { get; set; }
         public DateTimeOffset? ExpiredAt { get; set; }
         public string? PaymentSessionId { get; set; }

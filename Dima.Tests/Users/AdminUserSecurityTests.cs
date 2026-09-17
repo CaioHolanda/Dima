@@ -55,7 +55,7 @@ public class AdminUserSecurityTests
         var stamp = target.SecurityStamp;
         var signIn = scope.ServiceProvider.GetRequiredService<SignInManager<User>>();
         var oldPrincipal = await signIn.CreateUserPrincipalAsync(target);
-        var handler = new AdminUserHandler(context, manager);
+        var handler = new AdminUserHandler(context, manager, TimeProvider.System);
         var result = await handler.DeactivateAsync(new DeactivateUserRequest
         {
             Id = target.Id, ActorId = scenario == "self" ? target.Id : actor.Id
