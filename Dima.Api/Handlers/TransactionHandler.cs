@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Api.Services;
 using Dima.Core.Common.Extensions;
@@ -9,8 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers;
 
-public class TransactionHandler(AppDbContext context, TimeProvider timeProvider, BusinessTime businessTime) : ITransactionHandler
+public class TransactionHandler(AppDbContext context, TimeProvider timeProvider, BusinessTime businessTime, ILogger<TransactionHandler>? logger = null) : ITransactionHandler
 {
+    private readonly ILogger<TransactionHandler> _logger = logger ?? NullLogger<TransactionHandler>.Instance;
+
     public async Task<Response<Transaction?>> CreateAsync(CreateTransactionRequest request)
     {
         if(request is { Type:Core.Enums.ETransactionType.Withdraw,Amount: >= 0})
@@ -33,8 +37,9 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
             await context.SaveChangesAsync();
             return new Response<Transaction?>(transaction,201,"Transaction sucessufully created.");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<Transaction?>(null, 500, "[E008] Transaction creation not possible.");
         }
     }
@@ -53,8 +58,9 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
             await context.SaveChangesAsync();
             return new Response<Transaction?>(transaction);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<Transaction?>(null, 500, "[E012] Transaction not found.");
         }
     }
@@ -72,8 +78,9 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
                 : new Response<Transaction?>(transaction);
 
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<Transaction?>(null, 500, "[E014] Transaction not found.");
         }
     }
@@ -86,8 +93,9 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
             request.StartDate ??= now.GetFirstDay();
             request.EndDate ??= now.GetLastDay();
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<Transaction>?>(null, 500, "[E015] Date process error.");
         }
         try
@@ -112,8 +120,9 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
                  request.PageNumber, 
                  request.PageSize);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<Transaction>?>(null, 500, "[E016] Data acquire not possible.");
         }
     }
@@ -147,7 +156,8 @@ public class TransactionHandler(AppDbContext context, TimeProvider timeProvider,
         }
         catch (Exception ex)
         {
-            return new Response<Transaction?>(null, 500, ex.Message);
+            _logger.LogOperationError(ex);
+            return new Response<Transaction?>(null, 500, "Não foi possível atualizar a transação");
         }
     }
 }

@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
@@ -7,9 +9,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers;
 
-public class AdminOrderHandler(AppDbContext context)
+public class AdminOrderHandler(AppDbContext context, ILogger<AdminOrderHandler>? logger = null)
     : IAdminOrderHandler
 {
+    private readonly ILogger<AdminOrderHandler> _logger = logger ?? NullLogger<AdminOrderHandler>.Instance;
+
     public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
     {
         try
@@ -41,8 +45,9 @@ public class AdminOrderHandler(AppDbContext context)
                 ? new Response<AdminOrderDetails?>(null, 404, "Pedido não encontrado.")
                 : new Response<AdminOrderDetails?>(order);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<AdminOrderDetails?>(null, 500, "Não foi possível consultar o pedido.");
         }
     }
@@ -112,8 +117,9 @@ public class AdminOrderHandler(AppDbContext context)
                 request.PageNumber,
                 request.PageSize);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<AdminOrderListItem>?>(
                 null,
                 500,

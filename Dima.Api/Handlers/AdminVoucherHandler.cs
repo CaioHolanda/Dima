@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
@@ -8,8 +10,10 @@ using Dima.Core.Models.Vouchers;
 
 namespace Dima.Api.Handlers
 {
-    public class AdminVoucherHandler(AppDbContext context) : IAdminVoucherHandler
+    public class AdminVoucherHandler(AppDbContext context, ILogger<AdminVoucherHandler>? logger = null) : IAdminVoucherHandler
     {
+        private readonly ILogger<AdminVoucherHandler> _logger = logger ?? NullLogger<AdminVoucherHandler>.Instance;
+
         public async Task<Response<Voucher?>> ActivateAsync(
             ActivateVoucherRequest request)
         {
@@ -35,8 +39,9 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status200OK,
                     "Voucher ativado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Voucher?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -136,8 +141,9 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status201Created,
                     "Voucher criado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Voucher?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -170,8 +176,9 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status200OK,
                     "Voucher desativado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Voucher?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -244,8 +251,9 @@ namespace Dima.Api.Handlers
                         request.PageNumber,
                         request.PageSize);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<
                     List<AdminVoucherListItem>?>(
                         null,
@@ -301,8 +309,9 @@ namespace Dima.Api.Handlers
                     : new Response<AdminVoucherDetails?>(
                         voucher);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<AdminVoucherDetails?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -411,8 +420,9 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status200OK,
                     "Voucher atualizado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Voucher?>(
                     null,
                     StatusCodes.Status500InternalServerError,

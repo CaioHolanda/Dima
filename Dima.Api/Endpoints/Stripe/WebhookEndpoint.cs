@@ -1,5 +1,6 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
+using Dima.Core.Common;
 using Stripe;
 
 namespace Dima.Api.Endpoints.Stripe
@@ -41,6 +42,11 @@ namespace Dima.Api.Endpoints.Stripe
                     json,
                     stripeSignature,
                     ApiConfiguration.StripeWebhookSecret);
+                using var eventScope = logger.BeginScope(new Dictionary<string, object?>
+                {
+                    ["EventId"] = stripeEvent.Id,
+                    ["EventType"] = stripeEvent.Type
+                });
                 logger.LogInformation(
                     "Stripe webhook recebido: {EventType} - {EventId}",
                     stripeEvent.Type,
@@ -98,6 +104,13 @@ namespace Dima.Api.Endpoints.Stripe
                         paymentIntent.AmountReceived,
                         paymentIntent.Currency,
                         paymentIntent.Status);
+                    paymentIntent.Metadata.TryGetValue(RequestCorrelation.StripeMetadataKey, out var originId);
+                    using var paymentScope = logger.BeginScope(new Dictionary<string, object?>
+                    {
+                        ["OrderNumber"] = orderNumber,
+                        ["PaymentIntentId"] = paymentIntent.Id,
+                        ["CheckoutCorrelationId"] = RequestCorrelation.Normalize(originId)
+                    });
                     var result = await orderHandler.ConfirmPaymentAsync(
                         orderNumber,
                         paymentIntent.Id,
@@ -150,6 +163,11 @@ namespace Dima.Api.Endpoints.Stripe
                         refund.Status,
                         refund.FailureReason);
 
+                    using var refundScope = logger.BeginScope(new Dictionary<string, object?>
+                    {
+                        ["PaymentIntentId"] = refund.PaymentIntentId,
+                        ["RefundId"] = refund.Id
+                    });
                     var result = await orderHandler.ConfirmRefundAsync(
                         refund.PaymentIntentId,
                         refund.Id,

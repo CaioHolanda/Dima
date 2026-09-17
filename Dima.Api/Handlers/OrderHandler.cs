@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Common.Api;
 using Dima.Api.Data;
 using Dima.Core.Common;
@@ -26,10 +28,12 @@ namespace Dima.Api.Handlers
         VoucherEligibilityService eligibilityService,
         IOptions<OrderExpirationOptions> expirationOptions,
         TimeProvider timeProvider,
-        BusinessTime businessTime)
+        BusinessTime businessTime, ILogger<OrderHandler>? logger = null)
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
+        private readonly ILogger<OrderHandler> _logger = logger ?? NullLogger<OrderHandler>.Instance;
+
         #region Constants
         private const string PendingOrderMessage =
             "[E175] Você já possui um pedido aguardando pagamento. " +
@@ -69,8 +73,9 @@ namespace Dima.Api.Handlers
                 if (order is null)
                     return new Response<Order?>(null, 404, "[E035] Pedido nao encontrado");
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(null, 404, "[E036] Falha ao obter o pedido");
             }
             switch(order.Status)
@@ -99,8 +104,9 @@ namespace Dima.Api.Handlers
                         .FirstOrDefaultAsync(x =>
                             x.OrderId == order.Id);
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         order,
                         500,
@@ -133,8 +139,9 @@ namespace Dima.Api.Handlers
                     409,
                     ConcurrentOrderUpdateMessage);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     order, 
                     500, 
@@ -166,8 +173,9 @@ namespace Dima.Api.Handlers
                         "[E201] Pedido nao encontrado");
                 }
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     null,
                     500,
@@ -284,8 +292,9 @@ namespace Dima.Api.Handlers
                         redemption.ReleasedAt = null;
                     }
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         order,
                         500,
@@ -335,8 +344,9 @@ namespace Dima.Api.Handlers
                         .FirstOrDefaultAsync(x =>
                             x.Number == orderNumber);
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         null,
                         500,
@@ -374,8 +384,9 @@ namespace Dima.Api.Handlers
                     409,
                     PaymentAlreadyLinkedMessage);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     order,
                     500,
@@ -402,8 +413,9 @@ namespace Dima.Api.Handlers
                     .FirstOrDefaultAsync(x =>
                         x.ExternalReference == paymentIntentId);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     null,
                     500,
@@ -500,8 +512,9 @@ namespace Dima.Api.Handlers
                         .FirstOrDefaultAsync(x =>
                             x.ExternalReference == paymentIntentId);
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         null,
                         500,
@@ -540,8 +553,9 @@ namespace Dima.Api.Handlers
                     409,
                     ConcurrentOrderUpdateMessage);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     order,
                     500,
@@ -609,8 +623,9 @@ namespace Dima.Api.Handlers
                             IsolationLevel.Serializable);
                 }
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     null,
                     500,
@@ -672,8 +687,9 @@ namespace Dima.Api.Handlers
             {
                 throw;
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(null, 500, "[E042] Nao foi possivel buscar produto");
             }
 
@@ -720,8 +736,9 @@ namespace Dima.Api.Handlers
             {
                 throw;
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     null,
                     500,
@@ -803,8 +820,9 @@ namespace Dima.Api.Handlers
                 {
                     throw;
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         null,
                         500,
@@ -882,8 +900,7 @@ namespace Dima.Api.Handlers
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"[CREATE ORDER] {ex}");
+                _logger.LogOperationError(ex);
 
                 return new Response<Order?>(
                     null,
@@ -930,8 +947,9 @@ namespace Dima.Api.Handlers
                     request.PageNumber,
                     request.PageSize);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<List<Order>?>(null, 500, "[E062] Nao foi possivel listar os pedidos");
             }
 
@@ -960,8 +978,9 @@ namespace Dima.Api.Handlers
                     : new Response<Order?>(order);
 
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<Order?> (null, 500, "[E061] Nao foi possivel consultar pedido");
             }
@@ -988,8 +1007,9 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(null, 404, "[E060] Pedido nao encontrado");
 
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<Order?>(null, 500, "[E054] Falha ao buscar pedido");
             }
@@ -1106,8 +1126,9 @@ namespace Dima.Api.Handlers
                             x.Id == order.Id &&
                             x.UserId == userId.Value);
                 }
-                catch
+                catch (Exception exception)
                 {
+                    _logger.LogOperationError(exception);
                     return new Response<Order?>(
                         null,
                         500,
@@ -1145,8 +1166,9 @@ namespace Dima.Api.Handlers
                     409,
                     RefundAlreadyLinkedMessage);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     order,
                     500,

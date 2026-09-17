@@ -23,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Dima.Api\Dima.Api.csproj" />
     <ProjectReference Include="..\Dima.Core\Dima.Core.csproj" />
+    <ProjectReference Include="..\Dima.Web\Dima.Web.csproj" />
   </ItemGroup>
 
 </Project>

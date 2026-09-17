@@ -1,4 +1,6 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Categories;
@@ -7,8 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers
 {
-    public class CategoryHandler(AppDbContext context) : ICategoryHandler
+    public class CategoryHandler(AppDbContext context, ILogger<CategoryHandler>? logger = null) : ICategoryHandler
     {
+        private readonly ILogger<CategoryHandler> _logger = logger ?? NullLogger<CategoryHandler>.Instance;
+
         public async Task<Response<Category?>> CreateAsync(CreateCategoryRequest request)
         {
             try
@@ -24,8 +28,9 @@ namespace Dima.Api.Handlers
 
                 return new Response<Category?>(category,201,"Categoria criada com sucesso!");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Category?>(null,500,"[E001] Category not could be created");
             }
         }
@@ -46,8 +51,9 @@ namespace Dima.Api.Handlers
                 await context.SaveChangesAsync();
                 return new Response<Category?>(category, message: "Category removed sucessufully");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Category?>(null, 500, "[E005] Category not could be removed");
             }
 
@@ -73,8 +79,9 @@ namespace Dima.Api.Handlers
                     request.PageNumber,
                     request.PageSize);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<List<Category>>(null, 500, "[E007] Consult not possible");
             }
         }
@@ -92,8 +99,9 @@ namespace Dima.Api.Handlers
                     ? new Response<Category?>(null, 404, "Category not found")
                     : new Response<Category?>(category);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Category?>(null,500,"[E006] Load not possible");
             }
         }
@@ -116,8 +124,9 @@ namespace Dima.Api.Handlers
                 await context.SaveChangesAsync();
                 return new Response<Category?>(category, message: "Category updated sucessufully");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Category?>(null, 500, "[E003] Category not could be updated");
             }
         }

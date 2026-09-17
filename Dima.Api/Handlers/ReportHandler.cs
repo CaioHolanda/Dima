@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Api.Services;
 using Dima.Core.Enums;
@@ -9,8 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers
 {
-    public class ReportHandler(AppDbContext context, BusinessTime businessTime) : IReportHandler
+    public class ReportHandler(AppDbContext context, BusinessTime businessTime, ILogger<ReportHandler>? logger = null) : IReportHandler
     {
+        private readonly ILogger<ReportHandler> _logger = logger ?? NullLogger<ReportHandler>.Instance;
+
         public async Task<Response<List<ExpensesByCategory>?>> GetExpensesByCategoryReportAsync(GetExpensesByCategoryRequest request)
         {
             try
@@ -24,8 +28,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<ExpensesByCategory>?>(data);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<ExpensesByCategory>?>(null, 500, "Nao foi possivel coletar os dados: Expenses by Categoria.");
             }
@@ -55,8 +60,9 @@ namespace Dima.Api.Handlers
                 .FirstOrDefaultAsync();
                 return new Response<FinancialSummary?>(data);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<FinancialSummary?> (null, 500, "Nao foi possivel calcular o saldo.");
             }
@@ -76,8 +82,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<IncomesAndExpenses>?>(data);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<IncomesAndExpenses>?>(null, 500, "Nao foi possivel coletar os dados: Incomes and Expenses.");
             }
@@ -96,8 +103,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<IncomesByCategory>?>(data);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<IncomesByCategory>?>(null, 500, "Nao foi possivel coletar os dados: Incomes by Categoria.");
             }

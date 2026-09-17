@@ -20,6 +20,10 @@ namespace Dima.Api.Data.Mappings
                     .IsRequired(true)
                     .HasColumnType("VARCHAR")
                     .HasMaxLength(80);
+            builder.HasIndex(x => x.Slug)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Product_Slug");
+
             builder.Property(x => x.Description)
                     .IsRequired(false)
                     .HasColumnType("NVARCHAR")

@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
@@ -14,9 +16,11 @@ namespace Dima.Api.Handlers;
 
 public class AdminUserHandler(AppDbContext context,
                               UserManager<IdentityUser> userManager,
-                              TimeProvider timeProvider)
+                              TimeProvider timeProvider, ILogger<AdminUserHandler>? logger = null)
             : IAdminUserHandler
 {
+    private readonly ILogger<AdminUserHandler> _logger = logger ?? NullLogger<AdminUserHandler>.Instance;
+
     public async Task<Response<AdminUserListItem?>>
         ActivateAsync(ActivateUserRequest request)
     {
@@ -63,8 +67,9 @@ public class AdminUserHandler(AppDbContext context,
                 200,
                 "Usuário ativado com sucesso");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<AdminUserListItem?>(
                 null,
                 500,
@@ -152,8 +157,9 @@ public class AdminUserHandler(AppDbContext context,
                 200,
                 "Usuário desativado com sucesso");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<AdminUserListItem?>(
                 null,
                 500,
@@ -279,8 +285,9 @@ public class AdminUserHandler(AppDbContext context,
                 request.PageNumber,
                 request.PageSize);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<AdminUserListItem>?>(
                 null,
                 500,
@@ -324,8 +331,9 @@ public class AdminUserHandler(AppDbContext context,
                 users,
                 200);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<List<UserLookup>?>(
                 null,
                 500,

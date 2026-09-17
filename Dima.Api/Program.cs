@@ -2,8 +2,10 @@ using Dima.Api;
 using Dima.Api.Common.Api;
 using Dima.Api.Data.Seed;
 using Dima.Api.Endpoints;
+using Dima.Api.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddJsonConsole(options => options.IncludeScopes = true);
 builder.AddConfiguration();
 builder.AddSecurity();
 builder.AddDataContexts();
@@ -14,6 +16,7 @@ builder.AddEmailServices();
 
 var app = builder.Build();
 
+app.UseMiddleware<RequestObservabilityMiddleware>();
 app.ConfigureDevEnvironment();
 
 app.UseCors(ApiConfiguration.CorsPolicyName);

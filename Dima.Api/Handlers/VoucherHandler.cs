@@ -1,3 +1,5 @@
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
 using Dima.Api.Data;
 using Dima.Core.Common;
 using Dima.Core.Handlers;
@@ -9,8 +11,10 @@ using Dima.Api.Services;
 
 namespace Dima.Api.Handlers;
 
-public class VoucherHandler(AppDbContext context, VoucherEligibilityService eligibilityService, BusinessTime businessTime) : IVoucherHandler
+public class VoucherHandler(AppDbContext context, VoucherEligibilityService eligibilityService, BusinessTime businessTime, ILogger<VoucherHandler>? logger = null) : IVoucherHandler
 {
+    private readonly ILogger<VoucherHandler> _logger = logger ?? NullLogger<VoucherHandler>.Instance;
+
     public async Task<Response<VoucherApplication?>> ApplyAsync(
     ApplyVoucherRequest request)
     {
@@ -104,8 +108,9 @@ public class VoucherHandler(AppDbContext context, VoucherEligibilityService elig
                 200,
                 "Voucher aplicado com sucesso");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<VoucherApplication?>(
                 null,
                 500,

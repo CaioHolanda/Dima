@@ -1,4 +1,6 @@
-﻿using Dima.Core.Handlers;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Core.Handlers;
 using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
 using Stripe;
@@ -10,15 +12,18 @@ using CoreConfiguration = Dima.Core.Configuration;
 using Dima.Api.Configuration;
 using Microsoft.Extensions.Options;
 using Dima.Core.Models.Payments;
+using Dima.Core.Common;
 
 namespace Dima.Api.Handlers
 {
     public class StripePaymentHandler(
         AppDbContext context,
         TimeProvider timeProvider,
-        IOptions<OrderExpirationOptions> expirationOptions)
+        IOptions<OrderExpirationOptions> expirationOptions, ILogger<StripePaymentHandler>? logger = null)
         : IPaymentHandler
     {
+        private readonly ILogger<StripePaymentHandler> _logger = logger ?? NullLogger<StripePaymentHandler>.Instance;
+
         public async Task<Response<PaymentSessionResult?>> CreateSessionAsync(
             CreatePaymentSessionRequest request)
         {
@@ -224,10 +229,26 @@ namespace Dima.Api.Handlers
                         $"dima:checkout:v1:{order.Id}:{order.Number}:" +
                         $"{order.PaymentSessionExpiresAt.Value.ToUnixTimeSeconds()}"
                 };
+                var checkoutCorrelationId = RequestCorrelation.ForPaymentAttempt(requestOptions.IdempotencyKey);
+                options.Metadata[RequestCorrelation.StripeMetadataKey] = checkoutCorrelationId;
+                options.PaymentIntentData.Metadata[RequestCorrelation.StripeMetadataKey] = checkoutCorrelationId;
 
-                var session = await service.CreateAsync(
-                    options,
-                    requestOptions);
+                Session session;
+                try
+                {
+                    session = await service.CreateAsync(options, requestOptions);
+                }
+                catch (StripeException exception) when (exception.StripeError?.Type == "idempotency_error")
+                {
+                    // An attempt created before DT-19 may be cached without this metadata.
+                    // Retry its original parameters with the same key; never create a new attempt.
+                    _logger.LogWarning(exception, "Checkout anterior sem metadados de correlação: {OrderNumber}", order.Number);
+                    options.Metadata.Remove(RequestCorrelation.StripeMetadataKey);
+                    options.PaymentIntentData.Metadata.Remove(RequestCorrelation.StripeMetadataKey);
+                    session = await service.CreateAsync(options, requestOptions);
+                }
+                _logger.LogInformation("Checkout Stripe criado: pedido {OrderNumber}, sessão {PaymentSessionId}, correlação {CheckoutCorrelationId}",
+                    order.Number, session.Id, checkoutCorrelationId);
 
                 // Recupera alterações que possam ter ocorrido enquanto
                 // aguardávamos a resposta do Stripe.
@@ -324,18 +345,16 @@ namespace Dima.Api.Handlers
             }
             catch (StripeException ex)
             {
-                Console.WriteLine(
-                    $"[STRIPE CREATE SESSION] {ex.Message}");
+                _logger.LogOperationError(ex);
 
                 return new Response<PaymentSessionResult?>(
                     null,
                     502,
-                    $"[E090] Falha no Stripe: {ex.Message}");
+                    "[E090] Não foi possível iniciar o pagamento no Stripe");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"[STRIPE CREATE SESSION] {ex}");
+                _logger.LogOperationError(ex);
 
                 return new Response<PaymentSessionResult?>(
                     null,
@@ -381,6 +400,8 @@ namespace Dima.Api.Handlers
                 var refund = await service.CreateAsync(
                     options,
                     requestOptions);
+                _logger.LogInformation("Reembolso Stripe solicitado: pagamento {PaymentIntentId}, reembolso {RefundId}",
+                    externalReference, refund.Id);
 
                 return new Response<string?>(
                     refund.Id,
@@ -389,18 +410,16 @@ namespace Dima.Api.Handlers
             }
             catch (StripeException ex)
             {
-                Console.WriteLine(
-                    $"[STRIPE REFUND] {ex.Message}");
+                _logger.LogOperationError(ex);
 
                 return new Response<string?>(
                     null,
                     502,
-                    $"[E217] Falha no Stripe: {ex.Message}");
+                    "[E217] Não foi possível solicitar o reembolso no Stripe");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    $"[STRIPE REFUND] {ex}");
+                _logger.LogOperationError(ex);
 
                 return new Response<string?>(
                     null,
@@ -456,8 +475,7 @@ namespace Dima.Api.Handlers
             }
             catch (StripeException ex)
             {
-                Console.WriteLine(
-                    $"[STRIPE CLOSE SESSION] {ex.Message}");
+                _logger.LogOperationError(ex);
 
                 return new Response<bool>(
                     false,

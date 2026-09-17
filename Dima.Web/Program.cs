@@ -18,6 +18,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped<CookieHandler>();
+builder.Services.AddTransient<RequestCorrelationHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddMudServices();
@@ -37,6 +38,7 @@ builder.Services
     {
         opt.BaseAddress = backendUrl;
     })
+    .AddHttpMessageHandler<RequestCorrelationHandler>()
     .AddHttpMessageHandler<CookieHandler>();
 
 builder.Services.AddTransient<IAccountHandler,      AccountHandler      >();

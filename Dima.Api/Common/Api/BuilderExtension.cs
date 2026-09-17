@@ -185,6 +185,7 @@ namespace Dima.Api.Common.Api
                         ])
                     .AllowAnyMethod()
                     .AllowAnyHeader()
+                    .WithExposedHeaders(Dima.Core.Common.RequestCorrelation.HeaderName)
                     .AllowCredentials()
                     ));
         }
