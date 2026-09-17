@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Core.Common;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Vouchers;
@@ -9,7 +9,7 @@ using Dima.Api.Services;
 
 namespace Dima.Api.Handlers;
 
-public class VoucherHandler(AppDbContext context, VoucherEligibilityService eligibilityService) : IVoucherHandler
+public class VoucherHandler(AppDbContext context, VoucherEligibilityService eligibilityService, BusinessTime businessTime) : IVoucherHandler
 {
     public async Task<Response<VoucherApplication?>> ApplyAsync(
     ApplyVoucherRequest request)
@@ -76,7 +76,7 @@ public class VoucherHandler(AppDbContext context, VoucherEligibilityService elig
                     voucher,
                     product,
                     currentUserId.Value,
-                    DateTime.Now);
+                    businessTime.Now);
 
             if (!eligibility.IsEligible)
             {

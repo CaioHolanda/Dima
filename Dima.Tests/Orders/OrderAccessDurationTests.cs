@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Api.Handlers;
 using Dima.Api.Models;
 using Dima.Api.Services;
@@ -13,6 +13,7 @@ namespace Dima.Tests.Orders;
 
 public class OrderAccessDurationTests
 {
+    private static readonly TimeProvider Clock = new FixedClock(new DateTimeOffset(2026, 9, 17, 12, 0, 0, TimeSpan.Zero));
     [Fact]
     public async Task ConfirmPayment_uses_order_duration_snapshot_when_product_changes()
     {
@@ -74,9 +75,8 @@ public class OrderAccessDurationTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
-        var beforeConfirmation = DateTime.Now;
 
         var result = await handler.ConfirmPaymentAsync(
             orderNumber,
@@ -85,7 +85,6 @@ public class OrderAccessDurationTests
             "brl",
             userId.ToString());
 
-        var afterConfirmation = DateTime.Now;
 
         Assert.True(result.IsSuccess);
         Assert.Equal(200, result.Code);
@@ -98,10 +97,8 @@ public class OrderAccessDurationTests
         Assert.NotNull(result.Data.AccessStartsAt);
         Assert.NotNull(result.Data.AccessEndsAt);
 
-        Assert.InRange(
-            result.Data.AccessStartsAt.Value,
-            beforeConfirmation,
-            afterConfirmation);
+        Assert.Equal(Clock.GetUtcNow().UtcDateTime, result.Data.AccessStartsAt.Value);
+        Assert.Equal(DateTimeKind.Utc, result.Data.AccessStartsAt.Value.Kind);
 
         Assert.Equal(
             result.Data.AccessStartsAt.Value.AddMonths(6),

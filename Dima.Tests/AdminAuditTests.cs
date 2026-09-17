@@ -14,6 +14,7 @@ namespace Dima.Tests;
 
 public sealed class AdminAuditTests
 {
+    private static readonly TimeProvider Clock = new FixedClock(new DateTimeOffset(2026, 9, 17, 12, 0, 0, TimeSpan.Zero));
     private static ServiceProvider Services()
     {
         var name = Guid.NewGuid().ToString();
@@ -44,7 +45,7 @@ public sealed class AdminAuditTests
             db.Products.Add(new Product { Id = 1, Title = "Plan", Price = 100, AccessDurationMonths = 1 });
             await db.SaveChangesAsync();
         }
-        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance);
+        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance, Clock);
         await filter.InvokeAsync(EndpointFilterInvocationContext.Create(Http("/api/v1/admin/products/1")), async _ =>
         {
             using var scope = services.CreateScope();
@@ -59,6 +60,7 @@ public sealed class AdminAuditTests
         Assert.Equal(1L, log.TargetId);
         Assert.True(log.Succeeded);
         Assert.Equal(TimeSpan.Zero, log.OccurredAtUtc.Offset);
+        Assert.Equal(Clock.GetUtcNow(), log.OccurredAtUtc);
         Assert.Contains("\"Price\":100", log.BeforeJson);
         Assert.Contains("\"Price\":120", log.AfterJson);
     }
@@ -73,7 +75,7 @@ public sealed class AdminAuditTests
             db.Users.Add(new User { Id = 1, Email = "user@example.com", PasswordHash = "secret-password", SecurityStamp = "secret-stamp" });
             await db.SaveChangesAsync();
         }
-        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance);
+        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance, Clock);
         await filter.InvokeAsync(EndpointFilterInvocationContext.Create(Http("/api/v1/admin/users/1")), _ => ValueTask.FromResult<object?>(Results.Conflict()));
         using var readScope = services.CreateScope();
         var log = await readScope.ServiceProvider.GetRequiredService<AppDbContext>().AdminAuditLogs.SingleAsync();
@@ -89,7 +91,7 @@ public sealed class AdminAuditTests
     public async Task ReadsAndNonAdministratorActionsAreNotAudited(string method, bool admin)
     {
         using var services = Services();
-        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance);
+        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance, Clock);
         await filter.InvokeAsync(EndpointFilterInvocationContext.Create(Http("/api/v1/admin/products/1", method, admin)), _ => ValueTask.FromResult<object?>(Results.Ok()));
         using var scope = services.CreateScope();
         Assert.Empty(await scope.ServiceProvider.GetRequiredService<AppDbContext>().AdminAuditLogs.ToListAsync());
@@ -99,7 +101,7 @@ public sealed class AdminAuditTests
     public async Task CreateRecordsGeneratedIdAndRefundExceptionIsAudited()
     {
         using var services = Services();
-        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance);
+        var filter = new AdminAuditFilter(services.GetRequiredService<IServiceScopeFactory>(), NullLogger<AdminAuditFilter>.Instance, Clock);
         var http = Http("/api/v1/admin/products", "POST");
         http.Request.RouteValues.Remove("id");
         await filter.InvokeAsync(EndpointFilterInvocationContext.Create(http), async _ =>

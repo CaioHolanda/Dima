@@ -43,7 +43,7 @@ public class AdminOrderDetailsPage : ComponentBase
         finally { if (version == _version) IsBusy = false; }
     }
     public static string Text(string? value) => string.IsNullOrWhiteSpace(value) ? "Não registrado" : value;
-    public static string Date(DateTime? value) => value?.ToString("dd/MM/yyyy HH:mm:ss") ?? "Não registrado";
+    public static string Date(DateTime? value) => value.HasValue ? Dima.Core.Common.Time.UtcInstant.FormatLocal(value, "dd/MM/yyyy HH:mm:ss") : "Não registrado";
     public static string UtcDate(DateTimeOffset? value) => value?.UtcDateTime.ToString("dd/MM/yyyy HH:mm:ss") ?? "Não registrado";
     public string GatewayText => Order?.Gateway switch
     {

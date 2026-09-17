@@ -1,4 +1,4 @@
-﻿@page "/pedidos"
+@page "/pedidos"
 @inherits ListOrdersPage
 
 <MudText Typo="Typo.h3">
@@ -35,7 +35,7 @@ else
 
             <TemplateColumn Title="Data">
                 <CellTemplate>
-                    @context.Item.CreatedAt.ToString("dd/MM/yyyy")
+                    @Dima.Core.Common.Time.UtcInstant.FormatLocal(context.Item.CreatedAt, "dd/MM/yyyy")
                 </CellTemplate>
             </TemplateColumn>
 

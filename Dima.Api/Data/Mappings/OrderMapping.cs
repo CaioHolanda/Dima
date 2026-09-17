@@ -1,4 +1,4 @@
-﻿using Dima.Core.Models;
+using Dima.Core.Models;
 using Dima.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -39,10 +39,12 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasColumnType("SMALLINT");
 
         builder.Property(x => x.CreatedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired()
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.UpdatedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired()
             .HasColumnType("DATETIME2");
 
@@ -79,14 +81,17 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
                 "AND [ExpiresAt] IS NOT NULL");
 
         builder.Property(x => x.PaidAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.AccessStartsAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.AccessEndsAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
@@ -153,6 +158,7 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasColumnType("NVARCHAR");
 
         builder.Property(x => x.RefundedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 

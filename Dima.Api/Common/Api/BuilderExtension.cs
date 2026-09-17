@@ -21,6 +21,11 @@ namespace Dima.Api.Common.Api
     {
         public static void AddConfiguration(this WebApplicationBuilder builder)
         {
+            builder.Services.AddOptions<BusinessTimeOptions>()
+                .Bind(builder.Configuration.GetSection(BusinessTimeOptions.SectionName))
+                .Validate(options => IsValidTimeZone(options.TimeZoneId),
+                    "BusinessTime:TimeZoneId deve identificar um fuso válido.")
+                .ValidateOnStart();
             builder.Services.Configure<InitialAdminOptions>
                 (builder.Configuration.GetSection(InitialAdminOptions.SectionName));
             CoreConfiguration.ConnectionString=builder.Configuration
@@ -50,6 +55,11 @@ namespace Dima.Api.Common.Api
                         options.PaymentSessionLifetimeMinutes <= 1440,
                     "A sessão de pagamento deve durar entre 30 minutos e 24 horas.")
                 .ValidateOnStart();
+        }
+        private static bool IsValidTimeZone(string id)
+        {
+            try { TimeZoneInfo.FindSystemTimeZoneById(id); return true; }
+            catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException or ArgumentException) { return false; }
         }
         public static void AddDocumentation(this WebApplicationBuilder builder)
         {
@@ -158,6 +168,7 @@ namespace Dima.Api.Common.Api
             builder.Services.AddTransient<IAdminUserHandler, AdminUserHandler>();
             builder.Services.AddTransient<IAdminOrderHandler, AdminOrderHandler>();
             builder.Services.AddTransient<VoucherEligibilityService>();
+            builder.Services.AddSingleton<BusinessTime>();
             builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
             builder.Services.AddTransient<SessionService>(_ => new SessionService());
             builder.Services.AddTransient<OrderExpirationService>();

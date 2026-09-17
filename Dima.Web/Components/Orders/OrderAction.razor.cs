@@ -1,4 +1,5 @@
 using Dima.Core.Enums;
+using Dima.Core.Common.Time;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -33,11 +34,11 @@ namespace Dima.Web.Components.Orders
                 if (Order.AccessStartsAt is null)
                     return false;
 
-                var now = DateTime.Now;
+                var now = Clock.GetUtcNow().UtcDateTime;
 
                 // Plano futuro ainda não iniciado:
                 // reembolso integral permitido.
-                if (Order.AccessStartsAt.Value > now)
+                if (!RefundTimeRules.HasAccessStarted(Order.AccessStartsAt.Value, now))
                     return true;
 
                 // Plano já iniciado:
@@ -46,8 +47,7 @@ namespace Dima.Web.Components.Orders
                 if (Order.PaidAt is null)
                     return false;
 
-                return now <=
-                    Order.PaidAt.Value.AddDays(14);
+                return RefundTimeRules.IsWithinWindow(Order.PaidAt.Value, now);
             }
         }
         #endregion
@@ -62,6 +62,7 @@ namespace Dima.Web.Components.Orders
 
         #region Services
 
+        [Inject] public TimeProvider Clock { get; set; } = null!;
         [Inject] public IDialogService DialogService { get; set; } = null!;
         [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
         [Inject] public IOrderHandler OrderHandler { get; set; } = null!;

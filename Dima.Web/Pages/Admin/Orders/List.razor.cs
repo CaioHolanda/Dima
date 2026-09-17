@@ -44,20 +44,19 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
 
     public static string FormatDateTime(DateTime date)
     {
-        return date.ToString("dd/MM/yyyy HH:mm");
+        return Dima.Core.Common.Time.UtcInstant.FormatLocal(date, "dd/MM/yyyy HH:mm");
     }
 
     public static string FormatDate(DateTime? date)
     {
-        return date?.ToString("dd/MM/yyyy") ?? "-";
+        return Dima.Core.Common.Time.UtcInstant.FormatLocal(date, "dd/MM/yyyy");
     }
     public static string FormatAccessStart(
     AdminOrderListItem order)
     {
         if (order.AccessStartsAt is not null)
         {
-            return order.AccessStartsAt.Value
-                .ToString("dd/MM/yyyy");
+            return Dima.Core.Common.Time.UtcInstant.FormatLocal(order.AccessStartsAt, "dd/MM/yyyy");
         }
 
         return order.Status == EOrderStatus.WaintingPayment
@@ -73,8 +72,7 @@ public partial class ListAdminOrdersPage : Dima.Web.Pages.Admin.AdminListPage<Ad
                 ? "Aguardando pagamento"
                 : "-";
         }
-            return order.AccessEndsAt?.ToString("dd/MM/yyyy")
-                   ?? "-";
+            return Dima.Core.Common.Time.UtcInstant.FormatLocal(order.AccessEndsAt, "dd/MM/yyyy");
     }
 
     public static string FormatCurrency(decimal value)

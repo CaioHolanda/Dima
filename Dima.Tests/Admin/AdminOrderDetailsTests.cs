@@ -88,7 +88,7 @@ public class AdminOrderDetailsTests
         context.AddRange(product, voucher, user);
         await context.SaveChangesAsync();
         var expired = status == EOrderStatus.Expired ? DateTimeOffset.UtcNow : (DateTimeOffset?)null;
-        var refunded = status == EOrderStatus.Refunded ? DateTime.Now : (DateTime?)null;
+        var refunded = status == EOrderStatus.Refunded ? DateTime.UtcNow : (DateTime?)null;
         var order = new Order { ProductId = product.Id, UserId = user.Id, VoucherId = voucher.Id,
             Gateway = gateway, Status = status, ExpiredAt = expired, RefundedAt = refunded,
             OriginalPrice = 100, DiscountAmount = 100, Total = 0 };

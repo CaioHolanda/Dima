@@ -1,10 +1,11 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Microsoft.AspNetCore.Components;
 
 namespace Dima.Web.Components.Orders
 {
     public partial class OrderStatusComponent:ComponentBase
     {
+        [Inject] public TimeProvider Clock { get; set; } = null!;
         #region Parameters
 
         [Parameter, EditorRequired]
@@ -17,7 +18,7 @@ namespace Dima.Web.Components.Orders
         public DateTimeOffset? ExpiresAt { get; set; }
         protected bool HasElapsed =>
             ExpiresAt.HasValue &&
-            ExpiresAt.Value <= DateTimeOffset.UtcNow;
+            ExpiresAt.Value <= Clock.GetUtcNow();
 
         #endregion
     }

@@ -1,4 +1,4 @@
-﻿@inherits OrderActionComponent
+@inherits OrderActionComponent
 @switch (Order.Status)
 {
     case EOrderStatus.Paid:
@@ -39,7 +39,7 @@
                 Entre em contato com o suporte antes de continuar.
             </MudAlert>
         }
-        else if (Order.ExpiresAt.Value <= DateTimeOffset.UtcNow)
+        else if (Order.ExpiresAt.Value <= Clock.GetUtcNow())
         {
             <MudAlert Severity="Severity.Info"
                       Variant="Variant.Outlined">

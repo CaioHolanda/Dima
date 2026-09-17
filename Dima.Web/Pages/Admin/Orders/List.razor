@@ -47,11 +47,11 @@
                         CellStyle="width: 105px; min-width: 105px; white-space: nowrap;">
             <CellTemplate>
                 <MudText Typo="Typo.body2">
-                    @context.Item.CreatedAt.ToString("dd/MM/yyyy")
+                    @Dima.Core.Common.Time.UtcInstant.FormatLocal(context.Item.CreatedAt, "dd/MM/yyyy")
                 </MudText>
 
                 <MudText Typo="Typo.caption">
-                    @context.Item.CreatedAt.ToString("HH:mm")
+                    @Dima.Core.Common.Time.UtcInstant.FormatLocal(context.Item.CreatedAt, "HH:mm")
                 </MudText>
             </CellTemplate>
         </TemplateColumn>
@@ -132,7 +132,7 @@
                 @if (context.Item.RefundedAt is not null)
                 {
                     <MudText Typo="Typo.body2">
-                        @context.Item.RefundedAt.Value.ToString("dd/MM/yyyy")
+                        @Dima.Core.Common.Time.UtcInstant.FormatLocal(context.Item.RefundedAt, "dd/MM/yyyy")
                     </MudText>
 
                     @if (!string.IsNullOrWhiteSpace(context.Item.RefundReference))

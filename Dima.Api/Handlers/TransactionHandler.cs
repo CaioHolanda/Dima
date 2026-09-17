@@ -1,4 +1,5 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
+using Dima.Api.Services;
 using Dima.Core.Common.Extensions;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers;
 
-public class TransactionHandler(AppDbContext context) : ITransactionHandler
+public class TransactionHandler(AppDbContext context, TimeProvider timeProvider, BusinessTime businessTime) : ITransactionHandler
 {
     public async Task<Response<Transaction?>> CreateAsync(CreateTransactionRequest request)
     {
@@ -22,7 +23,7 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
             {
                 UserId = request.UserId,
                 CategoryId = request.CategoryId,
-                CreatedAt = DateTime.Now,
+                CreatedAt = timeProvider.GetUtcNow().UtcDateTime,
                 Amount = request.Amount,
                 PaidOrReceivedAt = request.PaidOrReceivedAt,
                 Title = request.Title,
@@ -81,8 +82,9 @@ public class TransactionHandler(AppDbContext context) : ITransactionHandler
     {
         try
         {
-            request.StartDate ??= DateTime.Now.GetFirstDay();
-            request.EndDate ??= DateTime.Now.GetLastDay();
+            var now = businessTime.Now;
+            request.StartDate ??= now.GetFirstDay();
+            request.EndDate ??= now.GetLastDay();
         }
         catch
         {

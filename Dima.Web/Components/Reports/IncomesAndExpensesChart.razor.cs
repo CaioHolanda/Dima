@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Requests.Reports;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
@@ -59,6 +59,6 @@ namespace Dima.Web.Components.Reports
 
         #endregion
         private static string GetMonthName(int month)
-        => new DateTime(DateTime.Now.Year, month, 1).ToString("MMMM");
+        => new DateTime(DateTime.UtcNow.Year, month, 1).ToString("MMMM");
     }
 }

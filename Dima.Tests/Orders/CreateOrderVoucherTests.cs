@@ -21,6 +21,7 @@ namespace Dima.Tests.Orders;
 
 public class CreateOrderVoucherTests
 {
+    private static readonly TimeProvider Clock = new FixedClock(new DateTimeOffset(2026, 9, 17, 12, 0, 0, TimeSpan.Zero));
     private sealed class FixedTimeProvider(
     DateTimeOffset utcNow) : TimeProvider
     {
@@ -153,7 +154,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new CreateOrderRequest
         {
@@ -228,7 +229,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new CreateOrderRequest
         {
@@ -267,7 +268,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new CreateOrderRequest
         {
@@ -312,9 +313,8 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
-        var beforeCreation = DateTime.Now;
 
         var request = new CreateOrderRequest
         {
@@ -326,7 +326,6 @@ public class CreateOrderVoucherTests
         var result =
             await handler.CreateAsync(request);
 
-        var afterCreation = DateTime.Now;
 
         Assert.True(result.IsSuccess);
         Assert.Equal(201, result.Code);
@@ -345,10 +344,8 @@ public class CreateOrderVoucherTests
         Assert.NotNull(result.Data.AccessStartsAt);
         Assert.NotNull(result.Data.AccessEndsAt);
 
-        Assert.InRange(
-            result.Data.PaidAt.Value,
-            beforeCreation,
-            afterCreation);
+        Assert.Equal(Clock.GetUtcNow().UtcDateTime, result.Data.PaidAt.Value);
+        Assert.Equal(DateTimeKind.Utc, result.Data.PaidAt.Value.Kind);
 
         Assert.Equal(
             result.Data.AccessStartsAt.Value.AddMonths(
@@ -395,7 +392,7 @@ public class CreateOrderVoucherTests
         var product = await context.Products.SingleAsync();
         var voucher = await context.Vouchers.SingleAsync();
 
-        voucher.EndsAt = DateTime.Now.AddDays(-1);
+        voucher.EndsAt = Clock.GetUtcNow().UtcDateTime.AddDays(-1);
         await context.SaveChangesAsync();
 
         context.ChangeTracker.Clear();
@@ -405,7 +402,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            TimeProvider.System);
+            Clock, TestBusinessTime.Create(Clock));
 
         var request = new CreateOrderRequest
         {
@@ -465,8 +462,8 @@ public class CreateOrderVoucherTests
             Status = EOrderStatus.WaintingPayment,
             Gateway = EPaymentGateway.Stripe,
 
-            CreatedAt = nowUtc.AddMinutes(-31).LocalDateTime,
-            UpdatedAt = nowUtc.AddMinutes(-31).LocalDateTime,
+            CreatedAt = nowUtc.AddMinutes(-31).UtcDateTime,
+            UpdatedAt = nowUtc.AddMinutes(-31).UtcDateTime,
 
             ExpiresAt = deadline
         };
@@ -523,7 +520,7 @@ public class CreateOrderVoucherTests
             storedRedemption.Status);
 
         Assert.Equal(
-            (DateTime?)nowUtc.LocalDateTime,
+            (DateTime?)nowUtc.UtcDateTime,
             storedRedemption.ReleasedAt);
 
         Assert.Null(storedRedemption.RedeemedAt);
@@ -556,7 +553,7 @@ public class CreateOrderVoucherTests
             repeatedOrder.ExpiredAt);
 
         Assert.Equal(
-            (DateTime?)nowUtc.LocalDateTime,
+            (DateTime?)nowUtc.UtcDateTime,
             repeatedRedemption.ReleasedAt);
 
         Assert.Equal(0, sessionCloser.Calls);
@@ -594,7 +591,7 @@ public class CreateOrderVoucherTests
             {
                 PendingOrderLifetimeMinutes = lifetimeMinutes
             }),
-            new FixedTimeProvider(utcNow));
+            new FixedTimeProvider(utcNow), TestBusinessTime.Create(new FixedTimeProvider(utcNow)));
 
         var result = await handler.CreateAsync(
             new CreateOrderRequest
@@ -657,7 +654,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            new FixedTimeProvider(createdAtUtc));
+            new FixedTimeProvider(createdAtUtc), TestBusinessTime.Create(new FixedTimeProvider(createdAtUtc)));
 
         var creationResult = await orderHandler.CreateAsync(
             new CreateOrderRequest

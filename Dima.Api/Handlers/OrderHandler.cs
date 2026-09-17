@@ -1,6 +1,7 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Api.Data;
 using Dima.Core.Common;
+using Dima.Core.Common.Time;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
@@ -24,7 +25,8 @@ namespace Dima.Api.Handlers
         IPaymentHandler paymentHandler,
         VoucherEligibilityService eligibilityService,
         IOptions<OrderExpirationOptions> expirationOptions,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        BusinessTime businessTime)
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
@@ -84,7 +86,7 @@ namespace Dima.Api.Handlers
                 default:
                     return new Response<Order?>(order, 400, "[E040] Pedido nao pode ser cancelado");
             }
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             if (order.VoucherId is not null)
             {
@@ -240,7 +242,7 @@ namespace Dima.Api.Handlers
             }
 
 
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             VoucherRedemption? redemption = null;
 
@@ -447,7 +449,7 @@ namespace Dima.Api.Handlers
                     $"Reembolso do pedido {order.Number} já possui estado final. " +
                     $"Evento {refundStatus} ignorado.");
             }
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             switch (refundStatus)
             {
@@ -617,7 +619,7 @@ namespace Dima.Api.Handlers
 
             await using var transactionScope = transaction;
 
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             // Já existe um pedido aguardando pagamento?
             var hasPendingOrder = await context.Orders
@@ -701,7 +703,7 @@ namespace Dima.Api.Handlers
                             voucher,
                             product,
                             userId.Value,
-                            now);
+                            businessTime.At(new DateTimeOffset(now, TimeSpan.Zero)));
 
                     if (!eligibility.IsEligible)
                     {
@@ -735,7 +737,7 @@ namespace Dima.Api.Handlers
                     voucher);
 
             var total = originalPrice - discountAmount;
-            var createdAtUtc = timeProvider.GetUtcNow();
+            var createdAtUtc = new DateTimeOffset(now, TimeSpan.Zero);
             var order = new Order
             {
                 UserId = userId.Value,
@@ -757,6 +759,8 @@ namespace Dima.Api.Handlers
                 AccessDurationMonths =
                     product.AccessDurationMonths,
 
+                CreatedAt = now,
+                UpdatedAt = now,
                 ExpiresAt = total > 0m
                     ? createdAtUtc.AddMinutes(
                         expirationOptions.Value.PendingOrderLifetimeMinutes)
@@ -1011,11 +1015,11 @@ namespace Dima.Api.Handlers
                     "[E220] Data de inicio do acesso nao encontrada");
             }
 
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var accessHasStarted =
                 order.AccessStartsAt.HasValue &&
-                order.AccessStartsAt.Value <= now;
+                RefundTimeRules.HasAccessStarted(order.AccessStartsAt.Value, now);
 
             if (accessHasStarted)
             {
@@ -1027,10 +1031,7 @@ namespace Dima.Api.Handlers
                         "[E213] Data de confirmacao do pagamento nao encontrada");
                 }
 
-                var refundDeadline =
-                    order.PaidAt.Value.AddDays(14);
-
-                if (now > refundDeadline)
+                if (!RefundTimeRules.IsWithinWindow(order.PaidAt.Value, now))
                 {
                     return new Response<Order?>(
                         order,
@@ -1083,7 +1084,7 @@ namespace Dima.Api.Handlers
             order.RefundReference = refundResult.Data;
             order.RefundFailureReason = null;
             order.Status = EOrderStatus.RefundPending;
-            order.UpdatedAt = DateTime.Now;
+            order.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
 
             // Persistencia em banco
             try

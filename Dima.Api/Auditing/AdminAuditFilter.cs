@@ -9,7 +9,7 @@ namespace Dima.Api.Auditing;
 
 public sealed class AdminAuditFilter(
     IServiceScopeFactory scopeFactory,
-    ILogger<AdminAuditFilter> logger) : IEndpointFilter
+    ILogger<AdminAuditFilter> logger, TimeProvider timeProvider) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext invocation, EndpointFilterDelegate next)
     {
@@ -32,7 +32,7 @@ public sealed class AdminAuditFilter(
 
         var log = new AdminAuditLog
         {
-            OccurredAtUtc = DateTimeOffset.UtcNow,
+            OccurredAtUtc = timeProvider.GetUtcNow(),
             ActorId = http.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? http.User.Identity?.Name ?? "unknown",
             ActorName = http.User.Identity?.Name,
             TargetType = target,

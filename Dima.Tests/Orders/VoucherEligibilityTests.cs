@@ -1,4 +1,4 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Data;
 using Dima.Api.Models;
 using Dima.Api.Services;
 using Dima.Core.Enums;
@@ -133,7 +133,7 @@ public class VoucherEligibilityTests
             voucher,
             product,
             user.Id,
-            DateTime.Now);
+            DateTime.UtcNow);
 
         Assert.True(result.IsEligible);
     }
@@ -169,7 +169,7 @@ public class VoucherEligibilityTests
             voucher,
             product,
             currentUser.Id,
-            DateTime.Now);
+            DateTime.UtcNow);
 
         Assert.False(result.IsEligible);
         Assert.Contains("[E243]", result.Message);
@@ -209,7 +209,7 @@ public class VoucherEligibilityTests
             voucher,
             selectedProduct,
             user.Id,
-            DateTime.Now);
+            DateTime.UtcNow);
 
         Assert.False(result.IsEligible);
         Assert.Contains("[E233]", result.Message);
@@ -419,7 +419,7 @@ public class VoucherEligibilityTests
             voucher,
             product,
             user.Id,
-            DateTime.Now);
+            DateTime.UtcNow);
 
         Assert.False(result.IsEligible);
         Assert.Contains("[E240]", result.Message);
