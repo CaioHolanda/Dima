@@ -1,4 +1,11 @@
-﻿<CascadingAuthenticationState>
+﻿@implements IDisposable
+@inject ThemeState ThemeState
+
+<MudThemeProvider @ref="_themeProvider"
+                  @bind-IsDarkMode="ThemeState.IsDarkMode"
+                  Theme="Configuration.Theme" />
+
+<CascadingAuthenticationState>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
@@ -17,3 +24,20 @@
 </CascadingAuthenticationState>
 
 
+
+@code {
+    private MudThemeProvider _themeProvider = null!;
+
+    protected override void OnInitialized() => ThemeState.Changed += OnThemeChanged;
+    private void OnThemeChanged() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => ThemeState.Changed -= OnThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ThemeState.IsDarkMode = await _themeProvider.GetSystemDarkModeAsync();
+            StateHasChanged();
+        }
+    }
+}

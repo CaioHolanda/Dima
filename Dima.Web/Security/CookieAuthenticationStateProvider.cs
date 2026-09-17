@@ -19,6 +19,12 @@ namespace Dima.Web.Security
         public void NotifyAuthenticationStateChanged()
         => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 
+        public void ClearAuthenticationState()
+        {
+            _isAuthenticated = false;
+            var anonymous = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            NotifyAuthenticationStateChanged(Task.FromResult(anonymous));
+        }
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
             _isAuthenticated = false;

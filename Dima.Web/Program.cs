@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Components.Web;
+﻿using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Dima.Web;
 using MudBlazor.Services;
@@ -22,6 +22,7 @@ builder.Services.AddTransient<RequestCorrelationHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddMudServices();
+builder.Services.AddScoped<ThemeState>();
 
 var configuredAddress =
     builder.HostEnvironment.IsDevelopment()

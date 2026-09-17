@@ -1,9 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
-<MudThemeProvider 
-    @ref="_mudThemeProvider"
-    @bind-IsDarkMode="_isDarkMode" 
-    Theme="Configuration.Theme" />
+@inject ThemeState ThemeState
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -31,7 +28,7 @@
                 </MudText>
                 <MudSwitch 
                     Color="Color.Inherit"
-                    @bind-Value="@_isDarkMode"
+                    @bind-Value="ThemeState.IsDarkMode"
                     T="bool"
                     Class="ma-4"
                     ThumbIcon="@Icons.Material.TwoTone.Lightbulb"/>
@@ -56,22 +53,6 @@
 
 @code {
     private bool _isDrawerOpened = true;
-    private bool _isDarkMode = true;
-    private MudThemeProvider? _mudThemeProvider = null!;
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _isDarkMode = await _mudThemeProvider.GetSystemDarkModeAsync();
-            StateHasChanged();
-        }
-    }
-    private Task OnSystemPreferenceChanged(bool newValue)
-    {
-        _isDarkMode = newValue;
-        StateHasChanged();
-        return Task.CompletedTask;
-    }
     private void ToggleDrawer() => _isDrawerOpened = !_isDrawerOpened;
     private bool IsAdminPage =>
     new Uri(NavigationManager.Uri)
