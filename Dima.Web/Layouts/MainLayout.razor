@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject NavigationManager NavigationManager
 @inject ThemeState ThemeState
 <MudPopoverProvider />
@@ -15,6 +15,10 @@
                 Edge="Edge.Start"
                 OnClick="ToggleDrawer"/>
                 Dima
+                @if (context.User.IsInRole(AppRoles.Admin))
+                {
+                    <MudText Typo="Typo.caption" Class="ml-2">Admin</MudText>
+                }
                 <MudButton  Href="/lancamentos/novo" 
                             Variant="Variant.Text"
                             StartIcon="@Icons.Material.TwoTone.Add"

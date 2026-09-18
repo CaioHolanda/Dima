@@ -1,11 +1,18 @@
-﻿@implements IDisposable
+@implements IDisposable
 @inject ThemeState ThemeState
 
-<MudThemeProvider @ref="_themeProvider"
-                  @bind-IsDarkMode="ThemeState.IsDarkMode"
-                  Theme="Configuration.Theme" />
-
 <CascadingAuthenticationState>
+    <AuthorizeView Roles="@AppRoles.Admin">
+        <Authorized>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.AdminTheme" />
+        </Authorized>
+        <NotAuthorized>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.Theme" />
+        </NotAuthorized>
+        <Authorizing>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.Theme" />
+        </Authorizing>
+    </AuthorizeView>
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
