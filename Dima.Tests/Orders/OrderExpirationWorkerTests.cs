@@ -106,53 +106,6 @@ public class OrderExpirationWorkerTests
         else Assert.Null(reservation.ReleasedAt);
     }
 
-    [Fact]
-    public async Task Sweep_expires_due_orders_across_batches_and_retries_blocked_checkout()
-    {
-        var now = DateTimeOffset.UtcNow;
-        var payment = new PaymentStub();
-        var services = new ServiceCollection();
-        var database = Guid.NewGuid().ToString();
-        services.AddLogging();
-        services.AddSingleton<TimeProvider>(TimeProvider.System);
-        services.AddSingleton<IPaymentHandler>(payment);
-        services.AddDbContext<AppDbContext>(x => x.UseInMemoryDatabase(database));
-        services.AddTransient<OrderExpirationService>();
-        await using var provider = services.BuildServiceProvider();
-        using (var scope = provider.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            db.Orders.Add(new Order { Id = 1, ExpiresAt = now.AddMinutes(-1), PaymentSessionId = "blocked" });
-            for (var id = 2; id <= 105; id++)
-                db.Orders.Add(new Order { Id = id, ExpiresAt = now.AddMinutes(-1) });
-            db.Orders.Add(new Order { Id = 106, ExpiresAt = now.AddHours(1) });
-            db.Orders.Add(new Order { Id = 107, ExpiresAt = now.AddMinutes(-1), Status = EOrderStatus.Paid });
-            db.Orders.Add(new Order { Id = 108 });
-            await db.SaveChangesAsync();
-        }
-        var worker = new OrderExpirationWorker(provider.GetRequiredService<IServiceScopeFactory>(),
-            TimeProvider.System, Options.Create(new OrderExpirationOptions()), NullLogger<OrderExpirationWorker>.Instance);
-        await worker.SweepAsync(default);
-        using (var scope = provider.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Equal(104, await db.Orders.CountAsync(x => x.Status == EOrderStatus.Expired));
-            Assert.Equal(EOrderStatus.WaitingPayment, (await db.Orders.FindAsync(1L))!.Status);
-            Assert.Equal(EOrderStatus.WaitingPayment, (await db.Orders.FindAsync(106L))!.Status);
-            Assert.Equal(EOrderStatus.Paid, (await db.Orders.FindAsync(107L))!.Status);
-            Assert.Equal(EOrderStatus.WaitingPayment, (await db.Orders.FindAsync(108L))!.Status);
-        }
-        payment.AllowClose = true;
-        await worker.SweepAsync(default);
-        using (var scope = provider.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Assert.Equal(EOrderStatus.Expired, (await db.Orders.FindAsync(1L))!.Status);
-        }
-        Assert.Equal(2, payment.Calls);
-        await Assert.ThrowsAsync<OperationCanceledException>(() => worker.SweepAsync(new CancellationToken(true)));
-    }
-
     private sealed class PaymentStub : IPaymentHandler
     {
         public bool AllowClose { get; set; }

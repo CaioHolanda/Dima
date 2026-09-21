@@ -1,8 +1,12 @@
 # DT-26 — Cancelamento Admin e expiração de pedidos
 
+A varredura descrita abaixo foi substituída pelo [agendamento durável](DT26-AGENDAMENTO-DURAVEL.md).
+A ativação depende de Storage Queue + Azure Function. O cancelamento Admin permanece.
+
+
 O cancelamento pelo Admin é elegível apenas para pedidos aguardando pagamento e deve verificar a situação do checkout antes de concluir. Pedidos pagos seguem o fluxo de reembolso. Pedidos vencidos devem seguir o fluxo de expiração.
 
-## Implementado nesta etapa
+## Implementação anterior (substituída)
 
 A API executa uma verificação ao iniciar e repete após cada passagem, com intervalo padrão de 60 segundos. `OrderExpiration:SweepIntervalSeconds` configura esse intervalo, que deve ser positivo. O prazo padrão do pedido continua sendo 30 minutos (`PendingOrderLifetimeMinutes`).
 

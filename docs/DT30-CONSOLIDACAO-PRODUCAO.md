@@ -43,3 +43,12 @@ Referência: [revisão da DT24](DT24-AUTENTICACAO-MESMA-ORIGEM.md).
 
 Referência: [DT21](DT21-SWAGGER-PRODUCAO.md). As demais listas permanecem nos
 documentos de origem até a consolidação final; esta lista ainda não é exaustiva.
+
+## DT26 — Ativação do agendamento durável
+- [ ] Provisionar e estimar custos de Storage Queue + Function; separar ambientes.
+- [ ] Configurar API/Function e rede; executar roteiro de DT26-AGENDAMENTO-DURAVEL.md.
+- [ ] Agendar pedidos existentes uma vez; revisar legados sem ExpiresAt.
+- [ ] Validar retomada do SQL, duplicidade, checkout prorrogado, falhas e poison.
+- [ ] Configurar alertas de falha e poison e procedimento de recuperação.
+- [ ] Confirmar remoção de instâncias antigas com varredura SQL.
+- [ ] Verificar auto-pausa sem outros acessos; DT28 permanece com polling.

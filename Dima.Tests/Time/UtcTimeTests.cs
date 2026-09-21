@@ -29,7 +29,7 @@ public class UtcTimeTests
     private static AppDbContext Database() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
     private static OrderHandler Orders(AppDbContext db, TimeProvider clock, FakePaymentHandler? payment = null) =>
-        new(db, payment ?? new(), new(db), Options.Create(new OrderExpirationOptions()), clock, TestBusinessTime.Create(clock));
+        new(db, payment ?? new(), new(db), Options.Create(new OrderExpirationOptions()), clock, TestBusinessTime.Create(clock), expirationScheduler: new RecordingExpirationScheduler());
 
     private static async Task<(User user, Product product)> Seed(AppDbContext db)
     {
@@ -124,7 +124,7 @@ public class UtcTimeTests
         Assert.Equal(DateTimeKind.Unspecified, business.Now.Kind);
         var preview = await new VoucherHandler(db, new(db), business).ApplyAsync(new ApplyVoucherRequest
             { UserId = user.Email!, ProductId = product.Id, Code = voucher.Code });
-        var order = await new OrderHandler(db, new FakePaymentHandler(), new(db), Options.Create(new OrderExpirationOptions()), clock, business)
+        var order = await new OrderHandler(db, new FakePaymentHandler(), new(db), Options.Create(new OrderExpirationOptions()), clock, business, expirationScheduler: new Dima.Tests.Orders.Fakes.RecordingExpirationScheduler())
             .CreateAsync(new CreateOrderRequest { UserId = user.Email!, ProductId = product.Id, VoucherId = voucher.Id });
         Assert.Equal(allowed, preview.IsSuccess);
         Assert.Equal(allowed, order.IsSuccess);

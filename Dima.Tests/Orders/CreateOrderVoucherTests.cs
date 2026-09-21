@@ -154,7 +154,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            Clock, TestBusinessTime.Create(Clock));
+            Clock, TestBusinessTime.Create(Clock), expirationScheduler: new RecordingExpirationScheduler());
 
         var request = new CreateOrderRequest
         {
@@ -229,7 +229,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            Clock, TestBusinessTime.Create(Clock));
+            Clock, TestBusinessTime.Create(Clock), expirationScheduler: new RecordingExpirationScheduler());
 
         var request = new CreateOrderRequest
         {
@@ -268,7 +268,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            Clock, TestBusinessTime.Create(Clock));
+            Clock, TestBusinessTime.Create(Clock), expirationScheduler: new RecordingExpirationScheduler());
 
         var request = new CreateOrderRequest
         {
@@ -313,7 +313,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            Clock, TestBusinessTime.Create(Clock));
+            Clock, TestBusinessTime.Create(Clock), expirationScheduler: new RecordingExpirationScheduler());
 
 
         var request = new CreateOrderRequest
@@ -402,7 +402,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            Clock, TestBusinessTime.Create(Clock));
+            Clock, TestBusinessTime.Create(Clock), expirationScheduler: new RecordingExpirationScheduler());
 
         var request = new CreateOrderRequest
         {
@@ -591,7 +591,7 @@ public class CreateOrderVoucherTests
             {
                 PendingOrderLifetimeMinutes = lifetimeMinutes
             }),
-            new FixedTimeProvider(utcNow), TestBusinessTime.Create(new FixedTimeProvider(utcNow)));
+            new FixedTimeProvider(utcNow), TestBusinessTime.Create(new FixedTimeProvider(utcNow)), expirationScheduler: new RecordingExpirationScheduler());
 
         var result = await handler.CreateAsync(
             new CreateOrderRequest
@@ -654,7 +654,7 @@ public class CreateOrderVoucherTests
             new FakePaymentHandler(),
             new VoucherEligibilityService(context),
             Options.Create(new OrderExpirationOptions()),
-            new FixedTimeProvider(createdAtUtc), TestBusinessTime.Create(new FixedTimeProvider(createdAtUtc)));
+            new FixedTimeProvider(createdAtUtc), TestBusinessTime.Create(new FixedTimeProvider(createdAtUtc)), expirationScheduler: new RecordingExpirationScheduler());
 
         var creationResult = await orderHandler.CreateAsync(
             new CreateOrderRequest

@@ -4,6 +4,7 @@
   </Folder>
   <Project Path="Dima.Api/Dima.Api.csproj" />
   <Project Path="Dima.Core/Dima.Core.csproj" />
+  <Project Path="Dima.OrderJobs/Dima.OrderJobs.csproj" />
   <Project Path="Dima.Tests/Dima.Tests.csproj" />
   <Project Path="Dima.Web/Dima.Web.csproj" />
 </Solution>

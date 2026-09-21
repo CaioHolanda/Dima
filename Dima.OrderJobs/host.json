@@ -1,0 +1,14 @@
+{
+  "version": "2.0",
+  "functionTimeout": "00:05:00",
+  "extensions": {
+    "queues": {
+      "batchSize": 1,
+      "newBatchThreshold": 0,
+      "maxPollingInterval": "00:01:00",
+      "visibilityTimeout": "00:30:00",
+      "maxDequeueCount": 5,
+      "messageEncoding": "base64"
+    }
+  }
+}

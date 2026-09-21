@@ -45,8 +45,6 @@ namespace Dima.Api.Common.Api
                         options.PaymentSessionLifetimeMinutes >= 30 &&
                         options.PaymentSessionLifetimeMinutes <= 1440,
                     "A sessão de pagamento deve durar entre 30 minutos e 24 horas.")
-                .Validate(options => options.SweepIntervalSeconds > 0,
-                    "O intervalo de verificação de expiração deve ser positivo.")
                 .ValidateOnStart();
         }
         private static bool IsValidTimeZone(string id)
@@ -200,7 +198,10 @@ namespace Dima.Api.Common.Api
                 return new StripeClient(string.IsNullOrWhiteSpace(key) ? null : key);
             });
             builder.Services.AddTransient<OrderExpirationService>();
-            builder.Services.AddHostedService<OrderExpirationWorker>();
+            builder.Services.Configure<OrderExpirationQueueOptions>(
+                builder.Configuration.GetSection(OrderExpirationQueueOptions.SectionName));
+            builder.Services.AddSingleton<IOrderExpirationScheduler, QueueOrderExpirationScheduler>();
+            builder.Services.AddTransient<OrderExpirationBackfill>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

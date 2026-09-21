@@ -28,7 +28,8 @@ namespace Dima.Api.Handlers
         VoucherEligibilityService eligibilityService,
         IOptions<OrderExpirationOptions> expirationOptions,
         TimeProvider timeProvider,
-        BusinessTime businessTime, ILogger<OrderHandler>? logger = null)
+        BusinessTime businessTime, ILogger<OrderHandler>? logger = null,
+        IOrderExpirationScheduler? expirationScheduler = null)
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
@@ -860,6 +861,24 @@ namespace Dima.Api.Handlers
                 }
 
                 await context.SaveChangesAsync();
+                if (order.ExpiresAt is { } dueAt)
+                {
+                    // SQL is still uncommitted. If durable scheduling fails, disposal rolls back
+                    // both order and voucher reservation. A successful send followed by rollback
+                    // only leaves an orphan message, never an unscheduled committed order.
+                    var scheduler = expirationScheduler
+                        ?? throw new InvalidOperationException("Agendamento de pedidos não configurado.");
+                    try
+                    {
+                        await scheduler.ScheduleAsync(new(order.Id, order.Number, order.CreatedAt), dueAt);
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogError(exception, "Falha ao agendar expiração do pedido {OrderId}", order.Id);
+                        return new Response<Order?>(null, 503,
+                            "[E274] Não foi possível agendar a expiração. O pedido não foi confirmado. Tente novamente.");
+                    }
+                }
                 if (transaction is not null)
                 {
                     await transaction.CommitAsync();
