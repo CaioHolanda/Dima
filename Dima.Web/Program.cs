@@ -18,6 +18,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped<CookieHandler>();
+builder.Services.AddSingleton<SessionSignals>();
 builder.Services.AddTransient<RequestCorrelationHandler>();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 

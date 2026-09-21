@@ -41,6 +41,11 @@ namespace Dima.Web.Pages.Identity
         #region Overrides
         protected override async Task OnInitializedAsync()
         {
+            var query = new Uri(NavigationManager.Uri).Query;
+            if (query.Contains("session=expired", StringComparison.Ordinal))
+                Snackbar.Add("Sua sessão expirou. Entre novamente para continuar.", Severity.Warning);
+            else if (query.Contains("session=changed", StringComparison.Ordinal))
+                Snackbar.Add("A conta foi alterada em outra aba. Confirme seu acesso novamente.", Severity.Warning);
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             if (user.Identity is not null && user.Identity.IsAuthenticated)

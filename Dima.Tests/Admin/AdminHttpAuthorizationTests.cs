@@ -57,6 +57,41 @@ public class AdminHttpAuthorizationTests
         Assert.Equal(identity == "admin" ? 1 : 0, await db.Products.CountAsync());
     }
 
+    [Theory]
+    [InlineData("anonymous", HttpStatusCode.Unauthorized)]
+    [InlineData("customer", HttpStatusCode.Forbidden)]
+    [InlineData("admin", HttpStatusCode.OK)]
+    public async Task Cancellation_requires_admin_and_audits_success(string identity, HttpStatusCode expected)
+    {
+        await using var app = await CreateAppAsync();
+        long orderId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var customer = await db.Users.SingleAsync(x => x.Email == "customer@test.com");
+            var order = new Dima.Core.Models.Order { UserId = customer.Id, ExpiresAt = DateTimeOffset.UtcNow.AddHours(1) };
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
+            orderId = order.Id;
+        }
+        using var client = await CreateClientAsync(app, identity);
+        using var response = await client.PostAsync($"/api/v1/admin/orders/{orderId}/cancel", null);
+        Assert.Equal(expected, response.StatusCode);
+        using var verification = app.Services.CreateScope();
+        var context = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(identity == "admin" ? Dima.Core.Enums.EOrderStatus.Canceled : Dima.Core.Enums.EOrderStatus.WaitingPayment,
+            (await context.Orders.FindAsync(orderId))!.Status);
+        if (identity == "admin")
+        {
+            var audit = await context.AdminAuditLogs.SingleAsync(x => x.TargetType == "Order" && x.TargetId == orderId);
+            Assert.True(audit.Succeeded);
+            Assert.Equal("admin@test.com", audit.ActorName);
+            Assert.NotNull(audit.BeforeJson);
+            Assert.NotNull(audit.AfterJson);
+        }
+        else Assert.Empty(await context.AdminAuditLogs.ToListAsync());
+    }
+
     private static async Task<WebApplication> CreateAppAsync()
     {
         // Real routes, cookie authentication and authorization; isolated database and loopback HTTP.

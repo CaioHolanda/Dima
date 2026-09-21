@@ -8,9 +8,11 @@ using Dima.Core;
 using Dima.Core.Handlers;
 using Dima.Core.Security;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 using Stripe.Checkout;
 
@@ -43,6 +45,8 @@ namespace Dima.Api.Common.Api
                         options.PaymentSessionLifetimeMinutes >= 30 &&
                         options.PaymentSessionLifetimeMinutes <= 1440,
                     "A sessão de pagamento deve durar entre 30 minutos e 24 horas.")
+                .Validate(options => options.SweepIntervalSeconds > 0,
+                    "O intervalo de verificação de expiração deve ser positivo.")
                 .ValidateOnStart();
         }
         private static bool IsValidTimeZone(string id)
@@ -57,6 +61,8 @@ namespace Dima.Api.Common.Api
         }
         public static void AddSecurity(this WebApplicationBuilder builder)
         {
+            builder.Services.AddScoped<UserSessionService>();
+            builder.Services.TryAddSingleton<TimeProvider>(TimeProvider.System);
             builder.Services
                 .AddAuthentication(IdentityConstants.ApplicationScheme)
                 .AddIdentityCookies();
@@ -70,6 +76,35 @@ namespace Dima.Api.Common.Api
                 options =>
                 {
                     options.Cookie.HttpOnly = true;
+                    options.ExpireTimeSpan = UserSessionService.AbsoluteTimeout;
+                    options.SlidingExpiration = false;
+                    options.Events.OnSigningIn = async context =>
+                    {
+                        var sessions = context.HttpContext.RequestServices.GetRequiredService<UserSessionService>();
+                        context.Properties.SetString(UserSessionService.CookieKey, (await sessions.CreateAsync()).ToString());
+                        context.Properties.AllowRefresh = false;
+                    };
+                    options.Events.OnValidatePrincipal = async context =>
+                    {
+                        var sessions = context.HttpContext.RequestServices.GetRequiredService<UserSessionService>();
+                        if (Guid.TryParse(context.Properties.GetString(UserSessionService.CookieKey), out var sessionId))
+                            context.HttpContext.Items[UserSessionService.CookieKey] = sessionId;
+                        if (!Guid.TryParse(context.Properties.GetString(UserSessionService.CookieKey), out var id)
+                            || await sessions.GetExpiryAsync(id) is null)
+                        {
+                            context.RejectPrincipal();
+                            await context.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+                            return;
+                        }
+                        await SecurityStampValidator.ValidatePrincipalAsync(context);
+                        // Stamp validation may request renewal; it must not extend the absolute limit.
+                        context.ShouldRenew = false;
+                    };
+                    options.Events.OnSigningOut = async context =>
+                    {
+                        if (context.HttpContext.Items[UserSessionService.CookieKey] is Guid id)
+                            await context.HttpContext.RequestServices.GetRequiredService<UserSessionService>().RevokeAsync(id);
+                    };
 
                     options.Events.OnRedirectToLogin = context =>
                     {
@@ -165,6 +200,7 @@ namespace Dima.Api.Common.Api
                 return new StripeClient(string.IsNullOrWhiteSpace(key) ? null : key);
             });
             builder.Services.AddTransient<OrderExpirationService>();
+            builder.Services.AddHostedService<OrderExpirationWorker>();
         }
         public static void AddCrossOrigin(this WebApplicationBuilder builder)
         {

@@ -13,6 +13,7 @@
             <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.Theme" />
         </Authorizing>
     </AuthorizeView>
+    <Dima.Web.Components.Identity.SessionMonitor />
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">

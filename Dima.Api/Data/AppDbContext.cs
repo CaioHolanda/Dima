@@ -20,6 +20,7 @@ namespace Dima.Api.Data
                 IdentityUserToken<long>
     >(options)
     {
+        public DbSet<UserSession> UserSessions { get; set; } = null!;
         public DbSet<AdminAuditLog> AdminAuditLogs { get; set; } = null!;
         public DbSet<Category> Categories { get; set; } = null!;
         public DbSet<Transaction> Transactions { get; set; } = null!;

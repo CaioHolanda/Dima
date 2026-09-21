@@ -38,5 +38,5 @@ Verifica `/swagger/index.html`, `/swagger/v1/swagger.json` e
 - Acumular a avaliação de limites de requisições, monitoramento de varreduras
   e regras de firewall/WAF; essas camadas não foram implementadas nesta DT.
 
-Esta lista será incorporada à DT específica de produção ao final, sem reservar
-agora um novo número de DT.
+Esta lista está referenciada na [DT30 — Consolidação de produção](DT30-CONSOLIDACAO-PRODUCAO.md),
+cujo número foi definido pelo usuário em 17/09/2026 para a execução final.

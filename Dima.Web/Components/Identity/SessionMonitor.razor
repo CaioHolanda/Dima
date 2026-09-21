@@ -1,0 +1,63 @@
+@implements IAsyncDisposable
+@inject Microsoft.JSInterop.IJSRuntime JS
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider Auth
+@inject Dima.Web.Security.ICookieAuthenticationStateProvider CookieAuth
+@inject Dima.Web.Security.SessionSignals Signals
+@inject IHttpClientFactory Clients
+@inject NavigationManager Navigation
+
+@code {
+    private Microsoft.JSInterop.IJSObjectReference? _module;
+    private Microsoft.JSInterop.DotNetObjectReference<SessionMonitor>? _reference;
+    private bool _ending;
+    private bool _authenticated;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        _module = await JS.InvokeAsync<Microsoft.JSInterop.IJSObjectReference>("import", "./js/session-monitor.js");
+        _reference = Microsoft.JSInterop.DotNetObjectReference.Create(this);
+        await _module.InvokeVoidAsync("initialize", Clients.CreateClient(Configuration.HttpClientName).BaseAddress!.ToString(), _reference);
+        Auth.AuthenticationStateChanged += OnAuthChanged;
+        Signals.Unauthorized += OnUnauthorized;
+        await UpdateAsync(await Auth.GetAuthenticationStateAsync());
+    }
+
+    private void OnAuthChanged(Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState> state)
+        => _ = InvokeAsync(async () => await UpdateAsync(await state));
+
+    private async Task UpdateAsync(Microsoft.AspNetCore.Components.Authorization.AuthenticationState state)
+    {
+        if (_module is null || _ending) return;
+        _authenticated = state.User.Identity?.IsAuthenticated == true;
+        await _module.InvokeVoidAsync("setAuthenticated", _authenticated);
+    }
+
+    private void OnUnauthorized()
+    {
+        if (_authenticated) _ = InvokeAsync(() => EndSession("expired"));
+    }
+
+    [Microsoft.JSInterop.JSInvokable]
+    public Task EndSession(string reason)
+    {
+        if (_ending) return Task.CompletedTask;
+        _ending = true;
+        CookieAuth.ClearAuthenticationState();
+        // Reload discards scoped services, cached user data and pending UI from the old account.
+        Navigation.NavigateTo("/login?session=" + (reason == "changed" ? "changed" : "expired"), forceLoad: true);
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Auth.AuthenticationStateChanged -= OnAuthChanged;
+        Signals.Unauthorized -= OnUnauthorized;
+        if (_module is not null)
+        {
+            await _module.InvokeVoidAsync("dispose");
+            await _module.DisposeAsync();
+        }
+        _reference?.Dispose();
+    }
+}

@@ -80,7 +80,10 @@ public class HttpContractTests
     public async Task CookieHandlerSendsCorrectAjaxHeaderAndPreservesUnauthorizedBehavior()
     {
         using var transport = new Transport(200, "{}");
-        using var cookies = new CookieHandler { InnerHandler = transport };
+        var signals = new SessionSignals();
+        var rejected = 0;
+        signals.Unauthorized += () => rejected++;
+        using var cookies = new CookieHandler(signals) { InnerHandler = transport };
         using var client = new HttpClient(cookies) { BaseAddress = new Uri("https://api.example/") };
         using var ok = await client.GetAsync("v1/products");
         Assert.Equal("XMLHttpRequest", transport.AjaxHeader);
@@ -88,8 +91,10 @@ public class HttpContractTests
         transport.Status = 401;
         using var login = await client.PostAsync("v1/identity/login-user", null);
         Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+        Assert.Equal(0, rejected);
         var error = await Assert.ThrowsAsync<HttpRequestException>(() => client.GetAsync("v1/orders"));
         Assert.Equal(HttpStatusCode.Unauthorized, error.StatusCode);
+        Assert.Equal(1, rejected);
     }
 
     [Fact]

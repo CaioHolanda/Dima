@@ -20,6 +20,12 @@ public class AdminOrderHandler(
         return await HttpResponseReader.ReadAsync<AdminOrderDetails?>(response, "Não foi possível consultar o pedido.");
     }
 
+    public async Task<Response<bool>> CancelAsync(long id)
+    {
+        using var response = await _client.PostAsync($"v1/admin/orders/{id}/cancel", null);
+        return await HttpResponseReader.ReadAsync<bool>(response, "Não foi possível cancelar o pedido.");
+    }
+
     public async Task<PagedResponse<List<AdminOrderListItem>?>>
         GetAllAsync(GetAllAdminOrdersRequest request)
     {

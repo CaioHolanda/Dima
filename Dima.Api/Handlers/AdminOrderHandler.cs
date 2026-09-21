@@ -9,10 +9,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers;
 
-public class AdminOrderHandler(AppDbContext context, ILogger<AdminOrderHandler>? logger = null)
+public class AdminOrderHandler(AppDbContext context, ILogger<AdminOrderHandler>? logger = null,
+    Dima.Api.Services.OrderExpirationService? expirationService = null)
     : IAdminOrderHandler
 {
     private readonly ILogger<AdminOrderHandler> _logger = logger ?? NullLogger<AdminOrderHandler>.Instance;
+
+    public Task<Response<bool>> CancelAsync(long id)
+        => (expirationService ?? throw new InvalidOperationException("Serviço de pedidos não configurado."))
+            .CancelAsync(id);
 
     public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
     {

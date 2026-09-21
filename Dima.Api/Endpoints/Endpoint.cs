@@ -85,7 +85,8 @@ public static class Endpoint
             .WithTags("Admin - Orders")
             .RequireAuthorization("AdminOnly")
             .MapEndpoint<GetAllAdminOrdersEndpoint>()
-            .MapEndpoint<GetAdminOrderByIdEndpoint>();
+            .MapEndpoint<GetAdminOrderByIdEndpoint>()
+            .MapEndpoint<CancelAdminOrderEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
@@ -116,6 +117,7 @@ public static class Endpoint
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
             .MapEndpoint<LoginEndpoint>()
+            .MapEndpoint<SessionEndpoint>()
             .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
             .MapEndpoint<GetRolesEndpoint>()

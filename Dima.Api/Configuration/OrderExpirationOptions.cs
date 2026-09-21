@@ -7,4 +7,6 @@ public sealed class OrderExpirationOptions
     public int PendingOrderLifetimeMinutes { get; set; } = 30;
 
     public int PaymentSessionLifetimeMinutes { get; set; } = 60;
+
+    public int SweepIntervalSeconds { get; set; } = 60;
 }

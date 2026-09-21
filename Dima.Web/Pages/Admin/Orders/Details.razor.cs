@@ -3,6 +3,7 @@ using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Microsoft.AspNetCore.Components;
+using MudBlazor;
 
 namespace Dima.Web.Pages.Admin.Orders;
 
@@ -14,8 +15,39 @@ public class AdminOrderDetailsPage : ComponentBase
     [SupplyParameterFromQuery(Name = "searchTerm")] public string? Search { get; set; }
     [SupplyParameterFromQuery(Name = "status")] public int? Status { get; set; }
     [Inject] public IAdminOrderHandler Handler { get; set; } = null!;
+    [Inject] public IDialogService DialogService { get; set; } = null!;
+    [Inject] public ISnackbar Snackbar { get; set; } = null!;
     public AdminOrderDetails? Order { get; private set; }
     public bool IsBusy { get; private set; }
+    public bool IsCanceling { get; private set; }
+    public bool CanCancel => Order?.Status == EOrderStatus.WaitingPayment
+        && Order.ExpiresAt > DateTimeOffset.UtcNow
+        && Order.PaidAt is null && string.IsNullOrWhiteSpace(Order.ExternalReference)
+        && Order.AccessStartsAt is null && Order.AccessEndsAt is null;
+
+    public async Task CancelAsync()
+    {
+        if (!CanCancel || IsCanceling || IsBusy) return;
+        var id = Id;
+        var number = Order!.Number;
+        IsCanceling = true;
+        try
+        {
+            var confirmed = await DialogService.ShowMessageBoxAsync("Cancelar pedido",
+                $"Cancelar o pedido {number}? O checkout será encerrado e eventual reserva de voucher será liberada. O pedido permanecerá no histórico.",
+                yesText: "Confirmar cancelamento", cancelText: "Voltar");
+            if (confirmed is not true || id != Id) return;
+            var result = await Handler.CancelAsync(id);
+            Snackbar.Add(result.Message, result.IsSuccess && result.Data ? Severity.Success : Severity.Warning);
+            if (id == Id) await LoadAsync();
+        }
+        catch
+        {
+            Snackbar.Add("Não foi possível confirmar o cancelamento. Consulte o estado atualizado antes de tentar novamente.", Severity.Error);
+            if (id == Id) await LoadAsync();
+        }
+        finally { IsCanceling = false; }
+    }
     public string ErrorMessage { get; private set; } = string.Empty;
     private int _version;
     public string BackUrl => "/admin/orders" + Dima.Web.Handlers.AdminQuery.Build(new GetAllAdminOrdersRequest

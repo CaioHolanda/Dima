@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Dima.Web.Security
 {
-    public class CookieHandler:DelegatingHandler
+    public class CookieHandler(SessionSignals signals):DelegatingHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,CancellationToken cancellationToken)
         {
@@ -18,6 +18,7 @@ namespace Dima.Web.Security
 
             if (response.StatusCode == HttpStatusCode.Unauthorized && !isLogin)
             {
+                signals.Reject();
                 response.Dispose();
                 throw new HttpRequestException(
                     "[401] Sua sessão não está mais válida. Entre novamente. Se não conseguir acessar, entre em contato com o administrador para verificar se sua conta está ativa.",

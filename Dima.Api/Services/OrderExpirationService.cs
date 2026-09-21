@@ -65,6 +65,12 @@ public sealed class OrderExpirationService(
         }
     }
     public async Task<Response<bool>> ExpireAsync(long orderId)
+        => await FinishPendingAsync(orderId, cancel: false);
+
+    public async Task<Response<bool>> CancelAsync(long orderId)
+        => await FinishPendingAsync(orderId, cancel: true);
+
+    private async Task<Response<bool>> FinishPendingAsync(long orderId, bool cancel)
     {
         try
         {
@@ -83,8 +89,8 @@ public sealed class OrderExpirationService(
             if (order.Status == EOrderStatus.Expired)
             {
                 return new Response<bool>(
-                    true,
-                    200,
+                    !cancel,
+                    cancel ? 409 : 200,
                     "Pedido já expirado.");
             }
 
@@ -92,7 +98,7 @@ public sealed class OrderExpirationService(
             {
                 return new Response<bool>(
                     false,
-                    200,
+                    cancel ? 409 : 200,
                     "O pedido não está aguardando pagamento.");
             }
 
@@ -107,12 +113,25 @@ public sealed class OrderExpirationService(
 
             var nowUtc = timeProvider.GetUtcNow();
 
-            if (order.ExpiresAt.Value > nowUtc)
+            if (cancel && order.ExpiresAt.Value <= nowUtc)
+            {
+                return new Response<bool>(false, 409,
+                    "O prazo do pedido venceu. Aguarde a atualização para Expirado e consulte novamente.");
+            }
+
+            if (!cancel && order.ExpiresAt.Value > nowUtc)
             {
                 return new Response<bool>(
                     false,
                     200,
                     "O prazo do pedido ainda não venceu.");
+            }
+
+            if (order.PaidAt.HasValue || !string.IsNullOrWhiteSpace(order.ExternalReference)
+                || order.AccessStartsAt.HasValue || order.AccessEndsAt.HasValue)
+            {
+                return new Response<bool>(false, 409,
+                    "O pedido possui registros de pagamento ou acesso. Sua situação precisa ser verificada.");
             }
 
             if (!string.IsNullOrWhiteSpace(order.PaymentSessionId))
@@ -155,8 +174,8 @@ public sealed class OrderExpirationService(
 
             var expiredAtUtc = timeProvider.GetUtcNow();
 
-            order.Status = EOrderStatus.Expired;
-            order.ExpiredAt = expiredAtUtc;
+            order.Status = cancel ? EOrderStatus.Canceled : EOrderStatus.Expired;
+            if (!cancel) order.ExpiredAt = expiredAtUtc;
 
             // Instant columns contain UTC, including legacy values confirmed as UTC.
             order.UpdatedAt = expiredAtUtc.UtcDateTime;
@@ -178,7 +197,7 @@ public sealed class OrderExpirationService(
             return new Response<bool>(
                 true,
                 200,
-                $"Pedido {order.Number} expirado com sucesso.");
+                $"Pedido {order.Number} {(cancel ? "cancelado" : "expirado")} com sucesso.");
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -187,7 +206,7 @@ public sealed class OrderExpirationService(
             return new Response<bool>(
                 false,
                 409,
-                "[E270] O pedido foi atualizado durante a expiração. " +
+                "[E270] O pedido foi atualizado durante a operação. " +
                 "Sua situação precisa ser consultada novamente.");
         }
         catch (Exception ex)
@@ -196,13 +215,13 @@ public sealed class OrderExpirationService(
 
             logger.LogError(
                 ex,
-                "Falha ao expirar o pedido {OrderId}",
+                "Falha ao encerrar o pedido {OrderId}",
                 orderId);
 
             return new Response<bool>(
                 false,
                 500,
-                "[E271] Não foi possível concluir a expiração do pedido.");
+                "[E271] Não foi possível concluir a operação no pedido.");
         }
     }
 }

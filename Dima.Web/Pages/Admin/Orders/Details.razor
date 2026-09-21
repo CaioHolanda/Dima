@@ -17,6 +17,18 @@ else
 {
     <MudText Typo="Typo.h5" Class="mb-2">Pedido @Order.Number</MudText>
     <MudChip T="string" Color="@ListAdminOrdersPage.GetStatusColor(Order.Status)">@ListAdminOrdersPage.GetStatusText(Order.Status)</MudChip>
+    @if (CanCancel)
+    {
+        <MudButton Color="Color.Error" Variant="Variant.Outlined" Class="ml-3"
+                   StartIcon="@Icons.Material.Filled.Cancel" Disabled="@(IsCanceling || IsBusy)" OnClick="CancelAsync">
+            @(IsCanceling ? "Verificando cancelamento…" : "Cancelar pedido")
+        </MudButton>
+    }
+    @if (Order.Status == EOrderStatus.WaitingPayment && !CanCancel)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">O pedido não está elegível para cancelamento. Se o prazo venceu, aguarde a expiração e atualize a consulta.</MudAlert>
+        <MudButton OnClick="LoadAsync" Disabled="@IsCanceling">Atualizar pedido</MudButton>
+    }
     <MudGrid Class="mt-2">
         <MudItem xs="12" md="6">
             <MudPaper Class="pa-4" Outlined="true">

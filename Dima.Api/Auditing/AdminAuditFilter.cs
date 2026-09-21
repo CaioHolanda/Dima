@@ -100,7 +100,8 @@ public sealed class AdminAuditFilter(
             "User" => await db.Users.AsNoTracking().Where(x => x.Id == id).Select(x => new
             { x.Id, x.Email, x.LockoutEnabled, x.LockoutEnd }).SingleOrDefaultAsync(),
             "Order" => await db.Orders.AsNoTracking().Where(x => x.Id == id).Select(x => new
-            { x.Id, x.Status, x.Total, x.Gateway, x.RefundReference, x.RefundFailureReason,
+            { x.Id, x.Status, x.UpdatedAt, x.ExpiresAt, x.ExpiredAt, x.PaymentSessionId,
+                x.PaidAt, x.ExternalReference, x.Total, x.Gateway, x.RefundReference, x.RefundFailureReason,
                 x.RefundedAt, x.RefundReason, x.RefundReasonDetails, x.AccessStartsAt, x.AccessEndsAt }).SingleOrDefaultAsync(),
             _ => null
         };
