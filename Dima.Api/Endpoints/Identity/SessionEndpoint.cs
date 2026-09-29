@@ -28,6 +28,11 @@ public sealed class SessionEndpoint : IEndpoint
             return Results.Conflict();
         if (activity && !await sessions.TouchAsync(id)) return Results.Unauthorized();
         var expiry = await sessions.GetExpiryAsync(id);
-        return expiry is null ? Results.Unauthorized() : Results.Ok(new { sessionId = id, expiresUtc = expiry });
+        return expiry is null ? Results.Unauthorized() : Results.Ok(new
+        {
+            sessionId = id,
+            expiresUtc = expiry,
+            serverUtc = context.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().UtcDateTime
+        });
     }
 }

@@ -14,4 +14,4 @@ Validação: build de Dima.Web concluído sem erros; validação visual no naveg
 
 ## DT28 — Sessão por inatividade
 
-Permanece pendente para retomada após a resolução das demais tarefas. As alterações locais de sessão não integram este commit.
+Revisão local de 29/09/2026 após conclusão da validação da DT26: estado mantido no SQL, sem polling de validade, atividade agrupada em 1 minuto por aba e prazos de 15 minutos/8 horas preservados. Ver DT28-EXPIRACAO-SESSAO.md para implementação e aceitação pendente no navegador.

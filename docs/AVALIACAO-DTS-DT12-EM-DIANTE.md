@@ -2,6 +2,8 @@
 
 Roteiro elaborado em 18/09/2026 a partir do histórico Git, código e documentação de `Dima-review`. Inclui as alterações locais ainda sem commit. Execute sobre a mesma versão que pretende publicar; testar somente o último commit deixa de fora partes das DT24, DT26 e DT28.
 
+Atualização de 29/09/2026: DT26 declarada validada pelo usuário; base local sincronizada com o commit da `dev`. O cenário T16 foi revisado para a nova DT28 sem polling. As observações abaixo sobre migrations locais/sem commit são históricas de 18/09; esta revisão da DT28 não acrescenta migration nem verifica o estado do banco publicado.
+
 ## 1. Ordem de execução e preparação
 
 1. Registrar versão, alterações locais, ambiente e banco utilizado.
@@ -267,20 +269,20 @@ Esperado: Expirado, checkout encerrado quando seguro e reserva liberada; incerte
 3. Registrar total, download/inicialização Blazor, autenticação, chamadas API e tempo de consultas SQL; usar Network/Performance e logs da API. Instrumentação SQL exige medição adicional no ambiente.
 4. Comparar baseline anterior e versão integrada nas mesmas condições, em ambientes isolados com schemas compatíveis; registrar mediana e faixa observada.
 
-Esperado: impacto quantificado antes de definir meta/otimização. Não há otimização nem meta numérica já comprovada na DT27. Para carga, observar também custo de validação de cookie/security stamp/sessão por chamada, polling de sessão, auditoria e varredura de pedidos.
+Esperado: impacto quantificado antes de definir meta/otimização. Não há otimização nem meta numérica já comprovada na DT27. Para carga, observar também custo de validação de cookie/security stamp/sessão por chamada, avisos agrupados de atividade, auditoria e varredura de pedidos.
 
 ### T16 — DT28: sessão por inatividade e duração absoluta
 
-1. Fazer login e deixar a página visível sem ponteiro/teclado/rolagem/toque por mais de 15 min; polling não pode renovar. Conferir redirecionamento/aviso e 401 em rota protegida.
-2. Interagir periodicamente por mais de 15 min: permanecer conectado; observar POST de atividade com intervalo mínimo de 30 s e GET de validade a cada 15 s.
+1. Fazer login e deixar a página visível sem ponteiro/teclado/rolagem/toque por mais de 15 min; não deve haver GET periódico nem POST sem atividade nova. Conferir redirecionamento/aviso e 401 em rota protegida.
+2. Interagir periodicamente por mais de 15 min: permanecer conectado; observar POST de atividade com intervalo mínimo de 60 s por aba e ausência de GET periódico; GET somente na inicialização/retomada.
 3. Conferir GET sem mudança em LastActivityUtc; POST válido pode atualizar atividade. Para inspecionar: `SELECT Id, CreatedUtc, LastActivityUtc FROM dbo.UserSessions;`.
 4. Suspender aba por mais de 15 min e retornar; repetir com retorno do Stripe após vencimento.
 5. Abrir duas abas; sair em uma, entrar com outra conta e conferir sincronização sem dados da conta anterior.
-6. Desconectar rede: não interpretar falha como expiração; reconectar e validar com servidor. Um 403 não encerra a sessão.
+6. Desconectar rede: falha não equivale a 401, mas o prazo local conhecido continua valendo; retomar online e validar com servidor. Um 403 não encerra a sessão.
 7. Manter interação até 8 h: sessão expira mesmo com atividade. Usar UserSessionTests para verificar o limite rapidamente com relógio controlado; ensaio real de 8 h é aceitação distinta.
 8. Reiniciar API e, se houver várias instâncias, alternar entre elas: validade permanece consistente com banco e chaves de proteção de cookies compartilhados.
 
-Esperado: servidor rejeita no instante do limite; indicação visual pode esperar a próxima verificação e atrasar em aba suspensa. Cookies anteriores à DT28 exigem novo login. Logout revoga também cópia do mesmo cookie; validar isso pela suíte sem exportar cookie para evidências. Impacto: novas consultas por requisição, polling e gravações de atividade.
+Esperado: servidor rejeita no instante do limite; indicação visual usa temporizador local e pode atrasar em aba suspensa. Cookies anteriores à DT28 exigem novo login. Logout revoga também cópia do mesmo cookie; validar isso pela suíte sem exportar cookie para evidências. Impacto: validação SQL por requisição, sem polling de sessão; gravações de atividade agrupadas em 60 s. Conferir duas abas acompanhando o mesmo prazo e os cenários de fallback em DT28-EXPIRACAO-SESSAO.md.
 
 ### T17 — DT29: identidade visual do Admin
 
@@ -313,6 +315,6 @@ Bloqueiam liberação: migration necessária ausente, duplicidade sob concorrên
 - Suíte .NET completa: 167 aprovados, 0 falhas, 0 ignorados; duração dos testes de aproximadamente 1 min 2 s. Evidência: `TestResults/avaliacao-dts/avaliacao-dts.trx`.
 - API, Core e frontend compilaram durante `dotnet test`. Ocorreram avisos de nullability/MudBlazor e NU1900 por indisponibilidade da consulta de vulnerabilidades NuGet; não houve erro de compilação. Builds separados não foram executados neste levantamento.
 - Nenhum banco externo foi consultado ou atualizado; a lista de migrations pendentes depende da consulta da seção 2.
-- Há divergência documental: o resumo DT27/DT29 descreve DT28 como pendente no commit, enquanto o documento específico e código local já contêm a implementação. Este roteiro avalia o estado local completo.
+- Revisão DT28 de 29/09/2026: resumo DT27/DT29 e T16 atualizados para ausência de polling e agrupamento em 1 minuto. As demais observações históricas deste roteiro são de 18/09/2026.
 
 Referências: documentos DT18–DT30 nesta pasta, `RETOMADA-DT13-DT16.md`, migrations e classes de testes listadas acima; histórico Git para DT12–DT17.

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Data.Common;
 using Dima.Api.Common.Api;
 using Dima.Api.Data;
 using Dima.Api.Endpoints.Identity;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +20,26 @@ namespace Dima.Tests.Users;
 
 public sealed class UserSessionTests
 {
+    [Fact]
+    public async Task Status_reuses_request_validation_and_returns_server_time_without_renewal()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+        fixture.Counter.SessionReads = 0;
+        var status = await fixture.Client.GetFromJsonAsync<SessionStatus>("/api/v1/identity/session");
+        Assert.NotNull(status);
+        Assert.Equal(fixture.Clock.GetUtcNow().UtcDateTime, status.ServerUtc);
+        Assert.Equal(status.ServerUtc.AddMinutes(10), status.ExpiresUtc);
+        Assert.Equal(1, fixture.Counter.SessionReads);
+        fixture.Clock.Advance(TimeSpan.FromMinutes(1));
+        fixture.Counter.SessionReads = 0;
+        using var response = await fixture.Client.PostAsync("/api/v1/identity/session/activity", null);
+        var updated = await response.Content.ReadFromJsonAsync<SessionStatus>();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(fixture.Clock.GetUtcNow().UtcDateTime.AddMinutes(15), updated!.ExpiresUtc);
+        Assert.Equal(2, fixture.Counter.SessionReads); // Validate before update, then read the new expiry.
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -105,6 +127,7 @@ public sealed class UserSessionTests
         public WebApplication App { get; private set; } = null!;
         public HttpClient Client { get; private set; } = null!;
         public Clock Clock { get; } = new();
+        public SessionQueryCounter Counter { get; } = new();
         public string Cookie { get; private set; } = "";
         private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
@@ -117,7 +140,7 @@ public sealed class UserSessionTests
             builder.WebHost.UseUrls("http://127.0.0.1:0");
             builder.Services.AddDataProtection().UseEphemeralDataProtectionProvider();
             builder.Services.AddScoped<AppDbContext>(_ => new TestContext(
-                new DbContextOptionsBuilder<AppDbContext>().UseSqlite(fixture._connection).Options));
+                new DbContextOptionsBuilder<AppDbContext>().UseSqlite(fixture._connection).AddInterceptors(fixture.Counter).Options));
             builder.Services.AddIdentityCore<User>().AddRoles<IdentityRole<long>>()
                 .AddEntityFrameworkStores<AppDbContext>().AddApiEndpoints();
             builder.AddSecurity();
@@ -172,5 +195,17 @@ public sealed class UserSessionTests
                     entity.RemoveCheckConstraint(constraint.Name!);
         }
     }
-    private sealed record SessionStatus(Guid SessionId, DateTime ExpiresUtc);
+    private sealed class SessionQueryCounter : DbCommandInterceptor
+    {
+        public int SessionReads { get; set; }
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (command.CommandText.StartsWith("SELECT") && command.CommandText.Contains("UserSessions"))
+                SessionReads++;
+            return ValueTask.FromResult(result);
+        }
+    }
+    private sealed record SessionStatus(Guid SessionId, DateTime ExpiresUtc, DateTime ServerUtc);
 }

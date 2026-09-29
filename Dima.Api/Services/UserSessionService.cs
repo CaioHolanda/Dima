@@ -6,6 +6,8 @@ namespace Dima.Api.Services;
 
 public sealed class UserSessionService(AppDbContext db, TimeProvider clock)
 {
+    // This service is scoped to one HTTP request, never shared between requests.
+    private readonly Dictionary<Guid, DateTime?> _expiries = new();
     public const string CookieKey = "dima.session";
     public static readonly TimeSpan IdleTimeout = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan AbsoluteTimeout = TimeSpan.FromHours(8);
@@ -24,14 +26,18 @@ public sealed class UserSessionService(AppDbContext db, TimeProvider clock)
 
     public async Task<DateTime?> GetExpiryAsync(Guid id)
     {
+        if (_expiries.TryGetValue(id, out var cached))
+            return cached > clock.GetUtcNow().UtcDateTime ? cached : null;
         var session = await db.UserSessions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
-        if (session is null) return null;
+        if (session is null) { _expiries[id] = null; return null; }
         var expiry = new[] { session.CreatedUtc + AbsoluteTimeout, session.LastActivityUtc + IdleTimeout }.Min();
-        return clock.GetUtcNow().UtcDateTime < expiry ? DateTime.SpecifyKind(expiry, DateTimeKind.Utc) : null;
+        _expiries[id] = DateTime.SpecifyKind(expiry, DateTimeKind.Utc);
+        return clock.GetUtcNow().UtcDateTime < expiry ? _expiries[id] : null;
     }
 
     public async Task<bool> TouchAsync(Guid id)
     {
+        _expiries.Remove(id);
         var now = clock.GetUtcNow().UtcDateTime;
         // A conditional update prevents concurrent requests from reviving an expired session.
         return await db.UserSessions
@@ -40,5 +46,9 @@ public sealed class UserSessionService(AppDbContext db, TimeProvider clock)
                 x => x.LastActivityUtc > now ? x.LastActivityUtc : now)) == 1;
     }
 
-    public Task<int> RevokeAsync(Guid id) => db.UserSessions.Where(x => x.Id == id).ExecuteDeleteAsync();
+    public Task<int> RevokeAsync(Guid id)
+    {
+        _expiries.Remove(id);
+        return db.UserSessions.Where(x => x.Id == id).ExecuteDeleteAsync();
+    }
 }
