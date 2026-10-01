@@ -92,7 +92,41 @@ public class AdminHttpAuthorizationTests
         else Assert.Empty(await context.AdminAuditLogs.ToListAsync());
     }
 
-    private static async Task<WebApplication> CreateAppAsync()
+    [Theory]
+    [InlineData(true, true, HttpStatusCode.OK)]
+    [InlineData(true, false, HttpStatusCode.Conflict)]
+    [InlineData(false, true, HttpStatusCode.NotFound)]
+    public async Task Customer_cancel_route_enforces_ownership_and_checkout_closure(
+        bool ownsOrder, bool canClose, HttpStatusCode expected)
+    {
+        var payment = new Dima.Tests.Orders.Fakes.FakePaymentHandler { CloseSessionShouldSucceed = canClose };
+        await using var app = await CreateAppAsync(payment);
+        long orderId;
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var ownerEmail = ownsOrder ? "customer@test.com" : "admin@test.com";
+            var owner = await db.Users.SingleAsync(x => x.Email == ownerEmail);
+            var product = new Dima.Core.Models.Product { Title = "Plan", Slug = "cancel-http", Price = 100, AccessDurationMonths = 1 };
+            db.Products.Add(product);
+            var order = new Dima.Core.Models.Order
+            {
+                UserId = owner.Id, Product = product, ExpiresAt = DateTimeOffset.UtcNow.AddHours(1),
+                PaymentSessionId = "cs_customer_http"
+            };
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
+            orderId = order.Id;
+        }
+        using var client = await CreateClientAsync(app, "customer");
+        using var response = await client.PostAsync($"/api/v1/orders/{orderId}/cancel", null);
+        Assert.Equal(expected, response.StatusCode);
+        Assert.Equal(ownsOrder, payment.CloseSessionWasCalled);
+        using var verification = app.Services.CreateScope();
+        var saved = await verification.ServiceProvider.GetRequiredService<AppDbContext>().Orders.FindAsync(orderId);
+        Assert.Equal(expected == HttpStatusCode.OK ? Dima.Core.Enums.EOrderStatus.Canceled : Dima.Core.Enums.EOrderStatus.WaitingPayment, saved!.Status);
+    }
+    private static async Task<WebApplication> CreateAppAsync(Dima.Core.Handlers.IPaymentHandler? payment = null)
     {
         // Real routes, cookie authentication and authorization; isolated database and loopback HTTP.
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -108,6 +142,7 @@ public class AdminHttpAuthorizationTests
             .AddRoles<IdentityRole<long>>().AddEntityFrameworkStores<AppDbContext>().AddApiEndpoints();
         builder.AddSecurity();
         builder.AddServices();
+        if (payment is not null) builder.Services.AddSingleton(payment);
         builder.AddEmailServices();
         var app = builder.Build();
         try
@@ -164,4 +199,3 @@ public class AdminHttpAuthorizationTests
         }
     }
 }
-

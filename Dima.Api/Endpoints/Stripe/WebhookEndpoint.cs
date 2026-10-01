@@ -136,7 +136,7 @@ namespace Dima.Api.Endpoints.Stripe
                         paymentIntent.Id);
                 }
 
-                if (stripeEvent.Type == EventTypes.RefundUpdated)
+                if (stripeEvent.Type is EventTypes.RefundCreated or EventTypes.RefundUpdated or EventTypes.RefundFailed)
                 {
                     var refund = stripeEvent.Data.Object as Refund;
 

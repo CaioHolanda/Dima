@@ -29,7 +29,8 @@ namespace Dima.Api.Handlers
         IOptions<OrderExpirationOptions> expirationOptions,
         TimeProvider timeProvider,
         BusinessTime businessTime, ILogger<OrderHandler>? logger = null,
-        IOrderExpirationScheduler? expirationScheduler = null)
+        IOrderExpirationScheduler? expirationScheduler = null,
+        OrderExpirationService? expirationService = null)
         : IOrderHandler,
           IOrderPaymentConfirmationHandler
     {
@@ -79,76 +80,12 @@ namespace Dima.Api.Handlers
                 _logger.LogOperationError(exception);
                 return new Response<Order?>(null, 404, "[E036] Falha ao obter o pedido");
             }
-            switch(order.Status)
-            {
-                case EOrderStatus.Canceled:
-                    return new Response<Order?>(order, 400, "[E037] Pedido ja cancelado");
-                case EOrderStatus.WaitingPayment:
-                    break;
-                case EOrderStatus.Paid:
-                    return new Response<Order?>(order, 400, "[E038] Pedido ja pago nao pode ser cancelado");
-                case EOrderStatus.Refunded:
-                    return new Response<Order?>(order, 400, "[E039] Pedido ja reembolsado nao pode ser cancelado");
-                default:
-                    return new Response<Order?>(order, 400, "[E040] Pedido nao pode ser cancelado");
-            }
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-
-            if (order.VoucherId is not null)
-            {
-                VoucherRedemption? redemption;
-
-                try
-                {
-                    redemption = await context
-                        .VoucherRedemptions
-                        .FirstOrDefaultAsync(x =>
-                            x.OrderId == order.Id);
-                }
-                catch (Exception exception)
-                {
-                    _logger.LogOperationError(exception);
-                    return new Response<Order?>(
-                        order,
-                        500,
-                        "[E239] Falha ao buscar a reserva do voucher");
-                }
-
-                if (redemption?.Status ==
-                    EVoucherRedemptionStatus.Reserved)
-                {
-                    redemption.Status =
-                        EVoucherRedemptionStatus.Released;
-
-                    redemption.ReleasedAt = now;
-                }
-            }
-
-            order.Status = EOrderStatus.Canceled;
-            order.UpdatedAt = now;
-
-            // Segunda analise: Podendo ser cancelado atualiza o banco
-            try
-            {
-                context.Orders.Update(order);
-                await context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                return new Response<Order?>(
-                    null,
-                    409,
-                    ConcurrentOrderUpdateMessage);
-            }
-            catch (Exception exception)
-            {
-                _logger.LogOperationError(exception);
-                return new Response<Order?>(
-                    order, 
-                    500, 
-                    "[E041] Nao foi possivel cancelar seu pedido");
-            }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} cancelado com sucesso");
+            // Ownership was checked above. Use the same checkout/expiry/concurrency
+            // safeguards as administrative cancellation before releasing a voucher.
+            var service = expirationService ?? new OrderExpirationService(
+                context, paymentHandler, timeProvider, NullLogger<OrderExpirationService>.Instance);
+            var result = await service.CancelAsync(order.Id);
+            return new Response<Order?>(result.IsSuccess ? order : null, result.Code, result.Message);
         }
 
         public async Task<Response<Order?>> ConfirmPaymentAsync(
@@ -449,12 +386,16 @@ namespace Dima.Api.Handlers
                     409,
                     "[E224] Referencia de reembolso nao corresponde ao pedido");
             }
-            var refundIsFinalized =
-                order.Status == EOrderStatus.Refunded ||
-                (order.Status == EOrderStatus.Paid &&
-                 !string.IsNullOrWhiteSpace(order.RefundFailureReason));
+            if (refundStatus is not ("succeeded" or "pending" or "requires_action" or "failed" or "canceled"))
+                return new Response<Order?>(order, 400,
+                    $"[E225] Status de reembolso desconhecido: {refundStatus}");
 
-            if (refundIsFinalized)
+            // Stripe can report succeeded before an asynchronous failure. Failure is
+            // terminal for this refund ID; delayed pending/succeeded must not revive it.
+            var refundFailed = order.Status == EOrderStatus.Paid
+                && !string.IsNullOrWhiteSpace(order.RefundFailureReason);
+            var refundSucceeded = order.Status == EOrderStatus.Refunded;
+            if (refundFailed || (refundSucceeded && refundStatus is not ("failed" or "canceled")))
             {
                 return new Response<Order?>(
                     order,
@@ -480,6 +421,7 @@ namespace Dima.Api.Handlers
                 case "failed":
                 case "canceled":
                     order.Status = EOrderStatus.Paid;
+                    order.RefundedAt = null;
                     order.RefundFailureReason =
                         string.IsNullOrWhiteSpace(failureReason)
                             ? refundStatus
