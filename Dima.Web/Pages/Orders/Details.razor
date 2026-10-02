@@ -1,28 +1,36 @@
-﻿@page "/pedidos/{number}"
+@page "/pedidos/{number}"
 @inherits DetailsPage
 
 @if (Order is not null)
 {
     <h1>Detalhes do Pedido</h1>
     <br />
+    @if (!string.IsNullOrWhiteSpace(VerificationWarning))
+    {
+        <MudAlert Severity="Severity.Warning"
+                  Variant="Variant.Outlined"
+                  Class="my-4">
+            @VerificationWarning
+        </MudAlert>
+    }
     <h4>Numero do Pedido</h4>
     <p>@Order.Number</p>
     <br />
     <h4>Data do Pedido</h4>
-    <p>@Order.CreatedAt.ToString("dd/MM/yyyy")</p>
+    <p>@Dima.Core.Common.Time.UtcInstant.FormatLocal(Order.CreatedAt, "dd/MM/yyyy")</p>
     <br />
     <h4>Ultima Atualizacao</h4>
-    <p>@Order.UpdatedAt.ToString("dd/MM/yyyy")</p>
+    <p>@Dima.Core.Common.Time.UtcInstant.FormatLocal(Order.UpdatedAt, "dd/MM/yyyy")</p>
     <br />
     <h4>Produto</h4>
     <p>@Order.Product.Title</p>
     <br />
     <h4>Valor do Produto</h4>
-    <p>@Order.Product.Price.ToString("C")</p>
+    <p>@Order.OriginalPrice.ToString("C")</p>
     <br />
     <h4>Desconto</h4>
     <p>
-        @(Order.Voucher is null
+        @(Order.DiscountAmount == 0
         ? "Não aplicado"
         : Order.DiscountAmount.ToString("C"))
     </p>
@@ -31,7 +39,11 @@
     <p>@Order.Total.ToString("C")</p>
     <br />
     <h4>Situacao</h4>
-    <OrderStatus Status="Order.Status"/>
+    <OrderStatus Status="Order.Status"
+                 ExpiresAt="@Order.ExpiresAt"
+                 IsComplimentary="@(
+                 Order.Gateway ==
+                 EPaymentGateway.NotApplicable)" />
     <br />
     <br />
     <br />

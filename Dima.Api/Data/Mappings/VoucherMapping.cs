@@ -1,7 +1,7 @@
-﻿using Dima.Core.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Dima.Core.Enums;
+using Dima.Core.Models.Vouchers;
 
 namespace Dima.Api.Data.Mappings
 {

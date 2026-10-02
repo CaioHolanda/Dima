@@ -1,4 +1,4 @@
-﻿using MudBlazor;
+using MudBlazor;
 using MudBlazor.Utilities;
 
 namespace Dima.Web
@@ -6,10 +6,35 @@ namespace Dima.Web
     public static class Configuration
     {
         public const string HttpClientName = "dima";
-        public static string BackendUrl { get; set; } = "http://localhost:5088";
-        public static string StripePublickey { get; set; } = "";
 
-        public static MudTheme Theme= new()
+        public static MudTheme AdminTheme { get; } = new()
+        {
+            Typography = new Typography { Default = new DefaultTypography { FontFamily = ["Raleway", "sans-serif"] } },
+            PaletteLight = new PaletteLight
+            {
+                Primary = new MudColor("#1565C0"),
+                PrimaryContrastText = Colors.Shades.White,
+                Secondary = new MudColor("#0D47A1"),
+                Background = Colors.Gray.Lighten4,
+                AppbarBackground = new MudColor("#90CAF9"),
+                AppbarText = Colors.Shades.Black,
+                TextPrimary = Colors.Shades.Black,
+                DrawerText = Colors.Shades.White,
+                DrawerBackground = new MudColor("#0D47A1")
+            },
+            PaletteDark = new PaletteDark
+            {
+                Primary = new MudColor("#90CAF9"),
+                PrimaryContrastText = Colors.Shades.Black,
+                Secondary = new MudColor("#64B5F6"),
+                AppbarBackground = new MudColor("#90CAF9"),
+                AppbarText = Colors.Shades.Black,
+                DrawerText = Colors.Shades.White,
+                DrawerBackground = new MudColor("#102A43")
+            }
+        };
+
+        public static MudTheme Theme { get; } = new()
         {
             Typography = new Typography
             {

@@ -1,18 +1,36 @@
-﻿@page "/sair"
+@page "/sair"
 @inherits LogoutPage
 @layout HeadlessLayout
 
-<PageTitle>Dima-Sair</PageTitle>
+<PageTitle>Dima - Sair</PageTitle>
 
-<MudText Typo="Typo.h3">Finalizando a sessao...</MudText>
-<MudPaper Class="pa-8 mt-4">
-    <div class="d-flex justify-content-center pb-8 pt-8">
-        <img src="imgs/dima.png" alt="Dima-Seu Controle Financeiro" width="200"
-    </div>
-    <MudAlert Severity="Severity.Info">
-        <div>
-            Sessao finalizada...
-            <MudButton Variant="Variant.Text" Href="/"> IR PARA A TELA DE LOGIN</MudButton>
-        </div>
-    </MudAlert>
-</MudPaper>
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" sm="12" md="8" lg="6" xl="6" xxl="6">
+        <MudPaper Class="mud-width-full pa-8">
+            <div class="d-flex justify-center pb-8 pt-8">
+                <img src="imgs/dima.png" alt="Dima - Seu controle financeiro" width="200" />
+            </div>
+            <div role="status" aria-live="polite" aria-busy="@(IsBusy ? "true" : "false")">
+                @if (IsBusy)
+                {
+                    <MudText Typo="Typo.h5">Finalizando a sessão...</MudText>
+                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-4" />
+                }
+                else if (HasError)
+                {
+                    <MudAlert Severity="Severity.Error">
+                        Não foi possível confirmar a saída. Tente novamente.
+                    </MudAlert>
+                    <MudButton OnClick="LogoutAsync" Variant="Variant.Filled"
+                               Color="Color.Primary" Class="mt-4">Tentar novamente</MudButton>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success">Sessão finalizada.</MudAlert>
+                    <MudButton Href="/login" Variant="Variant.Filled"
+                               Color="Color.Primary" Class="mt-4">Ir para a tela de login</MudButton>
+                }
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>

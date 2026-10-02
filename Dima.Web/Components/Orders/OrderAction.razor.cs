@@ -1,7 +1,10 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Enums;
+using Dima.Core.Common.Time;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Payment;
+using Dima.Web.Handlers;
 using Dima.Web.Pages.Orders;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
@@ -11,6 +14,44 @@ namespace Dima.Web.Components.Orders
 {
     public partial class OrderActionComponent:ComponentBase
     {
+        #region Properties
+        public bool CanRequestRefund
+        {
+            get
+            {
+                // Pedido gratuito não possui pagamento
+                // financeiro para ser reembolsado.
+                if (Order.Gateway ==
+                        EPaymentGateway.NotApplicable ||
+                    Order.Total <= 0m)
+                {
+                    return false;
+                }
+
+                if (Order.Status != EOrderStatus.Paid)
+                    return false;
+
+                if (Order.AccessStartsAt is null)
+                    return false;
+
+                var now = Clock.GetUtcNow().UtcDateTime;
+
+                // Plano futuro ainda não iniciado:
+                // reembolso integral permitido.
+                if (!RefundTimeRules.HasAccessStarted(Order.AccessStartsAt.Value, now))
+                    return true;
+
+                // Plano já iniciado:
+                // precisa ter data de pagamento
+                // e estar dentro dos 14 dias.
+                if (Order.PaidAt is null)
+                    return false;
+
+                return RefundTimeRules.IsWithinWindow(Order.PaidAt.Value, now);
+            }
+        }
+        #endregion
+
         #region Parameters
         [CascadingParameter] public DetailsPage Parent { get; set; } = null!;
 
@@ -21,10 +62,11 @@ namespace Dima.Web.Components.Orders
 
         #region Services
 
+        [Inject] public TimeProvider Clock { get; set; } = null!;
         [Inject] public IDialogService DialogService { get; set; } = null!;
         [Inject] public IJSRuntime JsRuntime { get; set; } = null!;
         [Inject] public IOrderHandler OrderHandler { get; set; } = null!;
-        [Inject] public IPaymentHandler PaymentHandler { get; set; } = null!;
+        [Inject] public IPaymentCheckoutClient PaymentHandler { get; set; } = null!;
         [Inject] public ISnackbar Snackbar { get; set; } = null!;
 
         #endregion
@@ -49,13 +91,28 @@ namespace Dima.Web.Components.Orders
 
         public async void OnRefundButtonClicked()
         {
-            bool? result = await DialogService.ShowMessageBoxAsync("ATENCAO",
-                                                "Confirma estorno?",
-                                                yesText: "SIM",
-                                                cancelText: "NAO");
-            if (result is not null && result == true)
-                await RefundOrderAsync();
+            var options = new DialogOptions
+            {
+                CloseButton = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
 
+            var dialog = await DialogService.ShowAsync<RefundDialog>(
+                "Solicitar reembolso",
+                options);
+
+            var result = await dialog.Result;
+
+            if (result is null || result.Canceled)
+                return;
+
+            if (result.Data is not RefundDialogResult refundData)
+                return;
+
+            await RefundOrderAsync(
+                refundData.Reason,
+                refundData.Details);
         }
         #endregion
 
@@ -71,7 +128,13 @@ namespace Dima.Web.Components.Orders
             if (result.IsSuccess)
                 Parent.RefreshState(result.Data!);
             else
-                Snackbar.Add(result.Message, Severity.Error);
+            {
+                Snackbar.Add(
+                    result.Message,
+                    result.Code == 409
+                        ? Severity.Warning
+                        : Severity.Error);
+            }
         }
 
         private async Task PayOrderAsync()
@@ -88,14 +151,14 @@ namespace Dima.Web.Components.Orders
                     Snackbar.Add(result.Message, Severity.Error);
                     return;
                 }
-                if (result.Data is null)
+                if (result.Data is null || string.IsNullOrWhiteSpace(result.Data.RedirectUrl))
                 {
                     Snackbar.Add(result.Message, Severity.Error);
                     return;
                 }
                 await JsRuntime.InvokeVoidAsync(
                     "checkout",
-                    result.Data);
+                    result.Data.RedirectUrl);
             }
             catch (JSException ex)
             {
@@ -107,17 +170,31 @@ namespace Dima.Web.Components.Orders
             }
         }
 
-        private async Task RefundOrderAsync()
+        private async Task RefundOrderAsync(
+            ERefundReason reason,
+            string? details)
         {
             var request = new RefundOrderRequest
             {
-                Id = Order.Id
+                Id = Order.Id,
+                RefundReason = reason,
+                RefundReasonDetails = details
             };
+
             var result = await OrderHandler.RefundAsync(request);
+
             if (result.IsSuccess)
+            {
                 Parent.RefreshState(result.Data!);
+            }
             else
-                Snackbar.Add(result.Message, Severity.Error);
+            {
+                Snackbar.Add(
+                    result.Message,
+                    result.Code == 409
+                        ? Severity.Warning
+                        : Severity.Error);
+            }
         }
         #endregion
 

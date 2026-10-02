@@ -1,25 +1,38 @@
-﻿using Dima.Core.Enums;
-using Dima.Core.Handlers;
+﻿using Dima.Core.Handlers;
 using Dima.Core.Models;
-using Dima.Core.Requests.Order;
+using Dima.Core.Models.Vouchers;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using Dima.Core.Requests.Vouchers;
+using Dima.Core.Requests.Order;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace Dima.Web.Pages.Orders
 {
     public partial class CheckoutoutPage :ComponentBase
     {
         #region Parameters
+
         [Parameter] public string ProductSlug { get; set; } = string.Empty;
         [SupplyParameterFromQuery(Name ="voucher")] public string? VoucherCode { get; set; }
+
+
         #endregion
 
         #region Properties
         public bool IsBusy { get; set; }
         public bool IsValid { get; set; }
         public Product? Product { get; set; }
-        public Voucher? Voucher { get; set; }
-        public decimal Total { get; set; }
+        public VoucherApplication? AppliedVoucher { get; set; }
+        public bool IsApplyingVoucher { get; set; }
+        public decimal DiscountAmount =>
+            AppliedVoucher?.DiscountAmount ?? 0m;
+
+        public decimal Total =>
+            AppliedVoucher?.Total ??
+            Product?.Price ??
+            0m;
+
         #endregion
 
         #region Services
@@ -31,7 +44,85 @@ namespace Dima.Web.Pages.Orders
         #endregion
 
         #region Methods
+        public async Task ApplyVoucherAsync(
+                bool showSuccessMessage = true)
+        {
+            if (Product is null ||
+                string.IsNullOrWhiteSpace(VoucherCode) ||
+                IsApplyingVoucher)
+            {
+                return;
+            }
 
+            IsApplyingVoucher = true;
+            AppliedVoucher = null;
+
+            try
+            {
+                var result = await VoucherHandler.ApplyAsync(
+                    new ApplyVoucherRequest
+                    {
+                        Code = VoucherCode,
+                        ProductId = Product.Id
+                    });
+
+                if (!result.IsSuccess || result.Data is null)
+                {
+                    Snackbar.Add(
+                        result.Message,
+                        Severity.Warning);
+
+                    return;
+                }
+
+                AppliedVoucher = result.Data;
+                VoucherCode = result.Data.Code;
+
+                if (showSuccessMessage)
+                {
+                    Snackbar.Add(
+                        result.Message,
+                        Severity.Success);
+                }
+            }
+            catch
+            {
+                Snackbar.Add(
+                    "[E236] Não foi possível aplicar o voucher",
+                    Severity.Error);
+            }
+            finally
+            {
+                IsApplyingVoucher = false;
+            }
+        }
+
+        public async Task OnVoucherAdornmentClickAsync()
+        {
+            if (AppliedVoucher is not null)
+            {
+                RemoveVoucher();
+                return;
+            }
+
+            await ApplyVoucherAsync();
+        }
+
+        public async Task OnVoucherKeyDownAsync(
+            KeyboardEventArgs args)
+        {
+            if (args.Key == "Enter" &&
+                AppliedVoucher is null)
+            {
+                await ApplyVoucherAsync();
+            }
+        }
+
+        public void RemoveVoucher()
+        {
+            AppliedVoucher = null;
+            VoucherCode = string.Empty;
+        }
         protected override async Task OnInitializedAsync()
         {
             IsValid = false;
@@ -65,65 +156,14 @@ namespace Dima.Web.Pages.Orders
                 return;
             }
 
-            // Recupera o voucher, quando informado
+            // Aplica o voucher recebido pela query string
             if (!string.IsNullOrWhiteSpace(VoucherCode))
             {
-                try
-                {
-                    var result = await VoucherHandler.GetByCodeAsync(
-                        new GetVoucherByCodeRequest
-                        {
-                            Code = VoucherCode
-                        });
-
-                    if (!result.IsSuccess || result.Data is null)
-                    {
-                        Voucher = null;
-                        VoucherCode = string.Empty;
-
-                        Snackbar.Add(
-                            "[E076] Não foi possível obter o voucher",
-                            Severity.Warning);
-                    }
-                    else
-                    {
-                        Voucher = result.Data;
-                    }
-                }
-                catch
-                {
-                    Voucher = null;
-                    VoucherCode = string.Empty;
-
-                    Snackbar.Add(
-                        "[E078] Não foi possível obter o voucher",
-                        Severity.Warning);
-                }
+                await ApplyVoucherAsync(showSuccessMessage: false);
             }
 
-            var discount = CalculateDiscount(Product.Price, Voucher);
-            Total = Product.Price - discount;
 
             IsValid = true;
-        }
-        protected static decimal CalculateDiscount(
-            decimal price,
-            Voucher? voucher)
-        {
-            if (voucher is null)
-                return 0;
-
-            var discount = voucher.DiscountType switch
-            {
-                EVoucherDiscountType.FixedAmount => voucher.Value,
-
-                EVoucherDiscountType.Percentage =>
-                    price * voucher.Value / 100,
-
-                _ => 0
-            };
-
-            return Math.Min(price, discount);
         }
         public async Task OnValidSubmitAsync()
         {
@@ -143,7 +183,7 @@ namespace Dima.Web.Pages.Orders
                 var request = new CreateOrderRequest
                 {
                     ProductId = Product.Id,
-                    VoucherId = Voucher?.Id
+                    VoucherId = AppliedVoucher?.VoucherId
                 };
 
                 var result = await OrderHandler.CreateAsync(request);
@@ -155,7 +195,11 @@ namespace Dima.Web.Pages.Orders
                 }
                 else
                 {
-                    Snackbar.Add(result.Message, Severity.Error);
+                    Snackbar.Add(
+                        result.Message,
+                        result.Code == 409
+                            ? Severity.Warning
+                            : Severity.Error);
                 }
             }
             catch (Exception ex)

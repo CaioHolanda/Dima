@@ -22,6 +22,60 @@ namespace Dima.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Dima.Api.Models.AdminAuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ActorName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("OccurredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Operation")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("TargetId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OccurredAtUtc");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.ToTable("AdminAuditLog", (string)null);
+                });
+
             modelBuilder.Entity("Dima.Api.Models.User", b =>
                 {
                     b.Property<long>("Id")
@@ -93,6 +147,23 @@ namespace Dima.Api.Migrations
                     b.ToTable("IdentityUser", (string)null);
                 });
 
+            modelBuilder.Entity("Dima.Api.Models.UserSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LastActivityUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserSessions");
+                });
+
             modelBuilder.Entity("Dima.Core.Models.Category", b =>
                 {
                     b.Property<long>("Id")
@@ -128,6 +199,9 @@ namespace Dima.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
+                    b.Property<int>("AccessDurationMonths")
+                        .HasColumnType("INT");
+
                     b.Property<DateTime?>("AccessEndsAt")
                         .HasColumnType("DATETIME2");
 
@@ -140,11 +214,17 @@ namespace Dima.Api.Migrations
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("DECIMAL(18,2)");
 
+                    b.Property<DateTimeOffset?>("ExpiredAt")
+                        .HasColumnType("DATETIMEOFFSET");
+
+                    b.Property<DateTimeOffset?>("ExpiresAt")
+                        .HasColumnType("DATETIMEOFFSET");
+
                     b.Property<string>("ExternalReference")
                         .HasMaxLength(60)
                         .HasColumnType("NVARCHAR");
 
-                    b.Property<short>("Gateway")
+                    b.Property<short?>("Gateway")
                         .HasColumnType("SMALLINT");
 
                     b.Property<string>("Number")
@@ -155,8 +235,41 @@ namespace Dima.Api.Migrations
                     b.Property<decimal>("OriginalPrice")
                         .HasColumnType("DECIMAL(18,2)");
 
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("DATETIME2");
+
+                    b.Property<DateTimeOffset?>("PaymentSessionExpiresAt")
+                        .HasColumnType("DATETIMEOFFSET");
+
+                    b.Property<string>("PaymentSessionId")
+                        .HasMaxLength(255)
+                        .HasColumnType("NVARCHAR");
+
                     b.Property<long>("ProductId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("RefundFailureReason")
+                        .HasMaxLength(100)
+                        .HasColumnType("NVARCHAR");
+
+                    b.Property<short?>("RefundReason")
+                        .HasColumnType("SMALLINT");
+
+                    b.Property<string>("RefundReasonDetails")
+                        .HasColumnType("NVARCHAR(500)");
+
+                    b.Property<string>("RefundReference")
+                        .HasMaxLength(60)
+                        .HasColumnType("NVARCHAR");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("DATETIME2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<short>("Status")
                         .HasColumnType("SMALLINT");
@@ -170,8 +283,18 @@ namespace Dima.Api.Migrations
                     b.Property<long>("UserId")
                         .HasColumnType("BIGINT");
 
+                    b.Property<string>("VoucherCodeSnapshot")
+                        .HasMaxLength(20)
+                        .HasColumnType("VARCHAR");
+
+                    b.Property<short?>("VoucherDiscountTypeSnapshot")
+                        .HasColumnType("SMALLINT");
+
                     b.Property<long?>("VoucherId")
                         .HasColumnType("bigint");
+
+                    b.Property<decimal?>("VoucherValueSnapshot")
+                        .HasColumnType("DECIMAL(18,2)");
 
                     b.HasKey("Id");
 
@@ -184,8 +307,29 @@ namespace Dima.Api.Migrations
 
                     b.HasIndex("VoucherId");
 
+                    b.HasIndex(new[] { "ExpiresAt" }, "IX_Order_WaitingPayment_ExpiresAt")
+                        .HasFilter("[Status] = 1 AND [ExpiresAt] IS NOT NULL");
+
+                    b.HasIndex(new[] { "ExternalReference" }, "UX_Order_ExternalReference")
+                        .IsUnique()
+                        .HasFilter("[ExternalReference] IS NOT NULL");
+
+                    b.HasIndex(new[] { "PaymentSessionId" }, "UX_Order_PaymentSessionId")
+                        .IsUnique()
+                        .HasFilter("[PaymentSessionId] IS NOT NULL");
+
+                    b.HasIndex(new[] { "RefundReference" }, "UX_Order_RefundReference")
+                        .IsUnique()
+                        .HasFilter("[RefundReference] IS NOT NULL");
+
+                    b.HasIndex(new[] { "UserId" }, "UX_Order_UserId_WaitingPayment")
+                        .IsUnique()
+                        .HasFilter("[Status] = 1");
+
                     b.ToTable("Order", null, t =>
                         {
+                            t.HasCheckConstraint("CK_Order_AccessDurationMonths_Positive", "[AccessDurationMonths] > 0");
+
                             t.HasCheckConstraint("CK_Order_AccessPeriod", "[AccessStartsAt] IS NULL OR [AccessEndsAt] IS NULL OR [AccessEndsAt] > [AccessStartsAt]");
 
                             t.HasCheckConstraint("CK_Order_DiscountAmount_NonNegative", "[DiscountAmount] >= 0");
@@ -197,6 +341,12 @@ namespace Dima.Api.Migrations
                             t.HasCheckConstraint("CK_Order_Total_Calculation", "[Total] = [OriginalPrice] - [DiscountAmount]");
 
                             t.HasCheckConstraint("CK_Order_Total_NonNegative", "[Total] >= 0");
+
+                            t.HasCheckConstraint("CK_Order_VoucherSnapshot_Consistency", "(\r\n    [VoucherId] IS NULL\r\n    AND [VoucherCodeSnapshot] IS NULL\r\n    AND [VoucherDiscountTypeSnapshot] IS NULL\r\n    AND [VoucherValueSnapshot] IS NULL\r\n)\r\nOR\r\n(\r\n    [VoucherId] IS NOT NULL\r\n    AND [VoucherCodeSnapshot] IS NOT NULL\r\n    AND [VoucherDiscountTypeSnapshot] IS NOT NULL\r\n    AND [VoucherValueSnapshot] IS NOT NULL\r\n)");
+
+                            t.HasCheckConstraint("CK_Order_VoucherSnapshot_DiscountType", "[VoucherDiscountTypeSnapshot] IS NULL\r\nOR [VoucherDiscountTypeSnapshot] IN (1, 2)");
+
+                            t.HasCheckConstraint("CK_Order_VoucherSnapshot_Value", "[VoucherValueSnapshot] IS NULL\r\nOR [VoucherValueSnapshot] > 0");
                         });
                 });
 
@@ -208,7 +358,7 @@ namespace Dima.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
-                    b.Property<int?>("AccessDurationMonths")
+                    b.Property<int>("AccessDurationMonths")
                         .HasColumnType("INT");
 
                     b.Property<string>("Description")
@@ -233,9 +383,13 @@ namespace Dima.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Product_Slug");
+
                     b.ToTable("Product", null, t =>
                         {
-                            t.HasCheckConstraint("CK_Product_AccessDurationMonths_Positive", "[AccessDurationMonths] IS NULL OR [AccessDurationMonths] > 0");
+                            t.HasCheckConstraint("CK_Product_AccessDurationMonths_Positive", "[AccessDurationMonths] > 0");
                         });
                 });
 
@@ -349,7 +503,7 @@ namespace Dima.Api.Migrations
                     b.ToTable("Transaction", (string)null);
                 });
 
-            modelBuilder.Entity("Dima.Core.Models.Voucher", b =>
+            modelBuilder.Entity("Dima.Core.Models.Vouchers.Voucher", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -428,7 +582,7 @@ namespace Dima.Api.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Dima.Core.Models.VoucherRedemption", b =>
+            modelBuilder.Entity("Dima.Core.Models.Vouchers.VoucherRedemption", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -625,7 +779,7 @@ namespace Dima.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Dima.Core.Models.Voucher", "Voucher")
+                    b.HasOne("Dima.Core.Models.Vouchers.Voucher", "Voucher")
                         .WithMany()
                         .HasForeignKey("VoucherId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -646,7 +800,7 @@ namespace Dima.Api.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("Dima.Core.Models.Voucher", b =>
+            modelBuilder.Entity("Dima.Core.Models.Vouchers.Voucher", b =>
                 {
                     b.HasOne("Dima.Api.Models.User", null)
                         .WithMany()
@@ -661,11 +815,11 @@ namespace Dima.Api.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("Dima.Core.Models.VoucherRedemption", b =>
+            modelBuilder.Entity("Dima.Core.Models.Vouchers.VoucherRedemption", b =>
                 {
                     b.HasOne("Dima.Core.Models.Order", "Order")
                         .WithOne()
-                        .HasForeignKey("Dima.Core.Models.VoucherRedemption", "OrderId")
+                        .HasForeignKey("Dima.Core.Models.Vouchers.VoucherRedemption", "OrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -675,7 +829,7 @@ namespace Dima.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Dima.Core.Models.Voucher", "Voucher")
+                    b.HasOne("Dima.Core.Models.Vouchers.Voucher", "Voucher")
                         .WithMany("Redemptions")
                         .HasForeignKey("VoucherId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -737,7 +891,7 @@ namespace Dima.Api.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Dima.Core.Models.Voucher", b =>
+            modelBuilder.Entity("Dima.Core.Models.Vouchers.Voucher", b =>
                 {
                     b.Navigation("Redemptions");
                 });

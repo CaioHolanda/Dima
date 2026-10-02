@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Components.Web;
+﻿using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Dima.Web;
 using MudBlazor.Services;
@@ -8,31 +8,45 @@ using Dima.Core.Handlers;
 using Dima.Web.Handlers;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
-Configuration.BackendUrl=builder.Configuration.GetValue<string>("BackendUrl")??string.Empty;
-Configuration.StripePublickey=builder.Configuration.GetValue<string>("StripePublicKey")??string.Empty;
+var configuredBackendUrl =
+    builder.Configuration.GetValue<string>("BackendUrl");
+
+configuredBackendUrl = string.IsNullOrWhiteSpace(configuredBackendUrl)
+    ? "http://localhost:5088" : configuredBackendUrl.Trim();
 
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped<CookieHandler>();
+builder.Services.AddSingleton<SessionSignals>();
+builder.Services.AddTransient<RequestCorrelationHandler>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddMudServices();
+builder.Services.AddScoped<ThemeState>();
 
-var backendUrl = builder.HostEnvironment.IsDevelopment()
-    ? Configuration.BackendUrl
-    : $"{builder.HostEnvironment.BaseAddress}api/";
+var configuredAddress =
+    builder.HostEnvironment.IsDevelopment()
+        ? configuredBackendUrl
+        : builder.HostEnvironment.BaseAddress;
+
+var backendUrl =
+    NormalizeApiBaseAddress(configuredAddress);
+
+Console.WriteLine($"API BASE ADDRESS: {backendUrl}");
 
 builder.Services
     .AddHttpClient(Configuration.HttpClientName, opt =>
     {
-        opt.BaseAddress = new Uri(backendUrl);
+        opt.BaseAddress = backendUrl;
     })
+    .AddHttpMessageHandler<RequestCorrelationHandler>()
     .AddHttpMessageHandler<CookieHandler>();
 
 builder.Services.AddTransient<IAccountHandler,      AccountHandler      >();
 builder.Services.AddTransient<ITransactionHandler,  TransactionHandler  >();
 builder.Services.AddTransient<IOrderHandler,        OrderHandler        >();
-builder.Services.AddTransient<IPaymentHandler,      StripePaymentHandler>(); 
+builder.Services.AddTransient<IPaymentCheckoutClient, StripePaymentHandler>();
 builder.Services.AddTransient<IProductHandler,      ProductHandler      >();
 builder.Services.AddTransient<IVoucherHandler,      VoucherHandler      >();
 builder.Services.AddTransient<ICategoryHandler,     CategoryHandler     >();
@@ -55,3 +69,32 @@ System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = new System.Glob
 
 
 await builder.Build().RunAsync();
+static Uri NormalizeApiBaseAddress(string address)
+{
+    if (!Uri.TryCreate(
+            address.Trim(),
+            UriKind.Absolute,
+            out var uri))
+    {
+        throw new InvalidOperationException(
+            $"BackendUrl inválido: '{address}'");
+    }
+
+    var path = uri.AbsolutePath.TrimEnd('/');
+
+    while (path.EndsWith(
+        "/api",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        path = path[..^4].TrimEnd('/');
+    }
+
+    var normalizedUri = new UriBuilder(uri)
+    {
+        Path = $"{path}/api/",
+        Query = string.Empty,
+        Fragment = string.Empty
+    };
+
+    return normalizedUri.Uri;
+}

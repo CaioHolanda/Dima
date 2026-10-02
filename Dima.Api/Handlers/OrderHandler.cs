@@ -1,20 +1,56 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Common.Api;
 using Dima.Api.Data;
+using Dima.Core.Common;
+using Dima.Core.Common.Time;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
+using Dima.Api.Services;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Payment;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Immutable;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using Microsoft.EntityFrameworkCore.Storage;
+using Dima.Api.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Dima.Api.Handlers
 {
     public class OrderHandler(
         AppDbContext context,
-        IPaymentHandler paymentHandler) : IOrderHandler,IOrderPaymentConfirmationHandler
+        IPaymentHandler paymentHandler,
+        VoucherEligibilityService eligibilityService,
+        IOptions<OrderExpirationOptions> expirationOptions,
+        TimeProvider timeProvider,
+        BusinessTime businessTime, ILogger<OrderHandler>? logger = null,
+        IOrderExpirationScheduler? expirationScheduler = null,
+        OrderExpirationService? expirationService = null)
+        : IOrderHandler,
+          IOrderPaymentConfirmationHandler
     {
+        private readonly ILogger<OrderHandler> _logger = logger ?? NullLogger<OrderHandler>.Instance;
+
+        #region Constants
+        private const string PendingOrderMessage =
+            "[E175] Você já possui um pedido aguardando pagamento. " +
+            "Acesse Meus pedidos para concluir ou cancelar esse pedido.";
+        private const string ConcurrentOrderUpdateMessage =
+            "[E247] O pedido foi atualizado durante esta operação. " +
+            "Atualize a página para verificar a situação atual.";
+        private const string PaymentAlreadyLinkedMessage =
+            "[E248] Esta referência de pagamento já está associada a outro pedido.";
+        private const string ConcurrentOrderCreationMessage =
+            "[E250] Outra solicitação foi processada ao mesmo tempo. " +
+            "Consulte Meus pedidos e tente novamente.";
+        private const string RefundAlreadyLinkedMessage =
+            "[E251] Esta referência de reembolso já está associada a outro pedido.";
+        #endregion
         public async Task<Response<Order?>> CancelAsync(CancelOrderRequest request)
         {
             Order? order;
@@ -39,42 +75,25 @@ namespace Dima.Api.Handlers
                 if (order is null)
                     return new Response<Order?>(null, 404, "[E035] Pedido nao encontrado");
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(null, 404, "[E036] Falha ao obter o pedido");
             }
-            switch(order.Status)
-            {
-                case EOrderStatus.Canceled:
-                    return new Response<Order?>(order, 400, "[E037] Pedido ja cancelado");
-                case EOrderStatus.WaintingPayment:
-                    break;
-                case EOrderStatus.Paid:
-                    return new Response<Order?>(order, 400, "[E038] Pedido ja pago nao pode ser cancelado");
-                case EOrderStatus.Refunded:
-                    return new Response<Order?>(order, 400, "[E039] Pedido ja reembolsado nao pode ser cancelado");
-                default:
-                    return new Response<Order?>(order, 400, "[E040] Pedido nao pode ser cancelado");
-            }
-            order.Status = EOrderStatus.Canceled;
-            order.UpdatedAt = DateTime.Now;
-
-            // Segunda analise: Podendo ser cancelado atualiza o banco
-            try
-            {
-                context.Orders.Update(order);
-                await context.SaveChangesAsync();
-            }
-            catch 
-            {
-                return new Response<Order?>(order, 500, "[E041] Nao foi possivel cancelar seu pedido");
-            }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} cancelado com sucesso");
+            // Ownership was checked above. Use the same checkout/expiry/concurrency
+            // safeguards as administrative cancellation before releasing a voucher.
+            var service = expirationService ?? new OrderExpirationService(
+                context, paymentHandler, timeProvider, NullLogger<OrderExpirationService>.Instance);
+            var result = await service.CancelAsync(order.Id);
+            return new Response<Order?>(result.IsSuccess ? order : null, result.Code, result.Message);
         }
 
         public async Task<Response<Order?>> ConfirmPaymentAsync(
             string orderNumber,
-            string externalReference)
+            string externalReference,
+            long amountReceived,
+            string currency,
+            string paymentUserId)
         {
             Order? order;
 
@@ -92,8 +111,9 @@ namespace Dima.Api.Handlers
                         "[E201] Pedido nao encontrado");
                 }
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     null,
                     500,
@@ -107,7 +127,42 @@ namespace Dima.Api.Handlers
                     400,
                     "[E205] Referencia externa do pagamento nao informada");
             }
+            if (!long.TryParse(paymentUserId, out var stripeUserId))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E208] Identificacao do usuario no pagamento invalida");
+            }
 
+            if (stripeUserId != order.UserId)
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E209] Pagamento nao pertence ao usuario do pedido");
+            }
+            var expectedAmount = (long)Math.Round(
+                                    order.Total * 100,
+                                    0);
+
+            if (amountReceived != expectedAmount)
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E210] Valor recebido nao corresponde ao valor do pedido");
+            }
+            if (!string.Equals(
+                    currency,
+                    "brl",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E211] Moeda do pagamento nao corresponde a moeda do pedido");
+            }
             if (order.Status == EOrderStatus.Paid)
             {
                 if (order.ExternalReference == externalReference)
@@ -124,7 +179,7 @@ namespace Dima.Api.Handlers
                     "[E206] Pedido ja pago com outra referencia externa");
             }
 
-            if (order.Status != EOrderStatus.WaintingPayment)
+            if (order.Status != EOrderStatus.WaitingPayment)
             {
                 return new Response<Order?>(
                     order,
@@ -133,12 +188,63 @@ namespace Dima.Api.Handlers
             }
 
 
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+
+            VoucherRedemption? redemption = null;
+
+            if (order.VoucherId is not null)
+            {
+                try
+                {
+                    redemption = await context
+                        .VoucherRedemptions
+                        .FirstOrDefaultAsync(x =>
+                            x.OrderId == order.Id);
+
+                    if (redemption is null)
+                    {
+                        // Compatibilidade com pedidos pendentes
+                        // criados antes da implementação da DT-06.
+                        redemption = new VoucherRedemption
+                        {
+                            VoucherId = order.VoucherId.Value,
+                            OrderId = order.Id,
+                            UserId = order.UserId,
+
+                            Status =
+                                EVoucherRedemptionStatus.Redeemed,
+
+                            ReservedAt = order.CreatedAt,
+                            RedeemedAt = now
+                        };
+
+                        await context.VoucherRedemptions
+                            .AddAsync(redemption);
+                    }
+                    else
+                    {
+                        redemption.Status =
+                            EVoucherRedemptionStatus.Redeemed;
+
+                        redemption.RedeemedAt ??= now;
+                        redemption.ReleasedAt = null;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogOperationError(exception);
+                    return new Response<Order?>(
+                        order,
+                        500,
+                        "[E238] Falha ao atualizar o resgate do voucher");
+                }
+            }
 
             order.Status = EOrderStatus.Paid;
-            order.ExternalReference = externalReference;
-            order.UpdatedAt = DateTime.Now;
 
-            var now = DateTime.Now;
+            order.ExternalReference = externalReference;
+            order.PaidAt = now;
+            order.UpdatedAt = now;
 
             var currentAccessEndsAt = await context.Orders
                 .AsNoTracking()
@@ -154,31 +260,294 @@ namespace Dima.Api.Handlers
             order.AccessStartsAt = accessStartsAt;
 
             order.AccessEndsAt =
-                order.Product.AccessDurationMonths.HasValue
-                    ? accessStartsAt.AddMonths(
-                        order.Product.AccessDurationMonths.Value)
-                    : null;
+                accessStartsAt.AddMonths(
+                    order.AccessDurationMonths);
 
             try
             {
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
             }
-            catch
+            catch (DbUpdateConcurrencyException)
             {
+                // Descarta as entidades com valores anteriores ao conflito.
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.Number == orderNumber);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogOperationError(exception);
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E204] Falha ao confirmar pagamento");
+                }
+
+                // Outro processamento já confirmou exatamente
+                // o mesmo pagamento.
+                if (currentOrder?.Status == EOrderStatus.Paid &&
+                    string.Equals(
+                        currentOrder.ExternalReference,
+                        externalReference,
+                        StringComparison.Ordinal))
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Pedido {currentOrder.Number} já confirmado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
+            }
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    (sqlException.Number is 2601 or 2627) &&
+                    sqlException.Message.Contains(
+                        "UX_Order_ExternalReference",
+                        StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    PaymentAlreadyLinkedMessage);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(
                     order,
                     500,
                     "[E204] Falha ao confirmar pagamento");
             }
-
             return new Response<Order?>(
                 order,
                 200,
                 $"Pedido {order.Number} pago com sucesso");
         }
 
-        public async Task<Response<Order?>> CreateAsync(CreateOrderRequest request)
+        public async Task<Response<Order?>> ConfirmRefundAsync(
+            string paymentIntentId,
+            string refundId,
+            string refundStatus,
+            string? failureReason)
+        {
+            Order? order;
+
+            try
+            {
+                order = await context
+                    .Orders
+                    .FirstOrDefaultAsync(x =>
+                        x.ExternalReference == paymentIntentId);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E221] Falha ao buscar pedido para confirmacao do reembolso");
+            }
+
+            if (order is null)
+            {
+                return new Response<Order?>(
+                    null,
+                    404,
+                    "[E222] Pedido associado ao pagamento nao encontrado");
+            }
+
+            if (string.IsNullOrWhiteSpace(order.RefundReference))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E223] Referencia de reembolso nao encontrada no pedido");
+            }
+
+            if (!string.Equals(
+                    order.RefundReference,
+                    refundId,
+                    StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    order,
+                    409,
+                    "[E224] Referencia de reembolso nao corresponde ao pedido");
+            }
+            if (refundStatus is not ("succeeded" or "pending" or "requires_action" or "failed" or "canceled"))
+                return new Response<Order?>(order, 400,
+                    $"[E225] Status de reembolso desconhecido: {refundStatus}");
+
+            // Stripe can report succeeded before an asynchronous failure. Failure is
+            // terminal for this refund ID; delayed pending/succeeded must not revive it.
+            var refundFailed = order.Status == EOrderStatus.Paid
+                && !string.IsNullOrWhiteSpace(order.RefundFailureReason);
+            var refundSucceeded = order.Status == EOrderStatus.Refunded;
+            if (refundFailed || (refundSucceeded && refundStatus is not ("failed" or "canceled")))
+            {
+                return new Response<Order?>(
+                    order,
+                    200,
+                    $"Reembolso do pedido {order.Number} já possui estado final. " +
+                    $"Evento {refundStatus} ignorado.");
+            }
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+
+            switch (refundStatus)
+            {
+                case "succeeded":
+                    order.Status = EOrderStatus.Refunded;
+                    order.RefundedAt ??= now;
+                    order.RefundFailureReason = null;
+                    break;
+
+                case "pending":
+                case "requires_action":
+                    order.Status = EOrderStatus.RefundPending;
+                    break;
+
+                case "failed":
+                case "canceled":
+                    order.Status = EOrderStatus.Paid;
+                    order.RefundedAt = null;
+                    order.RefundFailureReason =
+                        string.IsNullOrWhiteSpace(failureReason)
+                            ? refundStatus
+                            : failureReason;
+                    break;
+
+                default:
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        $"[E225] Status de reembolso desconhecido: {refundStatus}");
+            }
+
+            order.UpdatedAt = now;
+
+            try
+            {
+                context.Orders.Update(order);
+                await context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.ExternalReference == paymentIntentId);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogOperationError(exception);
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E226] Falha ao atualizar estado do reembolso");
+                }
+
+                var expectedStatus = refundStatus switch
+                {
+                    "succeeded" => EOrderStatus.Refunded,
+
+                    "pending" or "requires_action"
+                        => EOrderStatus.RefundPending,
+
+                    "failed" or "canceled"
+                        => EOrderStatus.Paid,
+
+                    _ => order.Status
+                };
+
+                if (currentOrder is not null &&
+                    string.Equals(
+                        currentOrder.RefundReference,
+                        refundId,
+                        StringComparison.Ordinal) &&
+                    currentOrder.Status == expectedStatus)
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Reembolso do pedido {currentOrder.Number} " +
+                        "já atualizado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
+                return new Response<Order?>(
+                    order,
+                    500,
+                    "[E226] Falha ao atualizar estado do reembolso");
+            }
+
+            return new Response<Order?>(
+                order,
+                200,
+                $"Reembolso do pedido {order.Number} atualizado para {refundStatus}");
+        }
+
+        public async Task<Response<Order?>> CreateAsync(
+            CreateOrderRequest request)
+        {
+            try
+            {
+                return await CreateWithinTransactionAsync(request);
+            }
+            catch (DbUpdateException ex) when (
+                ex.InnerException is SqlException sqlException &&
+                sqlException.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (SqlException ex) when (
+                ex.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (Exception ex) when (
+                    IsSqlDeadlock(ex))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+        }
+
+        private async Task<Response<Order?>>
+            CreateWithinTransactionAsync(
+                CreateOrderRequest request)
         {
             var userId = await GetUserIdAsync(request.UserId);
             if (userId is null)
@@ -186,22 +555,43 @@ namespace Dima.Api.Handlers
                     null,
                     404,
                     "[E167] Usuario nao encontrado");
+            IDbContextTransaction? transaction = null;
 
-            var now = DateTime.Now;
+            try
+            {
+                if (context.Database.IsRelational())
+                {
+                    transaction = await context.Database
+                        .BeginTransactionAsync(
+                            IsolationLevel.Serializable);
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E249] Não foi possível iniciar o processamento do pedido");
+            }
+
+            await using var transactionScope = transaction;
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             // Já existe um pedido aguardando pagamento?
             var hasPendingOrder = await context.Orders
                 .AsNoTracking()
                 .AnyAsync(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.WaintingPayment);
+                    x.Status == EOrderStatus.WaitingPayment);
 
             if (hasPendingOrder)
             {
                 return new Response<Order?>(
                     null,
-                    400,
-                    "[E175] Já existe um pedido aguardando pagamento");
+                    409,
+                    PendingOrderMessage);
             }
 
             // Já existe um plano futuro pago/agendado?
@@ -209,7 +599,8 @@ namespace Dima.Api.Handlers
                 .AsNoTracking()
                 .AnyAsync(x =>
                     x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
+                    (x.Status == EOrderStatus.Paid ||
+                     x.Status == EOrderStatus.RefundPending) &&
                     x.AccessStartsAt != null &&
                     x.AccessStartsAt > now);
 
@@ -221,23 +612,6 @@ namespace Dima.Api.Handlers
                     "[E176] Já existe um próximo plano agendado");
             }
 
-            // Existe acesso vitalício já adquirido?
-            var hasLifetimeAccess = await context.Orders
-                .AsNoTracking()
-                .AnyAsync(x =>
-                    x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
-                    x.AccessStartsAt != null &&
-                    x.AccessEndsAt == null);
-
-            if (hasLifetimeAccess)
-            {
-                return new Response<Order?>(
-                    null,
-                    400,
-                    "[E177] O usuário já possui acesso vitalício");
-            }           
-            
             // Produto existe?
             Product? product;
             try
@@ -252,46 +626,78 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(null, 404, "[E041] Produto nao encontrado");
                 context.Attach(product);
             }
-            catch
+            catch (Exception ex) when (IsSqlDeadlock(ex))
             {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
                 return new Response<Order?>(null, 500, "[E042] Nao foi possivel buscar produto");
             }
 
-            // Ha Voucher?
-            Voucher? voucher=null;
+            // Há voucher?
+            Voucher? voucher = null;
+
             try
             {
                 if (request.VoucherId is not null)
                 {
                     var voucherId = request.VoucherId.Value;
 
-                    // 1. Existe algum voucher com este ID?
                     voucher = await context.Vouchers
                         .AsNoTracking()
                         .FirstOrDefaultAsync(x => x.Id == voucherId);
 
                     if (voucher is null)
-                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} nao encontrado");
+                    {
+                        return new Response<Order?>(
+                            null,
+                            400,
+                            $"[E043] Voucher {voucherId} não encontrado");
+                    }
 
-                    // 2. O voucher está ativo?
-                    if (!voucher.IsActive)
-                        return new Response<Order?>(null, 400, $"[E043] Voucher {voucherId} existe, mas esta inativo");
+                    var eligibility =
+                        await eligibilityService.EvaluateAsync(
+                            voucher,
+                            product,
+                            userId.Value,
+                            businessTime.At(new DateTimeOffset(now, TimeSpan.Zero)));
 
-                    // 3. Agora sim, atualiza
-                    voucher.IsActive = false;
-                    context.Vouchers.Update(voucher);
+                    if (!eligibility.IsEligible)
+                    {
+                        return new Response<Order?>(
+                            null,
+                            400,
+                            eligibility.Message);
+                    }
+
+                    context.Attach(voucher);
                 }
             }
-            catch 
+            catch (Exception ex) when (IsSqlDeadlock(ex))
             {
-                return new Response<Order?>(null, 500, "[E045] Falha ao obter o Voucher informado");
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E045] Falha ao obter o voucher informado");
             }
 
             // Se existe produto e ha ou nao voucher cria-se o pedido
             var originalPrice = product.Price;
-            var discountAmount = 0m;
-            var total = originalPrice;
 
+            var discountAmount =
+                VoucherDiscountCalculator.Calculate(
+                    originalPrice,
+                    voucher);
+
+            var total = originalPrice - discountAmount;
+            var createdAtUtc = new DateTimeOffset(now, TimeSpan.Zero);
             var order = new Order
             {
                 UserId = userId.Value,
@@ -300,23 +706,177 @@ namespace Dima.Api.Handlers
                 ProductId = request.ProductId,
 
                 Voucher = voucher,
-                VoucherId = request.VoucherId,
+                VoucherId = voucher?.Id,
+
+                VoucherCodeSnapshot = voucher?.Code,
+                VoucherDiscountTypeSnapshot = voucher?.DiscountType,
+                VoucherValueSnapshot =voucher?.Value,
 
                 OriginalPrice = originalPrice,
                 DiscountAmount = discountAmount,
-                Total = total
+                Total = total,
+
+                AccessDurationMonths =
+                    product.AccessDurationMonths,
+
+                CreatedAt = now,
+                UpdatedAt = now,
+                ExpiresAt = total > 0m
+                    ? createdAtUtc.AddMinutes(
+                        expirationOptions.Value.PendingOrderLifetimeMinutes)
+                    : null,
             };
+            if (total == 0m)
+            {
+                try
+                {
+                    var currentAccessEndsAt =
+                        await context.Orders
+                            .AsNoTracking()
+                            .Where(x =>
+                                x.UserId == userId.Value &&
+                                x.Status == EOrderStatus.Paid &&
+                                x.AccessEndsAt != null &&
+                                x.AccessEndsAt > now)
+                            .MaxAsync(x =>
+                                (DateTime?)x.AccessEndsAt);
+
+                    var accessStartsAt =
+                        currentAccessEndsAt ?? now;
+
+                    order.Status = EOrderStatus.Paid;
+                    order.Gateway =
+                        EPaymentGateway.NotApplicable;
+
+                    order.PaidAt = now;
+                    order.UpdatedAt = now;
+                    order.ExternalReference = null;
+
+                    order.AccessStartsAt =
+                        accessStartsAt;
+
+                    order.AccessEndsAt =
+                        accessStartsAt.AddMonths(
+                        order.AccessDurationMonths);
+                }
+                catch (Exception ex) when (IsSqlDeadlock(ex))
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogOperationError(exception);
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E237] Não foi possível concluir o pedido gratuito");
+                }
+            }
             try
             {
                 await context.Orders.AddAsync(order);
+
+                if (voucher is not null)
+                {
+                    var isComplimentary = total == 0m;
+
+                    var redemption = new VoucherRedemption
+                    {
+                        VoucherId = voucher.Id,
+                        Voucher = voucher,
+
+                        Order = order,
+                        UserId = userId.Value,
+
+                        Status = isComplimentary
+                            ? EVoucherRedemptionStatus.Redeemed
+                            : EVoucherRedemptionStatus.Reserved,
+
+                        ReservedAt = now,
+                        RedeemedAt = isComplimentary
+                            ? now
+                            : null
+                    };
+
+                    await context.VoucherRedemptions
+                        .AddAsync(redemption);
+                }
+
                 await context.SaveChangesAsync();
+                if (order.ExpiresAt is { } dueAt)
+                {
+                    // SQL is still uncommitted. If durable scheduling fails, disposal rolls back
+                    // both order and voucher reservation. A successful send followed by rollback
+                    // only leaves an orphan message, never an unscheduled committed order.
+                    var scheduler = expirationScheduler
+                        ?? throw new InvalidOperationException("Agendamento de pedidos não configurado.");
+                    try
+                    {
+                        await scheduler.ScheduleAsync(new(order.Id, order.Number, order.CreatedAt), dueAt);
+                    }
+                    catch (Exception exception)
+                    {
+                        _logger.LogError(exception, "Falha ao agendar expiração do pedido {OrderId}", order.Id);
+                        return new Response<Order?>(null, 503,
+                            "[E274] Não foi possível agendar a expiração. O pedido não foi confirmado. Tente novamente.");
+                    }
+                }
+                if (transaction is not null)
+                {
+                    await transaction.CommitAsync();
+                }
             }
-            catch 
+            catch (DbUpdateException ex) when (
+                ex.InnerException is SqlException sqlException &&
+                (sqlException.Number is 2601 or 2627) &&
+                sqlException.Message.Contains(
+                    "UX_Order_UserId_WaitingPayment",
+                    StringComparison.Ordinal))
             {
-                return new Response<Order?>(null, 500, "[E046] Nao foi possivel realizar seu pedido");
+                return new Response<Order?>(
+                    null,
+                    409,
+                    PendingOrderMessage);
+            }
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    sqlException.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (SqlException ex) when (
+                ex.Number == 1205)
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    ConcurrentOrderCreationMessage);
+            }
+            catch (Exception ex) when (IsSqlDeadlock(ex))
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogOperationError(ex);
+
+                return new Response<Order?>(
+                    null,
+                    500,
+                    "[E046] Nao foi possivel realizar seu pedido");
             }
 
-            return new Response<Order?>(order, 201, $"Pedido {order.Number} cadastrado com sucesso");
+            var message = total == 0m
+                ? $"Pedido {order.Number} confirmado com sucesso"
+                : $"Pedido {order.Number} cadastrado com sucesso";
+
+            return new Response<Order?>(
+                order,
+                201,
+                message);
         }
 
         public async Task<PagedResponse<List<Order>?>> GetAllAsync(GetAllOrdersRequest request)
@@ -348,8 +908,9 @@ namespace Dima.Api.Handlers
                     request.PageNumber,
                     request.PageSize);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<List<Order>?>(null, 500, "[E062] Nao foi possivel listar os pedidos");
             }
 
@@ -378,119 +939,12 @@ namespace Dima.Api.Handlers
                     : new Response<Order?>(order);
 
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<Order?> (null, 500, "[E061] Nao foi possivel consultar pedido");
             }
-        }
-
-        public async Task<Response<Order?>> PayAsync(PayOrderRequest request)
-        {
-            var userId = await GetUserIdAsync(request.UserId);
-            Order? order;
-
-            if (userId is null)
-                return new Response<Order?>(
-                    null,
-                    404,
-                    "[E170] Usuario nao encontrado");
-
-
-            try
-            {
-                order = await context
-                    .Orders
-                    .Include(x => x.Product)
-                    .Include(x => x.Voucher)
-                    .FirstOrDefaultAsync(x=>x.Number == request.Number && x.UserId==userId.Value);
-                if (order is null)
-                    return new Response<Order?>(null, 404, "[E047] Pedido nao encontrado");
-            }
-            catch 
-            {
-                return new Response<Order?>(null, 500, "[E048] Falha ao buscar pedido");
-            }
-            switch (order.Status)
-            {
-                case EOrderStatus.Canceled:
-                    return new Response<Order?>(order, 400, "[E049] Pedido cancelado, repagamento nao possivel");
-                case EOrderStatus.Refunded:
-                    return new Response<Order?>(order, 400, "[E050] Pedido reembolsado, repagamento nao possivel");
-                case EOrderStatus.Paid:
-                    return new Response<Order?>(order, 400, "[E051] Pedido ja pago, repagamento nao possivel");
-                case EOrderStatus.WaintingPayment:
-                    break;
-                default:
-                    return new Response<Order?>(order, 400, "[E052] Falha ao processar pagamento");
-            }
-            try
-            {
-                Console.WriteLine($"[PAY] Order Number: {order.Number}");
-                var getTransactionsRequest = new GetTransactionsByOrderNumberRequest
-                {
-                    Number = order.Number
-                };
-                var result =
-                    await paymentHandler.GetTransactionsByOrderNumberAsync(
-                        getTransactionsRequest);
-
-                Console.WriteLine($"[STRIPE] Success: {result.IsSuccess}");
-                Console.WriteLine($"[STRIPE] Message: {result.Message}");
-                Console.WriteLine($"[STRIPE] Data null: {result.Data is null}");
-                Console.WriteLine($"[STRIPE] Count: {result.Data?.Count}");
-
-                if (result.IsSuccess == false)
-                    return new Response<Order?>(null, 500, "[E084] Nao foi possivel localizar o pagamento");
-                if(result.Data is null)
-                    return new Response<Order?>(null, 500, "[E085] Nao foi possivel localizar o pagamento");
-                if(result.Data.Any(x=>x.Refunded))
-                    return new Response<Order?>(null, 400, "[E086] Este pedido ja teve o pagamento informado");
-                if(!result.Data.Any(x=>x.Paid))
-                    return new Response<Order?>(null, 400, "[E087] Este pedido nao foi pago");
-                request.ExternalReference = result.Data[0].Id;
-            }
-            catch 
-            {
-                return new Response<Order?>(null, 400, "[E088] Nao foi possivel dar baixa no seu pedido");
-            }
-            order.Status = EOrderStatus.Paid;
-            order.ExternalReference=request.ExternalReference;
-            order.UpdatedAt=DateTime.Now;
-
-            var now = DateTime.Now;
-
-            var currentAccessEndsAt = await context.Orders
-                .AsNoTracking()
-                .Where(x =>
-                    x.UserId == userId.Value &&
-                    x.Status == EOrderStatus.Paid &&
-                    x.AccessEndsAt != null &&
-                    x.AccessEndsAt > now)
-                .MaxAsync(x => (DateTime?)x.AccessEndsAt);
-
-            var accessStartsAt = currentAccessEndsAt ?? now;
-
-            order.AccessStartsAt = accessStartsAt;
-
-            order.AccessEndsAt =
-                order.Product.AccessDurationMonths.HasValue
-                    ? accessStartsAt.AddMonths(
-                        order.Product.AccessDurationMonths.Value)
-                    : null;
-
-            // Persistencia em banco
-            try
-            {
-                context.Orders.Update(order);
-                await context.SaveChangesAsync();
-            }
-            catch 
-            {
-                return new Response<Order?>(order, 500, "[E053] Falha ao processar pagamento");
-            }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} pago com sucesso");
-
         }
 
         public async Task<Response<Order?>> RefundAsync(RefundOrderRequest request)
@@ -514,8 +968,9 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(null, 404, "[E060] Pedido nao encontrado");
 
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<Order?>(null, 500, "[E054] Falha ao buscar pedido");
             }
@@ -527,14 +982,90 @@ namespace Dima.Api.Handlers
                     return new Response<Order?>(order, 400, "[E056] Pedido reembolsado, reembolso nao possivel");
                 case EOrderStatus.Paid:
                     break;
-                case EOrderStatus.WaintingPayment:
+                case EOrderStatus.WaitingPayment:
                     return new Response<Order?>(order, 400, "[E057] Pedido ainda nao foi pago, reembolso nao possivel");
                 default:
                     return new Response<Order?>(order, 400, "[E058] Falha ao processar pagamento");
             }
-            //Neste ponto se insere o codigo do Stripe (PCI)
-            order.Status = EOrderStatus.Refunded;
-            order.UpdatedAt = DateTime.Now;
+
+            if (order.AccessStartsAt is null)
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E220] Data de inicio do acesso nao encontrada");
+            }
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+
+            var accessHasStarted =
+                order.AccessStartsAt.HasValue &&
+                RefundTimeRules.HasAccessStarted(order.AccessStartsAt.Value, now);
+
+            if (accessHasStarted)
+            {
+                if (order.PaidAt is null)
+                {
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        "[E213] Data de confirmacao do pagamento nao encontrada");
+                }
+
+                if (!RefundTimeRules.IsWithinWindow(order.PaidAt.Value, now))
+                {
+                    return new Response<Order?>(
+                        order,
+                        400,
+                        "[E214] Prazo de 14 dias para reembolso expirado");
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(order.ExternalReference))
+            {
+                return new Response<Order?>(
+                    order,
+                    400,
+                    "[E219] Referencia externa do pagamento nao encontrada");
+            }
+
+            if (request.RefundReason is null)
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E226] Motivo do reembolso não informado");
+
+            if (request.RefundReason == ERefundReason.Other &&
+                string.IsNullOrWhiteSpace(request.RefundReasonDetails))
+            {
+                return new Response<Order?>(
+                    null,
+                    400,
+                    "[E227] Informe o motivo do reembolso");
+            }
+            order.RefundReason = request.RefundReason;
+            order.RefundReasonDetails =
+                string.IsNullOrWhiteSpace(request.RefundReasonDetails)
+                    ? null
+                    : request.RefundReasonDetails.Trim();
+
+            var refundResult = await paymentHandler.RefundAsync(
+                order.ExternalReference,
+                $"refund-order-{order.Id}");
+
+            if (!refundResult.IsSuccess)
+            {
+                return new Response<Order?>(
+                    order,
+                    refundResult.Code,
+                    refundResult.Message);
+            }
+
+
+            order.RefundReference = refundResult.Data;
+            order.RefundFailureReason = null;
+            order.Status = EOrderStatus.RefundPending;
+            order.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
 
             // Persistencia em banco
             try
@@ -542,12 +1073,71 @@ namespace Dima.Api.Handlers
                 context.Orders.Update(order);
                 await context.SaveChangesAsync();
             }
-            catch
+            catch (DbUpdateConcurrencyException)
             {
-                return new Response<Order?>(order, 500, "[E059] Falha ao processar reembolso");
+                context.ChangeTracker.Clear();
+
+                Order? currentOrder;
+
+                try
+                {
+                    currentOrder = await context.Orders
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(x =>
+                            x.Id == order.Id &&
+                            x.UserId == userId.Value);
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogOperationError(exception);
+                    return new Response<Order?>(
+                        null,
+                        500,
+                        "[E059] Falha ao processar reembolso");
+                }
+
+                if (currentOrder?.Status ==
+                        EOrderStatus.RefundPending &&
+                    string.Equals(
+                        currentOrder.RefundReference,
+                        refundResult.Data,
+                        StringComparison.Ordinal))
+                {
+                    return new Response<Order?>(
+                        currentOrder,
+                        200,
+                        $"Reembolso do pedido {currentOrder.Number} " +
+                        "já solicitado anteriormente");
+                }
+
+                return new Response<Order?>(
+                    currentOrder,
+                    409,
+                    ConcurrentOrderUpdateMessage);
             }
-            return new Response<Order?>(order, 200, $"Pedido {order.Number} reembolsado com sucesso");
+            catch (DbUpdateException ex) when (
+                    ex.InnerException is SqlException sqlException &&
+                    (sqlException.Number is 2601 or 2627) &&
+                    sqlException.Message.Contains(
+                        "UX_Order_RefundReference",
+                        StringComparison.Ordinal))
+            {
+                return new Response<Order?>(
+                    null,
+                    409,
+                    RefundAlreadyLinkedMessage);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
+                return new Response<Order?>(
+                    order,
+                    500,
+                    "[E059] Falha ao processar reembolso");
+            }
+            return new Response<Order?>(order, 200, $"Reembolso do pedido {order.Number} solicitado com sucesso");
         }
+
         private async Task<long?> GetUserIdAsync(string userIdentifier)
         {
             return await context.Users
@@ -557,6 +1147,27 @@ namespace Dima.Api.Handlers
                     x.UserName == userIdentifier)
                 .Select(x => (long?)x.Id)
                 .FirstOrDefaultAsync();
+        }
+        private static bool IsSqlDeadlock(
+                    Exception exception)
+        {
+            Exception? currentException = exception;
+
+            while (currentException is not null)
+            {
+                if (currentException is SqlException
+                    {
+                        Number: 1205
+                    })
+                {
+                    return true;
+                }
+
+                currentException =
+                    currentException.InnerException;
+            }
+
+            return false;
         }
     }
 }

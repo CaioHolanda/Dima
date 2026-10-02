@@ -1,4 +1,6 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Data;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Account;
@@ -6,26 +8,19 @@ using Dima.Core.Requests.Users;
 using Dima.Core.Responses;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Dima.Api.Configuration;
-using Microsoft.Extensions.Options;
+using Dima.Core.Security;
+using System.Data;
 using IdentityUser = Dima.Api.Models.User;
 
 namespace Dima.Api.Handlers;
 
 public class AdminUserHandler(AppDbContext context,
                               UserManager<IdentityUser> userManager,
-                              IOptions<InitialAdminOptions> adminOptions)
-            : IAdminUserHandler    
+                              TimeProvider timeProvider, ILogger<AdminUserHandler>? logger = null)
+            : IAdminUserHandler
 {
-    private readonly InitialAdminOptions _adminOptions = adminOptions.Value;
-    private bool IsProtectedAdmin(IdentityUser user)
-    {
-        return !string.IsNullOrWhiteSpace(_adminOptions.Email) &&
-               string.Equals(
-                   user.Email,
-                   _adminOptions.Email,
-                   StringComparison.OrdinalIgnoreCase);
-    }
+    private readonly ILogger<AdminUserHandler> _logger = logger ?? NullLogger<AdminUserHandler>.Instance;
+
     public async Task<Response<AdminUserListItem?>>
         ActivateAsync(ActivateUserRequest request)
     {
@@ -72,8 +67,9 @@ public class AdminUserHandler(AppDbContext context,
                 200,
                 "Usuário ativado com sucesso");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<AdminUserListItem?>(
                 null,
                 500,
@@ -86,6 +82,10 @@ public class AdminUserHandler(AppDbContext context,
     {
         try
         {
+            // Serialize the administrator count and update across API instances.
+            await using var transaction = await context.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable);
+
             var user = await userManager.FindByIdAsync(
                 request.Id.ToString());
 
@@ -97,12 +97,12 @@ public class AdminUserHandler(AppDbContext context,
                     "[E179] Usuário não encontrado");
             }
 
-            if (IsProtectedAdmin(user))
+            if (request.ActorId <= 0 || request.ActorId == user.Id)
             {
                 return new Response<AdminUserListItem?>(
                     null,
                     403,
-                    "[E180] O usuário administrador não pode ser desativado");
+                    "[E180] Não é permitido desativar a própria conta");
             }
 
             if (user.LockoutEnd == DateTimeOffset.MaxValue)
@@ -113,26 +113,29 @@ public class AdminUserHandler(AppDbContext context,
                     "[E181] O usuário já está desativado");
             }
 
-            if (!user.LockoutEnabled)
+            if (await userManager.IsInRoleAsync(user, AppRoles.Admin))
             {
-                var enableResult =
-                    await userManager.SetLockoutEnabledAsync(
-                        user,
-                        true);
+                var now = timeProvider.GetUtcNow();
+                var hasOtherActiveAdmin = await (
+                    from candidate in context.Users
+                    join membership in context.UserRoles on candidate.Id equals membership.UserId
+                    join role in context.Roles on membership.RoleId equals role.Id
+                    where role.NormalizedName == AppRoles.Admin.ToUpperInvariant()
+                        && candidate.Id != user.Id
+                        && candidate.EmailConfirmed
+                        && (!candidate.LockoutEnabled || candidate.LockoutEnd == null
+                            || candidate.LockoutEnd <= now)
+                    select candidate.Id).AnyAsync();
 
-                if (!enableResult.Succeeded)
-                {
-                    return new Response<AdminUserListItem?>(
-                        null,
-                        400,
-                        "[E187] Não foi possível habilitar o bloqueio do usuário");
-                }
+                if (!hasOtherActiveAdmin)
+                    return new Response<AdminUserListItem?>(null, 403,
+                        "[E188] O último administrador ativo não pode ser desativado");
             }
 
-            var result =
-                await userManager.SetLockoutEndDateAsync(
-                    user,
-                    DateTimeOffset.MaxValue);
+            // Persist lockout and stamp together; failure must not partially deactivate.
+            user.LockoutEnabled = true;
+            user.LockoutEnd = DateTimeOffset.MaxValue;
+            var result = await userManager.UpdateSecurityStampAsync(user);
 
             if (!result.Succeeded)
             {
@@ -141,6 +144,8 @@ public class AdminUserHandler(AppDbContext context,
                     400,
                     "[E182] Não foi possível desativar o usuário");
             }
+
+            await transaction.CommitAsync();
 
             return new Response<AdminUserListItem?>(
                 new AdminUserListItem
@@ -152,8 +157,9 @@ public class AdminUserHandler(AppDbContext context,
                 200,
                 "Usuário desativado com sucesso");
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<AdminUserListItem?>(
                 null,
                 500,
@@ -165,15 +171,13 @@ public class AdminUserHandler(AppDbContext context,
     {
         try
         {
-            var now = DateTime.Now;
+            var now = timeProvider.GetUtcNow().UtcDateTime;
 
             var query = context.Users
                 .AsNoTracking()
                 .OrderBy(x => x.Email);
 
-            var users = await query
-                .Skip((request.PageNumber - 1) * request.PageSize)
-                .Take(request.PageSize)
+            var projected = query
                 .Select(user => new AdminUserListItem
                 {
                     Id = user.Id,
@@ -186,7 +190,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.Product.Title)
@@ -199,7 +203,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessStartsAt)
@@ -212,7 +216,7 @@ public class AdminUserHandler(AppDbContext context,
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now)
                         .OrderByDescending(order =>
-                            order.AccessEndsAt == null ||
+                            order.AccessEndsAt != null &&
                             order.AccessEndsAt > now)
                         .ThenByDescending(order => order.AccessStartsAt)
                         .Select(order => order.AccessEndsAt)
@@ -224,10 +228,8 @@ public class AdminUserHandler(AppDbContext context,
                             order.Status == EOrderStatus.Paid &&
                             order.AccessStartsAt != null &&
                             order.AccessStartsAt <= now &&
-                            (
-                                order.AccessEndsAt == null ||
-                                order.AccessEndsAt > now
-                            )),
+                            order.AccessEndsAt != null &&
+                            order.AccessEndsAt > now),
 
                     NextProductName = context.Orders
                         .Where(order =>
@@ -261,10 +263,21 @@ public class AdminUserHandler(AppDbContext context,
 
                     IsActive =
                         user.LockoutEnd != DateTimeOffset.MaxValue
-                })
-                .ToListAsync();
-
-            var count = await query.CountAsync();
+                });
+            if (request.IsActive.HasValue)
+                projected = projected.Where(x => x.IsActive == request.IsActive.Value);
+            if (request.IsPremium.HasValue)
+                projected = projected.Where(x => x.IsPremium == request.IsPremium.Value);
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                var term = request.SearchTerm.Trim().ToLower();
+                projected = projected.Where(x => x.Email.ToLower().Contains(term)
+                    || (x.ProductName ?? "").ToLower().Contains(term)
+                    || (x.NextProductName ?? "").ToLower().Contains(term));
+            }
+            var count = await projected.CountAsync();
+            var users = await projected.OrderBy(x => x.Email).ThenBy(x => x.Id)
+                .Skip((request.PageNumber - 1) * request.PageSize).Take(request.PageSize).ToListAsync();
 
             return new PagedResponse<List<AdminUserListItem>?>(
                 users,
@@ -272,8 +285,9 @@ public class AdminUserHandler(AppDbContext context,
                 request.PageNumber,
                 request.PageSize);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<AdminUserListItem>?>(
                 null,
                 500,
@@ -317,8 +331,9 @@ public class AdminUserHandler(AppDbContext context,
                 users,
                 200);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new Response<List<UserLookup>?>(
                 null,
                 500,

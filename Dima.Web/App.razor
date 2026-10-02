@@ -1,4 +1,19 @@
-﻿<CascadingAuthenticationState>
+@implements IDisposable
+@inject ThemeState ThemeState
+
+<CascadingAuthenticationState>
+    <AuthorizeView Roles="@AppRoles.Admin">
+        <Authorized>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.AdminTheme" />
+        </Authorized>
+        <NotAuthorized>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.Theme" />
+        </NotAuthorized>
+        <Authorizing>
+            <MudThemeProvider @ref="_themeProvider" @bind-IsDarkMode="ThemeState.IsDarkMode" Theme="Configuration.Theme" />
+        </Authorizing>
+    </AuthorizeView>
+    <Dima.Web.Components.Identity.SessionMonitor />
     <Router AppAssembly="@typeof(App).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
@@ -17,3 +32,20 @@
 </CascadingAuthenticationState>
 
 
+
+@code {
+    private MudThemeProvider _themeProvider = null!;
+
+    protected override void OnInitialized() => ThemeState.Changed += OnThemeChanged;
+    private void OnThemeChanged() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => ThemeState.Changed -= OnThemeChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            ThemeState.IsDarkMode = await _themeProvider.GetSystemDarkModeAsync();
+            StateHasChanged();
+        }
+    }
+}

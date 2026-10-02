@@ -7,5 +7,6 @@ namespace Dima.Web.Security
         Task<bool> CheckAuthenticatedAsync();
         Task<AuthenticationState> GetAuthenticationStateAsync();
         void NotifyAuthenticationStateChanged();
+        void ClearAuthenticationState();
     }
 }

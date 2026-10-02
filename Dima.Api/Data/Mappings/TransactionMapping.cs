@@ -1,4 +1,4 @@
-﻿using Dima.Core.Models;
+using Dima.Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -22,6 +22,7 @@ namespace Dima.Api.Data.Mappings
                 .HasColumnType("MONEY")
                 .HasMaxLength(255);
             builder.Property(t => t.CreatedAt)
+                .HasConversion<UtcDateTimeConverter>()
                 .IsRequired(true);
             builder.Property(t => t.PaidOrReceivedAt)
                 .IsRequired(false);

@@ -1,6 +1,6 @@
 ﻿using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
-using Dima.Core.Models;
+using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
 

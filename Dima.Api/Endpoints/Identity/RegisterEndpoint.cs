@@ -63,7 +63,7 @@ public class RegisterEndpoint : IEndpoint
             $"{httpContext.Request.Scheme}://" +
             $"{httpContext.Request.Host}" +
             $"{httpContext.Request.PathBase}" +
-            "/v1/identity/confirmEmail",
+            "/api/v1/identity/confirm-email",
             new Dictionary<string, string?>
             {
                 ["userId"] = user.Id.ToString(),

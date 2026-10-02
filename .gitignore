@@ -89,3 +89,5 @@ coverage/
 
 appsettings.Development.json
 secrets.json
+# Azure Functions local secrets
+local.settings.json

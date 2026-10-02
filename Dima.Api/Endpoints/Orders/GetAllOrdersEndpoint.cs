@@ -7,6 +7,7 @@ using Dima.Core.Responses;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using CoreConfiguration = Dima.Core.Configuration;
+using Dima.Api.Services;
 
 namespace Dima.Api.Endpoints.Orders
 {
@@ -22,19 +23,37 @@ namespace Dima.Api.Endpoints.Orders
         private static async Task<IResult> HandleAsync(
             ClaimsPrincipal user,
             IOrderHandler handler,
-            [FromQuery] int pageSize = CoreConfiguration.DefaultPageSize,          
+            OrderExpirationService expirationService,
+            [FromQuery] int pageSize = CoreConfiguration.DefaultPageSize,
             [FromQuery] int pageNumber = CoreConfiguration.DefaultPageNumber)
         {
+            var userName = user.Identity!.Name ?? string.Empty;
+
+            var expirationResult =
+                await expirationService.ExpirePendingForUserAsync(userName);
+
             var request = new GetAllOrdersRequest
             {
-                UserId = user.Identity!.Name ?? string.Empty,
+                UserId = userName,
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
+
+            // Consulta depois da tentativa de expiração,
+            // para retornar o estado atualizado do banco.
             var result = await handler.GetAllAsync(request);
-            return result.IsSuccess
-                ? TypedResults.Ok(result)
-                : TypedResults.BadRequest(result);
+
+            if (!result.IsSuccess)
+                return TypedResults.BadRequest(result);
+
+            // A falha na verificação não impede consultar os pedidos.
+            result.Message = expirationResult.IsSuccess
+                ? string.Empty
+                : "Não foi possível concluir a verificação do pedido pendente. " +
+                  "O estado exibido é o último confirmado. " +
+                  "Atualize a página para tentar novamente.";
+
+            return TypedResults.Ok(result);
         }
     }
 }

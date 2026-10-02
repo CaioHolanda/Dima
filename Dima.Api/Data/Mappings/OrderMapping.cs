@@ -1,4 +1,5 @@
-﻿using Dima.Core.Models;
+using Dima.Core.Models;
+using Dima.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +12,9 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
         builder.ToTable("Order");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.RowVersion)
+           .IsRowVersion();
 
         builder.Property(x => x.Number)
             .IsRequired()
@@ -25,23 +29,69 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
             .HasColumnType("NVARCHAR")
             .HasMaxLength(60);
 
+        builder.HasIndex(x => x.ExternalReference,
+            "UX_Order_ExternalReference")
+            .IsUnique()
+            .HasFilter("[ExternalReference] IS NOT NULL");
+
         builder.Property(x => x.Gateway)
-            .IsRequired()
+            .IsRequired(false)
             .HasColumnType("SMALLINT");
 
         builder.Property(x => x.CreatedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired()
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.UpdatedAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired()
             .HasColumnType("DATETIME2");
 
+        builder.Property(x => x.ExpiresAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        builder.Property(x => x.ExpiredAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        builder.Property(x => x.PaymentSessionId)
+            .IsRequired(false)
+            .HasColumnType("NVARCHAR")
+            .HasMaxLength(255);
+
+        builder.Property(x => x.PaymentSessionExpiresAt)
+            .IsRequired(false)
+            .HasColumnType("DATETIMEOFFSET");
+
+        // Uma sessão de pagamento pertence a um único pedido.
+        builder.HasIndex(
+                x => x.PaymentSessionId,
+                "UX_Order_PaymentSessionId")
+            .IsUnique()
+            .HasFilter("[PaymentSessionId] IS NOT NULL");
+
+        // Facilita a localização dos pedidos pendentes vencidos.
+        builder.HasIndex(
+                x => x.ExpiresAt,
+                "IX_Order_WaitingPayment_ExpiresAt")
+            .HasFilter(
+                $"[Status] = {(int)EOrderStatus.WaitingPayment} " +
+                "AND [ExpiresAt] IS NOT NULL");
+
+        builder.Property(x => x.PaidAt)
+            .HasConversion<UtcDateTimeConverter>()
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
         builder.Property(x => x.AccessStartsAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
         builder.Property(x => x.AccessEndsAt)
+            .HasConversion<UtcDateTimeConverter>()
             .IsRequired(false)
             .HasColumnType("DATETIME2");
 
@@ -52,6 +102,30 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(x => x.UserId)
             .IsRequired()
             .HasColumnType("BIGINT");
+
+        // Índice geral para consultar os pedidos do usuário.
+        builder.HasIndex(x => x.UserId);
+
+        // Cada usuário pode ter apenas um pedido aguardando pagamento.
+        builder.HasIndex(
+                x => x.UserId,
+                "UX_Order_UserId_WaitingPayment")
+            .IsUnique()
+            .HasFilter(
+                $"[Status] = {(int)EOrderStatus.WaitingPayment}");
+
+        builder.Property(x => x.VoucherCodeSnapshot)
+            .IsRequired(false)
+            .HasColumnType("VARCHAR")
+            .HasMaxLength(20);
+
+        builder.Property(x => x.VoucherDiscountTypeSnapshot)
+            .IsRequired(false)
+            .HasColumnType("SMALLINT");
+
+        builder.Property(x => x.VoucherValueSnapshot)
+            .IsRequired(false)
+            .HasColumnType("DECIMAL(18,2)");
 
         builder.Property(x => x.OriginalPrice)
             .IsRequired()
@@ -64,6 +138,37 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
         builder.Property(x => x.Total)
             .IsRequired()
             .HasColumnType("DECIMAL(18,2)");
+
+        builder.Property(x => x.AccessDurationMonths)
+            .IsRequired()
+            .HasColumnType("INT");
+
+        builder.Property(x => x.RefundReference)
+            .IsRequired(false)
+            .HasMaxLength(60)
+            .HasColumnType("NVARCHAR");
+
+        builder.HasIndex(x => x.RefundReference,"UX_Order_RefundReference")
+            .IsUnique()
+            .HasFilter("[RefundReference] IS NOT NULL");
+
+        builder.Property(x => x.RefundFailureReason)
+            .IsRequired(false)
+            .HasMaxLength(100)
+            .HasColumnType("NVARCHAR");
+
+        builder.Property(x => x.RefundedAt)
+            .HasConversion<UtcDateTimeConverter>()
+            .IsRequired(false)
+            .HasColumnType("DATETIME2");
+
+        builder.Property(x => x.RefundReason)
+            .HasColumnType("SMALLINT")
+            .IsRequired(false);
+
+        builder.Property(x => x.RefundReasonDetails)
+            .HasColumnType("NVARCHAR(500)")
+            .IsRequired(false);
 
         builder.HasOne(x => x.Product)
             .WithMany()
@@ -102,9 +207,45 @@ public class OrderMapping : IEntityTypeConfiguration<Order>
                 "CK_Order_Total_Calculation",
                 "[Total] = [OriginalPrice] - [DiscountAmount]");
 
+            table.HasCheckConstraint(    
+                "CK_Order_AccessDurationMonths_Positive",
+                "[AccessDurationMonths] > 0");
+
             table.HasCheckConstraint(
                 "CK_Order_AccessPeriod",
                 "[AccessStartsAt] IS NULL OR [AccessEndsAt] IS NULL OR [AccessEndsAt] > [AccessStartsAt]");
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_Consistency",
+                """
+                (
+                    [VoucherId] IS NULL
+                    AND [VoucherCodeSnapshot] IS NULL
+                    AND [VoucherDiscountTypeSnapshot] IS NULL
+                    AND [VoucherValueSnapshot] IS NULL
+                )
+                OR
+                (
+                    [VoucherId] IS NOT NULL
+                    AND [VoucherCodeSnapshot] IS NOT NULL
+                    AND [VoucherDiscountTypeSnapshot] IS NOT NULL
+                    AND [VoucherValueSnapshot] IS NOT NULL
+                )
+                """);
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_DiscountType",
+                """
+                [VoucherDiscountTypeSnapshot] IS NULL
+                OR [VoucherDiscountTypeSnapshot] IN (1, 2)
+                """);
+
+            table.HasCheckConstraint(
+                "CK_Order_VoucherSnapshot_Value",
+                """
+                [VoucherValueSnapshot] IS NULL
+                OR [VoucherValueSnapshot] > 0
+                """);
         });
     }
 }

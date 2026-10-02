@@ -1,5 +1,6 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Core.Handlers;
+using Dima.Core.Common;
 using Stripe;
 
 namespace Dima.Api.Endpoints.Stripe
@@ -8,6 +9,7 @@ namespace Dima.Api.Endpoints.Stripe
     {
         public static void Map(IEndpointRouteBuilder app)
             => app.MapPost("/webhook", HandleAsync)
+                .AllowAnonymous()
                 .WithName("Stripe Webhook")
                 .WithSummary("Receive Stripe webhook events")
                 .WithDescription("Receives events sent by Stripe")
@@ -16,9 +18,9 @@ namespace Dima.Api.Endpoints.Stripe
 
         private static async Task<IResult> HandleAsync(HttpRequest request,             
             IOrderPaymentConfirmationHandler orderHandler,
-            ILogger<WebhookEndpoint> logger)
+            ILogger<WebhookEndpoint> logger, Microsoft.Extensions.Options.IOptions<Dima.Api.Configuration.ApiOptions> apiOptions)
         {
-            if (string.IsNullOrWhiteSpace(ApiConfiguration.StripeWebhookSecret))
+            if (string.IsNullOrWhiteSpace(apiOptions.Value.StripeWebhookSecret))
                 return Results.Problem(
                     "[E196] StripeWebhookSecret nao configurado",
                     statusCode: StatusCodes.Status500InternalServerError);
@@ -39,7 +41,12 @@ namespace Dima.Api.Endpoints.Stripe
                 var stripeEvent = EventUtility.ConstructEvent(
                     json,
                     stripeSignature,
-                    ApiConfiguration.StripeWebhookSecret);
+                    apiOptions.Value.StripeWebhookSecret);
+                using var eventScope = logger.BeginScope(new Dictionary<string, object?>
+                {
+                    ["EventId"] = stripeEvent.Id,
+                    ["EventType"] = stripeEvent.Type
+                });
                 logger.LogInformation(
                     "Stripe webhook recebido: {EventType} - {EventId}",
                     stripeEvent.Type,
@@ -65,12 +72,60 @@ namespace Dima.Api.Endpoints.Stripe
                         return Results.BadRequest(
                             "[E200] Numero do pedido nao encontrado no evento");
                     }
+                    if (!paymentIntent.Metadata.TryGetValue(
+                            "userId",
+                            out var paymentUserId))
+                    {
+                        logger.LogWarning(
+                            "Stripe PaymentIntent {PaymentIntentId} recebido sem metadata de usuario",
+                            paymentIntent.Id);
+
+                        return Results.BadRequest(
+                            "[E207] Usuario do pagamento nao encontrado no evento");
+                    }
+                    if (!string.Equals(
+                            paymentIntent.Status,
+                            "succeeded",
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        logger.LogWarning(
+                            "Stripe PaymentIntent {PaymentIntentId} recebido com status {Status}",
+                            paymentIntent.Id,
+                            paymentIntent.Status);
+
+                        return Results.BadRequest(
+                            "[E212] Pagamento ainda nao foi concluido");
+                    }
+                    logger.LogInformation(
+                        "Stripe PaymentIntent recebido - Id: {PaymentIntentId}, Pedido: {OrderNumber}, Usuario: {PaymentUserId}, ValorRecebido: {AmountReceived}, Moeda: {Currency}, Status: {Status}",
+                        paymentIntent.Id,
+                        orderNumber,
+                        paymentUserId,
+                        paymentIntent.AmountReceived,
+                        paymentIntent.Currency,
+                        paymentIntent.Status);
+                    paymentIntent.Metadata.TryGetValue(RequestCorrelation.StripeMetadataKey, out var originId);
+                    using var paymentScope = logger.BeginScope(new Dictionary<string, object?>
+                    {
+                        ["OrderNumber"] = orderNumber,
+                        ["PaymentIntentId"] = paymentIntent.Id,
+                        ["CheckoutCorrelationId"] = RequestCorrelation.Normalize(originId)
+                    });
                     var result = await orderHandler.ConfirmPaymentAsync(
-                                                    orderNumber,
-                                                    paymentIntent.Id);
+                        orderNumber,
+                        paymentIntent.Id,
+                        paymentIntent.AmountReceived,
+                        paymentIntent.Currency,
+                        paymentUserId);
 
                     if (!result.IsSuccess)
                     {
+                        logger.LogWarning(
+                        "Falha ao confirmar pagamento Stripe - Pedido: {OrderNumber}, PaymentIntent: {PaymentIntentId}, Codigo: {Code}, Mensagem: {Message}",
+                        orderNumber,
+                        paymentIntent.Id,
+                        result.Code,
+                        result.Message);
                         return Results.Problem(
                             result.Message,
                             statusCode: result.Code);
@@ -81,6 +136,64 @@ namespace Dima.Api.Endpoints.Stripe
                         paymentIntent.Id);
                 }
 
+                if (stripeEvent.Type is EventTypes.RefundCreated or EventTypes.RefundUpdated or EventTypes.RefundFailed)
+                {
+                    var refund = stripeEvent.Data.Object as Refund;
+
+                    if (refund is null)
+                    {
+                        return Results.BadRequest(
+                            "[E227] Refund invalido");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(refund.PaymentIntentId))
+                    {
+                        logger.LogWarning(
+                            "Stripe Refund {RefundId} recebido sem PaymentIntent",
+                            refund.Id);
+
+                        return Results.BadRequest(
+                            "[E228] PaymentIntent do reembolso nao encontrado");
+                    }
+
+                    logger.LogInformation(
+                        "Stripe Refund recebido - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Status: {Status}, FailureReason: {FailureReason}",
+                        refund.Id,
+                        refund.PaymentIntentId,
+                        refund.Status,
+                        refund.FailureReason);
+
+                    using var refundScope = logger.BeginScope(new Dictionary<string, object?>
+                    {
+                        ["PaymentIntentId"] = refund.PaymentIntentId,
+                        ["RefundId"] = refund.Id
+                    });
+                    var result = await orderHandler.ConfirmRefundAsync(
+                        refund.PaymentIntentId,
+                        refund.Id,
+                        refund.Status,
+                        refund.FailureReason);
+
+                    if (!result.IsSuccess)
+                    {
+                        logger.LogWarning(
+                            "Falha ao atualizar reembolso Stripe - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Codigo: {Code}, Mensagem: {Message}",
+                            refund.Id,
+                            refund.PaymentIntentId,
+                            result.Code,
+                            result.Message);
+
+                        return Results.Problem(
+                            result.Message,
+                            statusCode: result.Code);
+                    }
+
+                    logger.LogInformation(
+                        "Reembolso Stripe atualizado - Refund: {RefundId}, PaymentIntent: {PaymentIntentId}, Status: {Status}",
+                        refund.Id,
+                        refund.PaymentIntentId,
+                        refund.Status);
+                }
                 return Results.Ok();
             }
             catch (StripeException ex)

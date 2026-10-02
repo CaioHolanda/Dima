@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Requests.Account;
 using Dima.Core.Responses;
 using System.Net;
@@ -12,8 +12,8 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> LoginAsync(
             LoginRequest request)
         {
-            var result = await _client.PostAsJsonAsync(
-                "v1/identity/login?useCookies=true",
+            using var result = await _client.PostAsJsonAsync(
+                "v1/identity/login-user",
                 request);
 
             if (result.IsSuccessStatusCode)
@@ -59,7 +59,7 @@ namespace Dima.Web.Handlers
 
         public async Task<Response<string>> RegisterAsync(RegisterRequest request)
         {
-            var result = await _client.PostAsJsonAsync("v1/identity/register-user", request);
+            using var result = await _client.PostAsJsonAsync("v1/identity/register-user", request);
             return result.IsSuccessStatusCode
                 ? new Response<string>(
                     "Cadastro realizado. Verifique seu e-mail para ativar a conta.",
@@ -73,8 +73,8 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> ForgotPasswordAsync(
                                             ForgotPasswordRequest request)
         {
-            var result = await _client.PostAsJsonAsync(
-                "v1/identity/forgotPassword",
+            using var result = await _client.PostAsJsonAsync(
+                "v1/identity/forgot-password",
                 request);
 
             if (result.IsSuccessStatusCode)
@@ -100,8 +100,8 @@ namespace Dima.Web.Handlers
                 request.NewPassword
             };
 
-            var result = await _client.PostAsJsonAsync(
-                "v1/identity/resetPassword",
+            using var result = await _client.PostAsJsonAsync(
+                "v1/identity/reset-password",
                 payload);
 
             if (result.IsSuccessStatusCode)
@@ -121,7 +121,7 @@ namespace Dima.Web.Handlers
         public async Task<Response<string>> ConfirmEmailAsync(string userId, string code)
         {
             var url =
-                    $"v1/identity/confirmEmail" +
+                    $"v1/identity/confirm-email" +
                     $"?userId={Uri.EscapeDataString(userId)}" +
                     $"&code={Uri.EscapeDataString(code)}";
 
@@ -148,7 +148,7 @@ namespace Dima.Web.Handlers
             };
 
             using var result = await _client.PostAsJsonAsync(
-                "v1/identity/resendConfirmationEmail",
+                "v1/identity/resend-confirmation-email",
                 payload);
 
             if (result.IsSuccessStatusCode)

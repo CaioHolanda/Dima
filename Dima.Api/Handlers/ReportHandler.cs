@@ -1,4 +1,7 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Data;
+using Dima.Api.Services;
 using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models.Reports;
@@ -8,8 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers
 {
-    public class ReportHandler(AppDbContext context) : IReportHandler
+    public class ReportHandler(AppDbContext context, BusinessTime businessTime, ILogger<ReportHandler>? logger = null) : IReportHandler
     {
+        private readonly ILogger<ReportHandler> _logger = logger ?? NullLogger<ReportHandler>.Instance;
+
         public async Task<Response<List<ExpensesByCategory>?>> GetExpensesByCategoryReportAsync(GetExpensesByCategoryRequest request)
         {
             try
@@ -23,8 +28,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<ExpensesByCategory>?>(data);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<ExpensesByCategory>?>(null, 500, "Nao foi possivel coletar os dados: Expenses by Categoria.");
             }
@@ -33,7 +39,8 @@ namespace Dima.Api.Handlers
         public async Task<Response<FinancialSummary?>> GetFinancialSummaryReportAsync(GetFinancialSummaryRequest request)
         {
             // Faz o resumo financeiro do mes corrente, comecando do dia 01
-            var startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+            var now = businessTime.Now;
+            var startDate = new DateTime(now.Year, now.Month, 1);
             try
             {
                 var data = await context
@@ -42,7 +49,7 @@ namespace Dima.Api.Handlers
                 .Where(
                     x => x.UserId == request.UserId &&
                         x.PaidOrReceivedAt >= startDate &&
-                        x.PaidOrReceivedAt <= DateTime.Now)
+                        x.PaidOrReceivedAt <= now)
                 .GroupBy(x => 1) // sempre verdadeiro, nao depende de informacao em comum
                 .Select(
                     x => new FinancialSummary(
@@ -53,8 +60,9 @@ namespace Dima.Api.Handlers
                 .FirstOrDefaultAsync();
                 return new Response<FinancialSummary?>(data);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<FinancialSummary?> (null, 500, "Nao foi possivel calcular o saldo.");
             }
@@ -74,8 +82,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<IncomesAndExpenses>?>(data);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<IncomesAndExpenses>?>(null, 500, "Nao foi possivel coletar os dados: Incomes and Expenses.");
             }
@@ -94,8 +103,9 @@ namespace Dima.Api.Handlers
                                 .ToListAsync();
                 return new Response<List<IncomesByCategory>?>(data);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
 
                 return new Response<List<IncomesByCategory>?>(null, 500, "Nao foi possivel coletar os dados: Incomes by Categoria.");
             }

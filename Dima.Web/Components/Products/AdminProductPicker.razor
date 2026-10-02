@@ -1,0 +1,38 @@
+@using Dima.Core.Models
+@using Dima.Core.Requests.Products
+@inject Dima.Core.Handlers.IAdminProductHandler Handler
+@inject MudBlazor.ISnackbar Snackbar
+<MudAutocomplete T="Product" Label="Produto" HelperText="Opcional — pesquise por nome ou ID; deixe vazio para qualquer produto"
+                 Value="_selected" ValueChanged="SelectAsync" SearchFunc="SearchAsync" ToStringFunc="@(p => p is null ? string.Empty : $"{p.Title} (#{p.Id})")"
+                 Clearable="true" ResetValueOnEmptyText="true" CoerceValue="false" MinCharacters="0" DebounceInterval="350" MaxItems="25" />
+@code {
+    [Parameter] public long? Value { get; set; }
+    [Parameter] public EventCallback<long?> ValueChanged { get; set; }
+    private Product? _selected;
+    private int _version;
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_selected?.Id == Value) return;
+        if (!Value.HasValue) { _version++; _selected = null; return; }
+        var id = Value.Value;
+        var version = ++_version;
+        try {
+            var result = await Handler.GetByIdForAdminAsync(new GetProductByIdRequest { Id = id });
+            if (Value != id || version != _version) return;
+            _selected = result.Data ?? new Product { Id = id, Title = $"Produto #{id}" };
+            if (!result.IsSuccess) Snackbar.Add(result.Message ?? "Não foi possível carregar o produto", Severity.Error);
+        } catch (Exception ex) { if (version == _version) { _selected = new Product { Id = id, Title = $"Produto #{id}" }; Snackbar.Add(ex.Message, Severity.Error); } }
+    }
+    private async Task SelectAsync(Product? product) { _version++; _selected = product; await ValueChanged.InvokeAsync(product?.Id); }
+    private async Task<IEnumerable<Product>> SearchAsync(string term, CancellationToken token)
+    {
+        try {
+            token.ThrowIfCancellationRequested();
+            var result = await Handler.GetAllForAdminAsync(new GetAllAdminProductsRequest { SearchTerm = term, PageSize = 25 });
+            token.ThrowIfCancellationRequested();
+            if (!result.IsSuccess) { Snackbar.Add(result.Message ?? "Não foi possível pesquisar produtos", Severity.Error); return []; }
+            return result.Data ?? [];
+        } catch (OperationCanceledException) { return []; }
+        catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); return []; }
+    }
+}

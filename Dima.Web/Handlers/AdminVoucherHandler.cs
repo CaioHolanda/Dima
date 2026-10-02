@@ -1,5 +1,4 @@
-﻿using Dima.Core.Handlers;
-using Dima.Core.Models;
+using Dima.Core.Handlers;
 using Dima.Core.Models.Vouchers;
 using Dima.Core.Requests.Vouchers;
 using Dima.Core.Responses;
@@ -15,7 +14,7 @@ namespace Dima.Web.Handlers
         private readonly HttpClient _client = httpClientFactory.CreateClient(Configuration.HttpClientName);
         public async Task<Response<Voucher?>> ActivateAsync(ActivateVoucherRequest request)
         {
-            var response = await _client.PatchAsync(
+            using var response = await _client.PatchAsync(
                 $"v1/admin/vouchers/{request.Id}/activate",
                 null);
 
@@ -23,7 +22,7 @@ namespace Dima.Web.Handlers
         }
         public async Task<Response<Voucher?>> CreateAsync(CreateVoucherRequest request)
         {
-            var response = await _client.PostAsJsonAsync(
+            using var response = await _client.PostAsJsonAsync(
                 "v1/admin/vouchers",
                 request);
 
@@ -31,7 +30,7 @@ namespace Dima.Web.Handlers
         }
         public async Task<Response<Voucher?>> DeactivateAsync(DeactivateVoucherRequest request)
         {
-            var response = await _client.PatchAsync(
+            using var response = await _client.PatchAsync(
                 $"v1/admin/vouchers/{request.Id}/deactivate",
                 null);
 
@@ -39,50 +38,26 @@ namespace Dima.Web.Handlers
         }
         public async Task<PagedResponse<List<AdminVoucherListItem>?>> GetAllForAdminAsync(GetAllAdminVouchersRequest request)
         {
-            var response = await _client.GetAsync(
+            using var response = await _client.GetAsync(
                 $"v1/admin/vouchers" +
-                $"?pageNumber={request.PageNumber}" +
-                $"&pageSize={request.PageSize}");
+                AdminQuery.Build(request));
 
-            var result = await response.Content
-                .ReadFromJsonAsync<
-                    PagedResponse<List<AdminVoucherListItem>?>>();
-
-            return result ??
-                new PagedResponse<List<AdminVoucherListItem>?>(
-                    null,
-                    (int)response.StatusCode,
-                    "[E155] Não foi possível obter os vouchers");
+            return await HttpResponseReader.ReadPagedAsync<List<AdminVoucherListItem>?>(response, "[E155] Não foi possível obter os vouchers");
         }
         private static async Task<Response<Voucher?>> ReadResponseAsync(HttpResponseMessage response)
         {
-            var result = await response.Content
-                .ReadFromJsonAsync<Response<Voucher?>>();
-
-            return result ??
-                new Response<Voucher?>(
-                    null,
-                    (int)response.StatusCode,
-                    "[E156] Não foi possível processar o voucher");
+            return await HttpResponseReader.ReadAsync<Voucher?>(response, "[E156] Não foi possível processar o voucher");
         }
         public async Task<Response<AdminVoucherDetails?>>GetByIdForAdminAsync(GetVoucherByIdRequest request)
         {
-            var response = await _client.GetAsync(
+            using var response = await _client.GetAsync(
                 $"v1/admin/vouchers/{request.Id}");
 
-            var result = await response.Content
-                .ReadFromJsonAsync<
-                    Response<AdminVoucherDetails?>>();
-
-            return result ??
-                new Response<AdminVoucherDetails?>(
-                    null,
-                    (int)response.StatusCode,
-                    "[E162] Não foi possível obter o voucher");
+            return await HttpResponseReader.ReadAsync<AdminVoucherDetails?>(response, "[E162] Não foi possível obter o voucher");
         }
         public async Task<Response<Voucher?>> UpdateAsync(UpdateVoucherRequest request)
         {
-            var response = await _client.PutAsJsonAsync(
+            using var response = await _client.PutAsJsonAsync(
                 $"v1/admin/vouchers/{request.Id}",
                 request);
 

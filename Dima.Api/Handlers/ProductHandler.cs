@@ -1,16 +1,21 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
 using Dima.Core.Requests.Products;
 using Dima.Core.Responses;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using System.Text.RegularExpressions;
 
 namespace Dima.Api.Handlers
 {
-    public class ProductHandler(AppDbContext context) : IProductHandler, IAdminProductHandler
+    public class ProductHandler(AppDbContext context, ILogger<ProductHandler>? logger = null) : IProductHandler, IAdminProductHandler
     {
+        private readonly ILogger<ProductHandler> _logger = logger ?? NullLogger<ProductHandler>.Instance;
+
         public async Task<Response<Product?>> CreateAsync(
             CreateProductRequest request)
         {
@@ -70,8 +75,15 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status201Created,
                     "Produto criado com sucesso");
             }
-            catch
+            catch (DbUpdateException exception) when (IsDuplicateSlug(exception))
             {
+                _logger.LogWarning(exception, "Conflito de unicidade do slug ao criar produto");
+                return new Response<Product?>(null, StatusCodes.Status409Conflict,
+                    "[E114] Já existe um produto com este slug");
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -147,8 +159,15 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status200OK,
                     "Produto atualizado com sucesso");
             }
-            catch
+            catch (DbUpdateException exception) when (IsDuplicateSlug(exception))
             {
+                _logger.LogWarning(exception, "Conflito de unicidade do slug ao atualizar produto");
+                return new Response<Product?>(null, StatusCodes.Status409Conflict,
+                    "[E117] Já existe outro produto com este slug");
+            }
+            catch (Exception exception)
+            {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -170,8 +189,9 @@ namespace Dima.Api.Handlers
                 var count = await query.CountAsync();
                 return new PagedResponse<List<Product>?>(products, count, request.PageNumber, request.PageSize);
             }
-            catch 
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<List<Product>?>(null, 500, "Nao foi possivel consultar os produtos");
             }
         }
@@ -187,8 +207,9 @@ namespace Dima.Api.Handlers
                         ? new Response<Product?>(null, 404, "Produto nao encontrado")
                         : new Response<Product?>(product);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(null, 500, "Nao foi possivel buscar produto");
             }
         }
@@ -215,8 +236,9 @@ namespace Dima.Api.Handlers
                     200,
                     "Produto desativado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(
                     null,
                     500,
@@ -227,12 +249,20 @@ namespace Dima.Api.Handlers
         {
             try
             {
-                var query = context.Products
-                    .AsNoTracking()
-                    .OrderByDescending(x => x.IsActive)
-                    .ThenByDescending(x => x.Price);
+                var query = context.Products.AsNoTracking();
+                if (request.IsActive.HasValue)
+                    query = query.Where(x => x.IsActive == request.IsActive.Value);
+                if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+                {
+                    var term = request.SearchTerm.Trim().ToLower();
+                    query = query.Where(x => x.Id.ToString().Contains(term)
+                        || x.Title.ToLower().Contains(term) || x.Slug.ToLower().Contains(term)
+                        || x.Description.ToLower().Contains(term)
+                        || x.AccessDurationMonths.ToString().Contains(term));
+                }
 
                 var products = await query
+                    .OrderBy(x => x.Title).ThenBy(x => x.Id)
                     .Skip((request.PageNumber - 1) * request.PageSize)
                     .Take(request.PageSize)
                     .ToListAsync();
@@ -245,8 +275,9 @@ namespace Dima.Api.Handlers
                     request.PageNumber,
                     request.PageSize);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new PagedResponse<List<Product>?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -268,8 +299,9 @@ namespace Dima.Api.Handlers
                         "[E124] Produto não encontrado")
                     : new Response<Product?>(product);
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -301,8 +333,9 @@ namespace Dima.Api.Handlers
                     StatusCodes.Status200OK,
                     "Produto ativado com sucesso");
             }
-            catch
+            catch (Exception exception)
             {
+                _logger.LogOperationError(exception);
                 return new Response<Product?>(
                     null,
                     StatusCodes.Status500InternalServerError,
@@ -312,5 +345,10 @@ namespace Dima.Api.Handlers
 
         private static readonly Regex SlugPattern = new("^[a-z0-9]+(?:-[a-z0-9]+)*$",
                 RegexOptions.Compiled);
+
+        private static bool IsDuplicateSlug(DbUpdateException exception)
+            => exception.InnerException is SqlException sql
+                && sql.Number is 2601 or 2627
+                && sql.Message.Contains("UX_Product_Slug", StringComparison.Ordinal);
     }
 }

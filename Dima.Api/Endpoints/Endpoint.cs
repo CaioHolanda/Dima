@@ -1,4 +1,4 @@
-﻿using Dima.Api.Common.Api;
+using Dima.Api.Common.Api;
 using Dima.Api.Endpoints.Admin;
 using Dima.Api.Endpoints.Categories;
 using Dima.Api.Endpoints.Identity;
@@ -21,10 +21,12 @@ public static class Endpoint
     public static void MapEndpoints(this WebApplication app)
     {
         var endpoint = app
-            .MapGroup("/api");
+            .MapGroup("/api")
+            .AddEndpointFilter<Dima.Api.Auditing.AdminAuditFilter>();
 
         endpoint.MapGroup("/")
             .WithTags("Health Check")
+            .AllowAnonymous()
             .MapGet("/", () => new { message = "OK" });
 
         endpoint.MapGroup("v1/categories")
@@ -47,6 +49,7 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/products")
             .WithTags("Products")
+            .AllowAnonymous()
             .MapEndpoint<GetAllProductsEndpoint>()
             .MapEndpoint<GetProductBySlugEndpoint>();
 
@@ -81,12 +84,14 @@ public static class Endpoint
         endpoint.MapGroup("v1/admin/orders")
             .WithTags("Admin - Orders")
             .RequireAuthorization("AdminOnly")
-            .MapEndpoint<GetAllAdminOrdersEndpoint>();
+            .MapEndpoint<GetAllAdminOrdersEndpoint>()
+            .MapEndpoint<GetAdminOrderByIdEndpoint>()
+            .MapEndpoint<CancelAdminOrderEndpoint>();
 
         endpoint.MapGroup("v1/vouchers")
             .WithTags("Vouchers")
             .RequireAuthorization()
-            .MapEndpoint<GetVoucherByCodeEndpoint>();
+            .MapEndpoint<ApplyVoucherEndpoint>();
 
         endpoint.MapGroup("v1/orders")
             .WithTags("Orders")
@@ -95,7 +100,6 @@ public static class Endpoint
             .MapEndpoint<GetOrderByNumberEndpoint>()
             .MapEndpoint<CreateOrderEndpoint>()
             .MapEndpoint<CancelOrderEndpoint>()
-            .MapEndpoint<PayOrderEndpoint>()
             .MapEndpoint<RefundOrderEndpoint>();
 
         var stripe = endpoint
@@ -112,13 +116,16 @@ public static class Endpoint
 
         endpoint.MapGroup("v1/identity")
             .WithTags("Identity")
-            .MapIdentityApi<User>();
-
-        endpoint.MapGroup("v1/identity")
-            .WithTags("Identity")
+            .MapEndpoint<LoginEndpoint>()
+            .MapEndpoint<SessionEndpoint>()
             .MapEndpoint<RegisterEndpoint>()
             .MapEndpoint<LogoutEndpoint>()
-            .MapEndpoint<GetRolesEndpoint>();
+            .MapEndpoint<GetRolesEndpoint>()
+            .MapEndpoint<ForgotPasswordEndpoint>()
+            .MapEndpoint<ResetPasswordEndpoint>()
+            .MapEndpoint<ConfirmEmailEndpoint>()
+            .MapEndpoint<ResendConfirmationEmailEndpoint>()
+            .MapEndpoint<GetCurrentUserEndpoint>();
 
         endpoint.MapGroup("v1/admin")
             .WithTags("Admin")
@@ -140,4 +147,3 @@ public static class Endpoint
             return app;
     }
 }
-

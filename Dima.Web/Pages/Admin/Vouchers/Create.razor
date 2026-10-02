@@ -1,4 +1,4 @@
-﻿@page "/admin/vouchers/adicionar"
+@page "/admin/vouchers/adicionar"
 @using Dima.Core.Enums
 @using Dima.Core.Models.Account
 @attribute [Authorize(Roles = AppRoles.Admin)]
@@ -119,21 +119,7 @@
             </MudItem>
 
             <MudItem xs="12" md="6">
-                <MudSelect T="long?"
-                           Label="Produto"
-                           HelperText="Opcional — deixe vazio para aplicar a qualquer produto"
-                           @bind-Value="InputModel.ProductId"
-                           For="@(() => InputModel.ProductId)"
-                           Clearable="true">
-
-                    @foreach (var product in Products)
-                    {
-                        <MudSelectItem T="long?"
-                                       Value="@((long?)product.Id)">
-                            @product.Title
-                        </MudSelectItem>
-                    }
-                </MudSelect>
+                <Dima.Web.Components.Products.AdminProductPicker @bind-Value="InputModel.ProductId" />
             </MudItem>
 
             <MudItem xs="12">

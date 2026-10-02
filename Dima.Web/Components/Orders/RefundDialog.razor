@@ -1,0 +1,107 @@
+﻿@using Dima.Core.Enums
+
+<MudDialog>
+    <DialogContent>
+
+        <MudSelect T="ERefundReason"
+                   Label="Motivo do reembolso"
+                   @bind-Value="_reason"
+                   Required="true"
+                   ToStringFunc="@(value => value == 0 ? "-" : GetRefundReasonText(value))">
+
+            <MudSelectItem Value="ERefundReason.NotUsingProduct">
+                Não estou utilizando o produto
+            </MudSelectItem>
+
+            <MudSelectItem Value="ERefundReason.NotAsExpected">
+                O produto não atendeu às expectativas
+            </MudSelectItem>
+
+            <MudSelectItem Value="ERefundReason.PurchasedByMistake">
+                Comprei por engano
+            </MudSelectItem>
+
+            <MudSelectItem Value="ERefundReason.TechnicalIssue">
+                Problema técnico
+            </MudSelectItem>
+
+            <MudSelectItem Value="ERefundReason.Price">
+                Preço
+            </MudSelectItem>
+
+            <MudSelectItem Value="ERefundReason.Other">
+                Outro
+            </MudSelectItem>
+
+        </MudSelect>
+
+        <MudTextField T="string"
+                      Label="Comentário"
+                      Lines="4"
+                      MaxLength="500"
+                      Counter="500"
+                      @bind-Value="_details"
+                      HelperText="@DetailsHelperText" />
+
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel">
+            CANCELAR
+        </MudButton>
+
+        <MudButton Color="Color.Warning"
+                   Variant="Variant.Filled"
+                   Disabled="@(!CanSubmit)"
+                   OnClick="Submit">
+            SOLICITAR REEMBOLSO
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private ERefundReason _reason;
+    private string? _details;
+
+    private bool CanSubmit =>
+        _reason != 0 &&
+        (_reason != ERefundReason.Other ||
+         !string.IsNullOrWhiteSpace(_details));
+
+    private string DetailsHelperText =>
+        _reason == ERefundReason.Other
+            ? "Obrigatório quando o motivo selecionado for Outro."
+            : "Opcional.";
+
+    private void Cancel()
+        => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        var result = new RefundDialogResult
+        {
+            Reason = _reason,
+            Details = string.IsNullOrWhiteSpace(_details)
+                ? null
+                : _details.Trim()
+        };
+
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+    private static string GetRefundReasonText(ERefundReason reason)
+    {
+        return reason switch
+        {
+            ERefundReason.NotUsingProduct => "Não estou utilizando o produto",
+            ERefundReason.NotAsExpected => "O produto não atendeu às expectativas",
+            ERefundReason.PurchasedByMistake => "Comprei por engano",
+            ERefundReason.TechnicalIssue => "Problema técnico",
+            ERefundReason.Price => "Preço",
+            ERefundReason.Other => "Outro",
+            _ => "-"
+        };
+    }
+}

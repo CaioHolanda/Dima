@@ -8,6 +8,7 @@ namespace Dima.Web.Security
     public class CookieAuthenticationStateProvider(IHttpClientFactory clientFactory) : AuthenticationStateProvider, ICookieAuthenticationStateProvider
     {
         private bool _isAuthenticated = false;
+        private int _generation;
         private readonly HttpClient _client = clientFactory.CreateClient(Configuration.HttpClientName);
 
         public async Task<bool> CheckAuthenticatedAsync()
@@ -19,8 +20,16 @@ namespace Dima.Web.Security
         public void NotifyAuthenticationStateChanged()
         => NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 
+        public void ClearAuthenticationState()
+        {
+            _generation++;
+            _isAuthenticated = false;
+            var anonymous = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
+            NotifyAuthenticationStateChanged(Task.FromResult(anonymous));
+        }
         public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
+            var generation = _generation;
             _isAuthenticated = false;
             var user = new ClaimsPrincipal(new ClaimsIdentity());
 
@@ -29,6 +38,8 @@ namespace Dima.Web.Security
                 return new AuthenticationState(user);
 
             var claims = await GetClaims(userInfo);
+            if (generation != _generation)
+                return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
 
             var id = new ClaimsIdentity(claims, nameof(CookieAuthenticationStateProvider));
             user = new ClaimsPrincipal(id);
@@ -77,7 +88,7 @@ namespace Dima.Web.Security
         {
             try
             {
-                return await _client.GetFromJsonAsync<User?>("v1/identity/manage/info");
+                return await _client.GetFromJsonAsync<User?>("v1/identity/me");
             }
             catch
             {

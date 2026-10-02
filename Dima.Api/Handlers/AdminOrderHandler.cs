@@ -1,4 +1,6 @@
-﻿using Dima.Api.Data;
+using Dima.Api.Observability;
+using Microsoft.Extensions.Logging.Abstractions;
+using Dima.Api.Data;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -7,9 +9,54 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Dima.Api.Handlers;
 
-public class AdminOrderHandler(AppDbContext context)
+public class AdminOrderHandler(AppDbContext context, ILogger<AdminOrderHandler>? logger = null,
+    Dima.Api.Services.OrderExpirationService? expirationService = null)
     : IAdminOrderHandler
 {
+    private readonly ILogger<AdminOrderHandler> _logger = logger ?? NullLogger<AdminOrderHandler>.Instance;
+
+    public Task<Response<bool>> CancelAsync(long id)
+        => (expirationService ?? throw new InvalidOperationException("Serviço de pedidos não configurado."))
+            .CancelAsync(id);
+
+    public async Task<Response<AdminOrderDetails?>> GetByIdAsync(long id)
+    {
+        try
+        {
+            var order = await (
+                from item in context.Orders.AsNoTracking()
+                join user in context.Users.AsNoTracking() on item.UserId equals user.Id
+                where item.Id == id
+                select new AdminOrderDetails
+                {
+                    Id = item.Id, Number = item.Number,
+                    UserId = item.UserId, UserEmail = user.Email ?? string.Empty,
+                    ProductId = item.ProductId, ProductName = item.Product.Title,
+                    VoucherCode = item.VoucherCodeSnapshot,
+                    VoucherDiscountTypeSnapshot = item.VoucherDiscountTypeSnapshot,
+                    VoucherValueSnapshot = item.VoucherValueSnapshot,
+                    OriginalPrice = item.OriginalPrice, DiscountAmount = item.DiscountAmount, Total = item.Total,
+                    CreatedAt = item.CreatedAt, UpdatedAt = item.UpdatedAt, Status = item.Status,
+                    PaidAt = item.PaidAt, Gateway = item.Gateway, ExternalReference = item.ExternalReference,
+                    PaymentSessionId = item.PaymentSessionId, PaymentSessionExpiresAt = item.PaymentSessionExpiresAt,
+                    ExpiresAt = item.ExpiresAt, ExpiredAt = item.ExpiredAt,
+                    AccessStartsAt = item.AccessStartsAt, AccessEndsAt = item.AccessEndsAt,
+                    AccessDurationMonths = item.AccessDurationMonths,
+                    RefundReference = item.RefundReference, RefundFailureReason = item.RefundFailureReason,
+                    RefundedAt = item.RefundedAt, RefundReason = item.RefundReason,
+                    RefundReasonDetails = item.RefundReasonDetails
+                }).SingleOrDefaultAsync();
+            return order is null
+                ? new Response<AdminOrderDetails?>(null, 404, "Pedido não encontrado.")
+                : new Response<AdminOrderDetails?>(order);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogOperationError(exception);
+            return new Response<AdminOrderDetails?>(null, 500, "Não foi possível consultar o pedido.");
+        }
+    }
+
     public async Task<PagedResponse<List<AdminOrderListItem>?>>
         GetAllAsync(GetAllAdminOrdersRequest request)
     {
@@ -19,7 +66,7 @@ public class AdminOrderHandler(AppDbContext context)
                 from order in context.Orders.AsNoTracking()
                 join user in context.Users.AsNoTracking()
                     on order.UserId equals user.Id
-                orderby order.CreatedAt descending
+                orderby order.CreatedAt descending, order.Id descending
                 select new AdminOrderListItem
                 {
                     Id = order.Id,
@@ -31,9 +78,7 @@ public class AdminOrderHandler(AppDbContext context)
                     ProductId = order.ProductId,
                     ProductName = order.Product.Title,
 
-                    VoucherCode = order.Voucher != null
-                        ? order.Voucher.Code
-                        : null,
+                    VoucherCode = order.VoucherCodeSnapshot,
 
                     OriginalPrice = order.OriginalPrice,
                     DiscountAmount = order.DiscountAmount,
@@ -43,9 +88,25 @@ public class AdminOrderHandler(AppDbContext context)
                     AccessStartsAt = order.AccessStartsAt,
                     AccessEndsAt = order.AccessEndsAt,
 
-                    Status = order.Status
+                    Status = order.Status,
+
+                    PaidAt = order.PaidAt,
+
+                    RefundReference = order.RefundReference,
+                    RefundFailureReason = order.RefundFailureReason,
+                    RefundedAt = order.RefundedAt,
+                    RefundReason = order.RefundReason,
+                    RefundReasonDetails = order.RefundReasonDetails,
                 };
 
+            if (request.Status.HasValue)
+                query = query.Where(x => x.Status == request.Status.Value);
+            if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+            {
+                var term = request.SearchTerm.Trim().ToLower();
+                query = query.Where(x => x.Number.ToLower().Contains(term)
+                    || x.UserEmail.ToLower().Contains(term) || x.ProductName.ToLower().Contains(term));
+            }
             var count = await query.CountAsync();
 
             var orders = await query
@@ -61,8 +122,9 @@ public class AdminOrderHandler(AppDbContext context)
                 request.PageNumber,
                 request.PageSize);
         }
-        catch
+        catch (Exception exception)
         {
+            _logger.LogOperationError(exception);
             return new PagedResponse<List<AdminOrderListItem>?>(
                 null,
                 500,

@@ -1,4 +1,4 @@
-﻿using Dima.Core.Enums;
+using Dima.Core.Enums;
 using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Order;
@@ -61,7 +61,7 @@ namespace Dima.Web.Pages.Orders
                     return;
                 }
 
-                if (Order?.Status != EOrderStatus.WaintingPayment)
+                if (Order?.Status != EOrderStatus.WaitingPayment)
                 {
                     IsConfirming = false;
                     return;

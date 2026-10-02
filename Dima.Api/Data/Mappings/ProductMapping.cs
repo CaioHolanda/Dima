@@ -20,6 +20,10 @@ namespace Dima.Api.Data.Mappings
                     .IsRequired(true)
                     .HasColumnType("VARCHAR")
                     .HasMaxLength(80);
+            builder.HasIndex(x => x.Slug)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Product_Slug");
+
             builder.Property(x => x.Description)
                     .IsRequired(false)
                     .HasColumnType("NVARCHAR")
@@ -31,13 +35,13 @@ namespace Dima.Api.Data.Mappings
                     .IsRequired(true)
                     .HasColumnType("BIT");
             builder.Property(x => x.AccessDurationMonths)
-                    .IsRequired(false)
+                    .IsRequired()
                     .HasColumnType("INT");
             builder.ToTable(table =>
             {
                 table.HasCheckConstraint(
                     "CK_Product_AccessDurationMonths_Positive",
-                    "[AccessDurationMonths] IS NULL OR [AccessDurationMonths] > 0");
+                    "[AccessDurationMonths] > 0");
             });
         }
     }

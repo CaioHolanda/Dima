@@ -13,20 +13,27 @@
                         </MudText>
                     </MudListItem>
                     <MudDivider/>
-                    <MudListItem Icon="@(Voucher is null? Icons.Material.Filled.Discount : Icons.Material.Filled.CheckCircle)">
-                        <MudTextField   T="string"
-                                        Disabled="@(Voucher is not null)"
-                                        Placeholder="Cupom de desconto"
-                                        @bind-Value="@VoucherCode"
-                                        Adornment="Adornment.End"
-                                        AdornmentIcon="@Icons.Material.Filled.FactCheck"
-                                        OnAdornmentClick="@(()=>{})"/>
-                    </MudListItem> 
+                    <MudListItem Icon="@(AppliedVoucher is null
+                                 ? Icons.Material.Filled.Discount
+                                 : Icons.Material.Filled.CheckCircle)">
+
+                        <MudTextField T="string"
+                                      Disabled="@IsApplyingVoucher"
+                                      ReadOnly="@(AppliedVoucher is not null)"
+                                      Placeholder="Cupom de desconto"
+                                      @bind-Value="VoucherCode"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@(AppliedVoucher is null
+                                              ? Icons.Material.Filled.FactCheck
+                                              : Icons.Material.Filled.Close)"
+                                      OnAdornmentClick="OnVoucherAdornmentClickAsync"
+                                      OnKeyDown="OnVoucherKeyDownAsync" />
+                    </MudListItem>
                     <MudListItem Icon ="@Icons.Material.Filled.MoneyOff">
                         <div class="d-flex">
                             <MudText>Desconto</MudText>
                             <MudText Class="ml-auto">
-                                @CalculateDiscount(Product?.Price ?? 0, Voucher).ToString("C")
+                                @DiscountAmount.ToString("C")
                             </MudText>
                         </div>
                     </MudListItem>
@@ -44,12 +51,14 @@
             <MudButton @onclick="OnValidSubmitAsync"
                 Variant="Variant.Filled"
                 Color="Color.Primary"
-                Disabled="@(!IsValid)"
+                Disabled="@(!IsValid || IsBusy || IsApplyingVoucher)"
                 DisableElevation="true"
                 Size="Size.Large"
                 Class="mt-6"
                 FullWidth="true">
-                FINALIZAR PEDIDO
+                @(Total == 0m
+                    ? "CONFIRMAR PEDIDO"
+                    : "FINALIZAR PEDIDO")
             </MudButton>
         </MudItem>
     </MudGrid>

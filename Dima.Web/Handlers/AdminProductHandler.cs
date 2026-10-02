@@ -1,4 +1,4 @@
-﻿using Dima.Core.Handlers;
+using Dima.Core.Handlers;
 using Dima.Core.Models;
 using Dima.Core.Requests.Products;
 using Dima.Core.Responses;
@@ -18,26 +18,18 @@ public class AdminProductHandler(
         GetAllForAdminAsync(
             GetAllAdminProductsRequest request)
     {
-        var response = await _client.GetAsync(
+        using var response = await _client.GetAsync(
             $"v1/admin/products" +
-            $"?pageNumber={request.PageNumber}" +
-            $"&pageSize={request.PageSize}");
+            AdminQuery.Build(request));
 
-        var result = await response.Content
-            .ReadFromJsonAsync<PagedResponse<List<Product>?>>();
-
-        return result ??
-            new PagedResponse<List<Product>?>(
-                null,
-                (int)response.StatusCode,
-                "[E121] Não foi possível obter os produtos");
+        return await HttpResponseReader.ReadPagedAsync<List<Product>?>(response, "[E121] Não foi possível obter os produtos");
     }
 
     public async Task<Response<Product?>>
         GetByIdForAdminAsync(
             GetProductByIdRequest request)
     {
-        var response = await _client.GetAsync(
+        using var response = await _client.GetAsync(
             $"v1/admin/products/{request.Id}");
 
         return await ReadResponseAsync(response);
@@ -46,7 +38,7 @@ public class AdminProductHandler(
     public async Task<Response<Product?>>
         CreateAsync(CreateProductRequest request)
     {
-        var response = await _client.PostAsJsonAsync(
+        using var response = await _client.PostAsJsonAsync(
             "v1/admin/products",
             request);
 
@@ -56,7 +48,7 @@ public class AdminProductHandler(
     public async Task<Response<Product?>>
         UpdateAsync(UpdateProductRequest request)
     {
-        var response = await _client.PutAsJsonAsync(
+        using var response = await _client.PutAsJsonAsync(
             $"v1/admin/products/{request.Id}",
             request);
 
@@ -67,7 +59,7 @@ public class AdminProductHandler(
         ActivateAsync(
             ActivateProductRequest request)
     {
-        var response = await _client.PutAsync(
+        using var response = await _client.PutAsync(
             $"v1/admin/products/{request.Id}/activate",
             null);
 
@@ -78,7 +70,7 @@ public class AdminProductHandler(
         DeactivateAsync(
             DeactivateProductRequest request)
     {
-        var response = await _client.DeleteAsync(
+        using var response = await _client.DeleteAsync(
             $"v1/admin/products/{request.Id}");
 
         return await ReadResponseAsync(response);
@@ -87,14 +79,7 @@ public class AdminProductHandler(
     private static async Task<Response<Product?>>
         ReadResponseAsync(HttpResponseMessage response)
     {
-        var result = await response.Content
-            .ReadFromJsonAsync<Response<Product?>>();
-
-        return result ??
-            new Response<Product?>(
-                null,
-                (int)response.StatusCode,
-                "[E122] Não foi possível processar o produto");
+        return await HttpResponseReader.ReadAsync<Product?>(response, "[E122] Não foi possível processar o produto");
     }
 
 }

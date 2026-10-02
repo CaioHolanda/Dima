@@ -6,22 +6,22 @@ public class AdminOrderListItem
 {
     public long Id { get; set; }
     public string Number { get; set; } = string.Empty;
-
     public long UserId { get; set; }
     public string UserEmail { get; set; } = string.Empty;
-
     public long ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
-
     public string? VoucherCode { get; set; }
-
     public decimal OriginalPrice { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal Total { get; set; }
-
     public DateTime CreatedAt { get; set; }
     public DateTime? AccessStartsAt { get; set; }
     public DateTime? AccessEndsAt { get; set; }
-
     public EOrderStatus Status { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? RefundReference { get; set; }
+    public string? RefundFailureReason { get; set; }
+    public DateTime? RefundedAt { get; set; }
+    public ERefundReason? RefundReason { get; set; }
+    public string? RefundReasonDetails { get; set; }
 }
